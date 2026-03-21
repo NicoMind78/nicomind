@@ -2847,26 +2847,48 @@ async function callManageRoles(action, params={}){
 async function loadUserList(){
   const list = document.getElementById('userList');
   list.innerHTML = '<div style="color:var(--text3);font-size:12px;padding:8px">Lade Benutzer…</div>';
-  const result = await callManageRoles('getAll');
-  if(result.error){ list.innerHTML = `<div style="color:var(--red);font-size:12px;padding:8px">Fehler: ${result.error}</div>`; return; }
-  const data = result.data;
-  if(!data||!data.length){ list.innerHTML = '<div style="color:var(--text3);font-size:12px;padding:8px">Keine Benutzer gefunden</div>'; return; }
+
+  const [rolesResult, profilesResult] = await Promise.all([
+    callManageRoles('getAll'),
+    sb.from('user_profiles').select('user_id, name, vorname, position')
+  ]);
+
+  if(rolesResult.error){ 
+    list.innerHTML = `<div style="color:var(--red);font-size:12px;padding:8px">Fehler: ${rolesResult.error}</div>`; 
+    return; 
+  }
+
+  const data = rolesResult.data;
+  const profiles = profilesResult.data || [];
+
+  if(!data || !data.length){ 
+    list.innerHTML = '<div style="color:var(--text3);font-size:12px;padding:8px">Keine Benutzer gefunden</div>'; 
+    return; 
+  }
+
   const canEdit = ['owner','master_admin','admin'].includes(currentUserRole);
-  list.innerHTML = data.map(u=>`
-    <div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:var(--surface2);border-radius:8px">
-      <div style="width:32px;height:32px;border-radius:50%;background:var(--accent-soft);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:var(--accent);flex-shrink:0">${(ROLE_LABELS[u.role]||'?')[0].toUpperCase()}</div>
-      <div style="flex:1;min-width:0">
-        <div style="font-size:12px;font-weight:500;color:var(--text)">${u.user_id === currentUserId ? '👤 Du' : u.user_id.substring(0,12)+'…'}</div>
-        <div style="font-size:10px;color:var(--text3)">${ROLE_LABELS[u.role]||u.role}</div>
+
+  list.innerHTML = data.map(u=>{
+    const profile = profiles.find(p=>p.user_id===u.user_id);
+    const displayName = profile ? `${profile.vorname||''} ${profile.name||''}`.trim() || '–' : u.user_id.substring(0,12)+'…';
+    const subLabel = profile?.position ? `${ROLE_LABELS[u.role]||u.role} · ${profile.position}` : ROLE_LABELS[u.role]||u.role;
+    const isMe = u.user_id === currentUserId;
+    return `
+      <div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:var(--surface2);border-radius:8px">
+        <div style="width:32px;height:32px;border-radius:50%;background:var(--accent-soft);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:var(--accent);flex-shrink:0">${(displayName[0]||'?').toUpperCase()}</div>
+        <div style="flex:1;min-width:0">
+          <div style="font-size:12px;font-weight:500;color:var(--text)">${isMe?'👤 ':''} ${displayName}</div>
+          <div style="font-size:10px;color:var(--text3)">${subLabel}</div>
+        </div>
+        ${canEdit ? `
+        <select onchange="changeUserRole('${u.user_id}', this.value)" style="font-size:11px;padding:4px 8px;border:1px solid var(--border);border-radius:6px;background:var(--surface);color:var(--text)">
+          ${Object.entries(ROLE_LABELS).map(([v,l])=>`<option value="${v}"${u.role===v?' selected':''}>${l}</option>`).join('')}
+        </select>
+        ${!isMe ? `<button onclick="deleteUser('${u.user_id}')" style="width:26px;height:26px;border:none;background:var(--red-soft);color:var(--red);border-radius:6px;cursor:pointer;font-size:14px;flex-shrink:0">✕</button>` : ''}
+        ` : ''}
       </div>
-      ${canEdit ? `
-      <select onchange="changeUserRole('${u.user_id}', this.value)" style="font-size:11px;padding:4px 8px;border:1px solid var(--border);border-radius:6px;background:var(--surface);color:var(--text)">
-        ${Object.entries(ROLE_LABELS).map(([v,l])=>`<option value="${v}"${u.role===v?' selected':''}>${l}</option>`).join('')}
-      </select>
-      ${u.user_id !== currentUserId ? `<button onclick="deleteUser('${u.user_id}')" style="width:26px;height:26px;border:none;background:var(--red-soft);color:var(--red);border-radius:6px;cursor:pointer;font-size:14px;flex-shrink:0">✕</button>` : ''}
-      ` : ''}
-    </div>
-  `).join('');
+    `;
+  }).join('');
 }
 
 async function changeUserRole(userId, newRole){
