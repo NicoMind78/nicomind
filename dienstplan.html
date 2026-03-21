@@ -464,7 +464,7 @@
       </div>
       <div style="padding:6px 0">
         <div class="settings-menu-item" onclick="openUserManagement()">👥 Benutzerverwaltung</div>
-        <div class="settings-menu-item" onclick="showToast('Standorte folgt bald')">🏢 Standorte</div>
+        <div class="settings-menu-item" onclick="openStandorteModal()">🏢 Standorte</div>
         <div class="settings-menu-item" onclick="showToast('Einstellungen folgt bald')">⚙️ Allgemeine Einstellungen</div>
         <div class="settings-menu-item" onclick="showToast('Datenschutz & TOM folgt bald')">🔒 Datenschutz & TOM</div>
       </div>
@@ -476,7 +476,7 @@
          onmousedown="sliderDragStart(event)" ontouchstart="sliderTouchStart(event)">
       <div id="monthSliderTrack" style="display:flex;align-items:center;height:100%;position:absolute;top:0;left:0"></div>
     </div>
-    <button class="btn btn-secondary btn-sm" onclick="openAddEntry()">+ Eintrag</button>
+    <div id="standortLabel" style="font-size:11px;color:var(--text3);white-space:nowrap;margin-right:4px">–</div>
     <button onclick="openAddStaff()" title="Personal hinzufügen" style="position:relative;width:32px;height:32px;border-radius:50%;border:1.5px solid var(--border);background:var(--surface2);cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--text2);transition:all .15s;flex-shrink:0" onmouseover="this.style.background='var(--accent-soft)';this.style.borderColor='var(--accent)';this.style.color='var(--accent)'" onmouseout="this.style.background='var(--surface2)';this.style.borderColor='var(--border)';this.style.color='var(--text2)'">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
         <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
@@ -1092,6 +1092,18 @@
   <div class="staff-popup-cards" id="spCards"></div>
 </div>
 
+<!-- Standorte Modal -->
+<div class="modal-overlay" id="standorteModal" onclick="if(event.target===this)closeModal('standorteModal')">
+  <div class="modal modal-wide">
+    <div class="modal-title">🏢 Standorte & Gruppen</div>
+    <div class="modal-sub">Aktiven Standort und Gruppe wechseln</div>
+    <div id="standorteList" style="display:flex;flex-direction:column;gap:12px;max-height:400px;overflow-y:auto"></div>
+    <div class="modal-actions" style="margin-top:16px;border-top:1px solid var(--border);padding-top:14px">
+      <button class="btn btn-secondary" onclick="closeModal('standorteModal')">Schließen</button>
+    </div>
+  </div>
+</div>
+
 <!-- User Management Modal -->
 <div class="modal-overlay" id="userMgmtModal" onclick="if(event.target===this)closeModal('userMgmtModal')">
   <div class="modal modal-wide">
@@ -1150,6 +1162,12 @@ const DAY_SHORT = ['So','Mo','Di','Mi','Do','Fr','Sa'];
 const SUPABASE_URL = 'https://pxztxkqzvjkwvbfymbst.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_bpKLnvsUQYffH7XEQay1Bg_Y__1XWEL';
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+// ─── STANDORT / GRUPPE ───
+let currentStandortId = '11111111-0000-0000-0000-000000000001';
+let currentGruppeId   = null;
+let allStandorte      = [];
+let allGruppen        = [];
 
 // ─── STATE (localStorage als Fallback während Migration) ───
 function loadData() {
@@ -2760,6 +2778,87 @@ function applyRolePermissions(){
     menuUserMgmt.style.display = canManageUsers.includes(currentUserRole) ? '' : 'none';
   }
 }
+// ─── STANDORTE & GRUPPEN ───
+async function loadStandorteData(){
+  const [sRes, gRes] = await Promise.all([
+    sb.from('standorte').select('*').order('name'),
+    sb.from('gruppen').select('*').order('position')
+  ]);
+  if(sRes.data) allStandorte = sRes.data;
+  if(gRes.data) allGruppen   = gRes.data;
+  if(!currentGruppeId && allGruppen.length){
+    const grp = allGruppen.find(g=>g.standort_id===currentStandortId && g.position===1);
+    if(grp) currentGruppeId = grp.id;
+  }
+  updateStandortLabel();
+}
+
+function updateStandortLabel(){
+  const s = allStandorte.find(s=>s.id===currentStandortId);
+  const g = allGruppen.find(g=>g.id===currentGruppeId);
+  const el = document.getElementById('standortLabel');
+  if(el) el.textContent = `${s?.name||'–'} · ${g?.name||'–'}`;
+}
+
+async function openStandorteModal(){
+  document.getElementById('settingsMenu').style.display='none';
+  await loadStandorteData();
+  renderStandorteList();
+  openModal('standorteModal');
+}
+
+function renderStandorteList(){
+  const list = document.getElementById('standorteList');
+  const canEdit = ['owner','master_admin','admin'].includes(currentUserRole);
+  list.innerHTML = allStandorte.map(s=>{
+    const gruppen = allGruppen.filter(g=>g.standort_id===s.id);
+    const isActiveS = s.id === currentStandortId;
+    return `
+      <div style="border:1.5px solid ${isActiveS?'var(--accent)':'var(--border)'};border-radius:10px;overflow:hidden">
+        <div style="padding:10px 14px;background:${isActiveS?'var(--accent-soft)':'var(--surface2)'};display:flex;align-items:center;gap:8px">
+          <div style="font-size:13px;font-weight:600;color:${isActiveS?'var(--accent)':'var(--text)'};flex:1">${s.name}</div>
+          ${canEdit?`<button onclick="renameStandort('${s.id}','${s.name}')" style="font-size:10px;padding:3px 8px;border:1px solid var(--border);border-radius:6px;background:var(--surface);color:var(--text2);cursor:pointer">✎ Umbenennen</button>`:''}
+        </div>
+        <div style="padding:8px 14px;display:flex;gap:6px;flex-wrap:wrap">
+          ${gruppen.map(g=>{
+            const isActiveG = g.id===currentGruppeId && isActiveS;
+            return `<div style="display:flex;align-items:center;gap:4px">
+              <button onclick="switchGruppe('${s.id}','${g.id}')" style="padding:5px 12px;border:1.5px solid ${isActiveG?'var(--accent)':'var(--border)'};border-radius:8px;background:${isActiveG?'var(--accent)':'var(--surface)'};color:${isActiveG?'#fff':'var(--text)'};font-size:12px;font-weight:${isActiveG?600:400};cursor:pointer">${g.name}</button>
+              ${canEdit?`<button onclick="renameGruppe('${g.id}','${g.name}')" style="font-size:9px;padding:2px 5px;border:1px solid var(--border);border-radius:5px;background:var(--surface2);color:var(--text3);cursor:pointer">✎</button>`:''}
+            </div>`;
+          }).join('')}
+        </div>
+      </div>`;
+  }).join('');
+}
+
+function switchGruppe(standortId, gruppeId){
+  currentStandortId = standortId;
+  currentGruppeId   = gruppeId;
+  updateStandortLabel();
+  renderStandorteList();
+  loadFromSupabase();
+  showToast('✅ Standort & Gruppe gewechselt');
+}
+
+async function renameStandort(id, currentName){
+  const newName = prompt('Neuer Name für Standort:', currentName);
+  if(!newName || newName===currentName) return;
+  const {error} = await sb.from('standorte').update({name:newName}).eq('id',id);
+  if(error){showToast('Fehler beim Umbenennen'); return;}
+  await loadStandorteData(); renderStandorteList();
+  showToast('✅ Standort umbenannt');
+}
+
+async function renameGruppe(id, currentName){
+  const newName = prompt('Neuer Name für Gruppe:', currentName);
+  if(!newName || newName===currentName) return;
+  const {error} = await sb.from('gruppen').update({name:newName}).eq('id',id);
+  if(error){showToast('Fehler beim Umbenennen'); return;}
+  await loadStandorteData(); renderStandorteList();
+  showToast('✅ Gruppe umbenannt');
+}
+
 // 1. Beim Verlassen der Seite ausloggen
 window.addEventListener('beforeunload', ()=>{ sb.auth.signOut(); });
 
@@ -2802,6 +2901,8 @@ render();
 loadFromSupabase();
 // Load user role
 loadUserRole();
+// Load Standorte
+loadStandorteData();
 </script>
 </body>
 </html>
