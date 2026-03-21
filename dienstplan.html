@@ -1,0 +1,2818 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Nicos Dienstplan – Palliativ Care</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  :root {
+    --bg: #f5f5f7; --surface: #ffffff; --surface2: #f5f5f7;
+    --border: rgba(0,0,0,0.08); --text: #1d1d1f; --text2: #6e6e73; --text3: #aeaeb2;
+    --accent: #0071e3; --accent-soft: rgba(0,113,227,0.10);
+    --green: #28cd41; --green-soft: rgba(40,205,65,0.12);
+    --orange: #ff9f0a; --orange-soft: rgba(255,159,10,0.12);
+    --red: #ff3b30; --red-soft: rgba(255,59,48,0.10);
+    --purple: #bf5af2; --purple-soft: rgba(191,90,242,0.12);
+    --teal: #5ac8fa; --teal-soft: rgba(90,200,250,0.12);
+    --yellow: #ffd60a; --yellow-soft: rgba(255,214,10,0.12);
+    --radius: 12px; --radius-sm: 8px;
+    --shadow: 0 2px 20px rgba(0,0,0,0.08); --shadow-lg: 0 8px 40px rgba(0,0,0,0.14);
+    font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', Arial, sans-serif;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); min-height: 100vh; -webkit-font-smoothing: antialiased; }
+  .app { display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
+
+  /* UNIFIED HEADER */
+  .app-header {
+    display: flex; align-items: center; height: 57px; flex-shrink: 0;
+    background: rgba(255,255,255,0.88);
+    backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+    border-bottom: 1px solid var(--border);
+    z-index: 20;
+  }
+  .app-header-left {
+    width: 200px; min-width: 200px; flex-shrink: 0;
+    padding: 0 14px;
+    display: flex; align-items: center;
+  }
+  .app-header-right {
+    flex: 1; padding: 0 24px;
+    display: flex; align-items: center; gap: 10px;
+  }
+
+  .logo { display: flex; align-items: center; gap: 8px; }
+  .logo-icon { width: 34px; height: 34px; border-radius: 8px; overflow: hidden; flex-shrink: 0; display: flex; }
+  .logo-icon img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .logo-text { font-size: 11px; font-weight: 600; letter-spacing: -.2px; color: var(--text); }
+  .logo-sub { font-size: 9px; color: var(--text3); margin-top: 1px; }
+
+
+  .settings-menu-item { padding: 9px 16px; font-size: 12.5px; color: var(--text); cursor: pointer; transition: background .12s; }
+  .settings-menu-item:hover { background: var(--surface2); }
+  /* BODY below header */
+  .app-body { display: flex; flex: 1; overflow: hidden; }
+  .dsgvo-badge {
+    display: inline-flex; align-items: center; gap: 4px;
+    background: var(--green-soft); color: var(--green);
+    padding: 2px 8px; border-radius: 20px; font-size: 10px; font-weight: 600; margin-bottom: 5px;
+  }
+
+  /* MAIN */
+  .main { flex: 1; display: flex; flex-direction: column; overflow: hidden; width: 100%; }
+  .topbar { display: none; }
+  .topbar-title { font-size: 19px; font-weight: 600; letter-spacing: -.3px; flex: 1; }
+  .topbar-sub { font-size: 12px; color: var(--text2); }
+  .btn {
+    padding: 6px 13px; border-radius: var(--radius-sm); border: none;
+    cursor: pointer; font-size: 12.5px; font-weight: 500;
+    transition: all .14s; display: inline-flex; align-items: center; gap: 5px; white-space: nowrap;
+  }
+  .btn-primary { background: var(--accent); color: #fff; }
+  .btn-primary:hover { background: #0077ed; box-shadow: 0 2px 8px rgba(0,113,227,0.28); }
+  .btn-secondary { background: var(--surface2); color: var(--text); }
+  .btn-secondary:hover { background: #e8e8ed; }
+  .btn-danger { background: var(--red-soft); color: var(--red); border: 1px solid rgba(255,59,48,0.2); }
+  .btn-danger:hover { background: var(--red); color: #fff; }
+  .btn-sm { padding: 5px 10px; font-size: 12px; border-radius: 6px; }
+
+  /* BANNER */
+  .release-banner {
+    margin: 12px 24px 0; padding: 10px 14px; border-radius: var(--radius);
+    display: flex; align-items: center; gap: 10px; font-size: 12.5px; font-weight: 500; flex-shrink: 0;
+  }
+  .release-banner.locked  { background: var(--orange-soft); color: #b86d00; border: 1px solid rgba(255,159,10,.22); }
+  .release-banner.released{ background: var(--green-soft);  color: #1a8a2e; border: 1px solid rgba(40,205,65,.22); }
+  .release-banner.draft   { background: var(--accent-soft); color: var(--accent); border: 1px solid rgba(0,113,227,.18); }
+  .banner-icon { font-size: 17px; }
+  .release-countdown { font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 20px; background: rgba(255,255,255,.55); margin-left: auto; }
+
+  /* STATS */
+  .stats-row { display: flex; gap: 10px; padding: 12px 24px; flex-shrink: 0; overflow-x: auto; }
+  .stat-card {
+    background: var(--surface); border-radius: var(--radius); padding: 12px 16px;
+    min-width: 130px; flex: 1; box-shadow: var(--shadow); border: 1px solid var(--border);
+  }
+  .stat-label { font-size: 10px; color: var(--text2); font-weight: 600; text-transform: uppercase; letter-spacing: .5px; }
+  .stat-value { font-size: 24px; font-weight: 600; letter-spacing: -.5px; margin-top: 3px; }
+  .stat-sub { font-size: 10.5px; color: var(--text3); margin-top: 2px; }
+  .stat-bar { height: 3px; background: var(--surface2); border-radius: 2px; margin-top: 7px; overflow: hidden; }
+  .stat-bar-fill { height: 100%; border-radius: 2px; transition: width .5s ease; }
+  .bar-ok { background: var(--green); } .bar-warn { background: var(--orange); } .bar-over { background: var(--red); }
+
+  /* SCHEDULE WRAPPER */
+  .schedule-wrapper { flex: 1; overflow: auto; padding: 16px 24px 24px; }
+
+  /* MONTH TABS */
+  .month-tabs {
+    display: flex; gap: 6px; padding: 12px 0 10px;
+    position: sticky; top: 0; background: var(--bg); z-index: 5; overflow-x: auto;
+  }
+  .month-tab {
+    padding: 5px 14px; border-radius: 20px; font-size: 12px; font-weight: 500;
+    cursor: pointer; border: 1px solid var(--border);
+    background: var(--surface); color: var(--text2); transition: all .14s; white-space: nowrap;
+  }
+  .month-tab:hover { background: var(--surface2); color: var(--text); }
+  .month-tab.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+
+  /* MONTH GRID */
+  .grid-scroll { overflow-x: auto; }
+  .schedule-grid {
+    background: var(--surface); border-radius: 14px; border: 1px solid var(--border);
+    overflow: hidden; box-shadow: var(--shadow); width: max-content; min-width: 100%;
+  }
+  .grid-header { display: flex; background: var(--surface2); border-bottom: 1px solid var(--border); position: sticky; top: 0; z-index: 4; }
+  .gh-staff {
+    width: 145px; min-width: 145px; padding: 0; font-size: 10.5px; font-weight: 600;
+    color: var(--text2); text-transform: uppercase; letter-spacing: .5px;
+    border-right: 1px solid var(--border); flex-shrink: 0;
+    display: flex; flex-direction: column; justify-content: flex-end;
+    background: var(--surface); border-radius: 14px 0 0 0;
+  }
+  .gh-staff-label {
+    font-size: 9.5px; font-weight: 600; color: var(--text3);
+    text-transform: uppercase; letter-spacing: .6px;
+    padding: 0 12px 7px;
+  }
+  /* Month tabs inside gh-staff */
+  .gh-month-tabs {
+    display: flex; gap: 0; overflow-x: auto; padding: 8px 8px 0;
+    scrollbar-width: none;
+  }
+  .gh-month-tabs::-webkit-scrollbar { display: none; }
+  .gh-month-tab {
+    padding: 4px 8px; border-radius: 8px 8px 0 0; font-size: 10.5px; font-weight: 500;
+    cursor: pointer; white-space: nowrap; color: var(--text3);
+    transition: all .14s; border: none; background: transparent; flex-shrink: 0;
+  }
+  .gh-month-tab:hover { background: var(--surface2); color: var(--text2); }
+  .gh-month-tab.active { background: var(--accent); color: #fff; }
+  .gh-day {
+    width: 50px; min-width: 50px; padding: 5px 3px; text-align: center;
+    font-size: 11px; font-weight: 600; color: var(--text2);
+    border-right: 1px solid var(--border); flex-shrink: 0;
+  }
+  .gh-day.today-col { color: var(--accent); background: var(--accent-soft); }
+  .gh-day.weekend { background: rgba(0,0,0,.07); color: var(--text3); }
+  .gh-day.holiday { background: rgba(255,45,85,.10); color: #c0002a; }
+  .gh-day.holiday .day-name { color: #c0002a; opacity:.7; }
+  .gh-day .day-name { font-size: 9px; font-weight: 400; color: var(--text3); display: block; }
+  .gh-day.holiday .day-name { color: #c0002a; opacity:.7; font-size: 8px; }
+  .cell-day.holiday { background: rgba(255,45,85,.06); }
+  .cell-day.holiday .shift-chip.chip-empty { border-color: rgba(255,45,85,.25); }
+  .gh-tail { width: 76px; min-width: 76px; padding: 9px 8px; font-size: 10.5px; font-weight: 600; color: var(--text2); text-transform: uppercase; letter-spacing: .5px; border-right: 1px solid var(--border); flex-shrink: 0; text-align: center; }
+  .gh-tail:last-child { border-right: none; }
+
+  /* ROWS */
+  .grid-row { display: flex; border-bottom: 1px solid var(--border); transition: background .1s; }
+  .grid-row:last-child { border-bottom: none; }
+  .grid-row:hover { background: rgba(0,113,227,.012); }
+  .cell-staff {
+    width: 145px; min-width: 145px; padding: 7px 10px; border-right: 1px solid var(--border);
+    display: flex; align-items: center; gap: 8px; flex-shrink: 0;
+  }
+  .staff-avatar {
+    width: 26px; height: 26px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 10px; font-weight: 700; color: #fff; flex-shrink: 0;
+  }
+  .staff-name { font-size: 12.5px; font-weight: 500; line-height: 1.2; }
+  .staff-role { font-size: 10px; color: var(--text3); }
+  .staff-delete {
+    margin-left: auto; width: 22px; height: 22px; border-radius: 50%;
+    border: none; background: transparent; color: var(--text3);
+    cursor: pointer; font-size: 12px; display: flex; align-items: center; justify-content: center;
+    transition: all .14s; flex-shrink: 0; opacity: 0;
+  }
+  .staff-edit {
+    width: 22px; height: 22px; border-radius: 50%;
+    border: none; background: transparent; color: var(--text3);
+    cursor: pointer; font-size: 13px; display: flex; align-items: center; justify-content: center;
+    transition: all .14s; flex-shrink: 0; opacity: 0; margin-left: auto;
+  }
+  .cell-staff:hover .staff-delete,
+  .cell-staff:hover .staff-edit { opacity: 1; }
+  .staff-edit:hover { background: var(--accent-soft); color: var(--accent); }
+  .staff-delete:hover { background: var(--red-soft); color: var(--red); }
+
+  .cell-day {
+    width: 50px; min-width: 50px; padding: 5px 3px; border-right: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: center; flex-shrink: 0; min-height: 46px;
+  }
+  .cell-day.today-col { background: rgba(0,113,227,.04); }
+  .cell-day.weekend { background: rgba(0,0,0,.045); }
+
+  /* SHIFT CHIPS */
+  .shift-chip {
+    display: inline-flex; align-items: center; justify-content: center;
+    padding: 2px 4px; border-radius: 5px; font-size: 14px;
+    cursor: pointer; transition: all .14s; border: none; outline: none;
+    width: 34px; height: 28px;
+  }
+  .shift-chip:hover { filter: brightness(.9); transform: scale(.95); }
+  .chip-frueh  { background: var(--yellow-soft); color: #7a5e00; font-size: 12px; font-weight: 700; }
+  .chip-spaet  { background: var(--orange-soft); color: #7a3e00; font-size: 12px; font-weight: 700; }
+  .chip-frei   { background: rgba(52,199,89,.10); }
+  .chip-urlaub { background: rgba(52,199,89,.38); color: #1a6b35; font-size: 12px; font-weight: 700; }
+  .chip-au     { background: var(--red-soft); }
+  .chip-fb     { background: var(--purple-soft); }
+  .chip-fza    { background: rgba(52,199,89,.38); color: #555; font-size: 10px; font-weight: 700; letter-spacing: -.3px; }
+  .chip-ru     { background: rgba(255,45,85,.15); color: #c0002a; font-size: 10px; font-weight: 700; letter-spacing: -.3px; }
+  .chip-fs     { background: rgba(0,0,0,.07); color: #555; font-size: 10px; font-weight: 700; letter-spacing: -.3px; }
+  .chip-empty  { background: transparent; border: 1.5px dashed var(--border); font-size: 12px; color: var(--text3); }
+  .chip-empty:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-soft); }
+
+  .cell-tail {
+    width: 76px; min-width: 76px; padding: 6px 8px; border-right: 1px solid var(--border);
+    display: flex; flex-direction: column; align-items: center; justify-content: center; flex-shrink: 0;
+  }
+  .cell-tail:last-child { border-right: none; }
+  .h-ist { font-size: 14px; font-weight: 600; }
+  .h-soll { font-size: 10px; color: var(--text2); }
+  .h-diff-pos { font-size: 10px; color: var(--green); font-weight: 500; }
+  .h-diff-neg { font-size: 10px; color: var(--red); font-weight: 500; }
+
+  /* MODAL */
+  .modal-overlay {
+    position: fixed; inset: 0; background: rgba(0,0,0,.38);
+    backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px);
+    z-index: 100; display: flex; align-items: center; justify-content: center;
+    opacity: 0; pointer-events: none; transition: opacity .2s;
+  }
+  .modal-overlay.open { opacity: 1; pointer-events: all; }
+  .modal {
+    background: var(--surface); border-radius: 16px; padding: 26px;
+    width: 430px; max-width: 95vw; box-shadow: var(--shadow-lg);
+    transform: scale(.95); transition: transform .2s;
+  }
+  .modal-overlay.open .modal { transform: scale(1); }
+  .modal-title { font-size: 17px; font-weight: 600; margin-bottom: 4px; }
+  .modal-sub { font-size: 12.5px; color: var(--text2); margin-bottom: 18px; }
+  .form-group { margin-bottom: 13px; }
+  .form-label { font-size: 11.5px; font-weight: 600; color: var(--text2); margin-bottom: 4px; display: block; }
+  .form-input, .form-select, .form-textarea {
+    width: 100%; padding: 8px 11px; border: 1px solid var(--border); border-radius: var(--radius-sm);
+    font-size: 13.5px; color: var(--text); background: var(--surface2);
+    outline: none; transition: border .14s; font-family: inherit;
+  }
+  .form-input:focus, .form-select:focus, .form-textarea:focus { border-color: var(--accent); background: #fff; }
+  .form-textarea { resize: vertical; min-height: 72px; }
+  .shift-picker { display: flex; flex-wrap: wrap; gap: 7px; }
+  .shift-picker .shift-chip { width: auto; height: auto; padding: 5px 11px; font-size: 12px; }
+  .modal-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 18px; }
+  .release-info { background: var(--surface2); border-radius: var(--radius-sm); padding: 12px; margin-bottom: 14px; }
+  .release-info-row { display: flex; justify-content: space-between; font-size: 12.5px; margin-bottom: 3px; }
+  .release-info-row:last-child { margin-bottom: 0; }
+  .delete-warn { background: var(--red-soft); border-radius: var(--radius-sm); padding: 12px; margin-bottom: 14px; color: #b02020; font-size: 12.5px; border: 1px solid rgba(255,59,48,.18); line-height: 1.5; }
+
+  /* WISH ROW */
+  .wish-row { display: flex; border-bottom: 1px solid var(--border); background: rgba(191,90,242,.04); }
+  .wish-row:last-child { border-bottom: none; }
+  .cell-wish-label {
+    width: 145px; min-width: 145px; padding: 5px 10px 5px 14px; border-right: 1px solid var(--border);
+    display: flex; align-items: center; gap: 6px; flex-shrink: 0;
+    font-size: 10.5px; font-weight: 500; color: var(--purple); font-style: italic;
+  }
+  .cell-wish {
+    width: 50px; min-width: 50px; padding: 4px 3px; border-right: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: center; flex-shrink: 0; min-height: 34px;
+  }
+  .cell-wish.today-col { background: rgba(0,113,227,.03); }
+  .cell-wish.weekend { background: rgba(0,0,0,.04); }
+  .cell-wish.holiday { background: rgba(255,45,85,.04); }
+  .cell-wish-tail { width: 76px; min-width: 76px; border-right: 1px solid var(--border); flex-shrink: 0; }
+  .cell-wish-tail:last-child { border-right: none; }
+  .wish-chip {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 28px; height: 22px; border-radius: 4px; font-size: 11px;
+    cursor: pointer; border: none; outline: none; transition: all .14s;
+    background: rgba(191,90,242,.15); color: var(--purple);
+  }
+  .wish-chip:hover { background: rgba(191,90,242,.28); transform: scale(.96); }
+  .wish-chip.wish-empty {
+    background: transparent; border: 1.5px dashed rgba(191,90,242,.25); color: rgba(191,90,242,.4); font-size: 10px;
+  }
+  .wish-chip.wish-empty:hover { border-color: var(--purple); color: var(--purple); background: rgba(191,90,242,.08); }
+  .legend { display: flex; flex-wrap: wrap; gap: 8px; padding: 8px 24px 0; flex-shrink: 0; }
+  .legend-item { display: flex; align-items: center; gap: 5px; font-size: 11px; color: var(--text2); }
+  .legend-chip { width: 22px; height: 18px; border-radius: 4px; display: flex; align-items: center; justify-content: center; font-size: 11px; }
+
+  /* PLANNING RULES UI */
+  .pr-info { background: var(--surface2); border-radius: var(--radius-sm); padding: 10px 12px; margin-bottom: 14px; font-size: 11.5px; color: var(--text2); line-height: 1.5; border-left: 3px solid var(--accent); }
+  .pr-section-title { font-size: 10.5px; font-weight: 600; color: var(--text3); text-transform: uppercase; letter-spacing: .6px; margin-bottom: 8px; margin-top: 4px; }
+  .pr-scale-row { margin-bottom: 4px; }
+  .pr-scale { display: flex; gap: 6px; }
+  .pr-scale-btn {
+    flex: 1; height: 34px; border-radius: var(--radius-sm); border: 1.5px solid var(--border);
+    background: var(--surface2); color: var(--text2); font-size: 13px; font-weight: 600;
+    cursor: pointer; transition: all .14s;
+  }
+  .pr-scale-btn:hover { border-color: var(--accent); color: var(--accent); }
+  .pr-scale-btn.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+  .day-check { display: flex; flex-direction: column; align-items: center; gap: 4px; cursor: pointer; }
+  .day-check input { display: none; }
+  .day-check span {
+    width: 36px; height: 36px; border-radius: 50%; border: 1.5px solid var(--border);
+    background: var(--surface2); display: flex; align-items: center; justify-content: center;
+    font-size: 11px; font-weight: 600; color: var(--text2); transition: all .14s;
+  }
+  .day-check input:checked + span { background: var(--accent); color: #fff; border-color: var(--accent); }
+  .day-check:hover span { border-color: var(--accent); }
+  .radio-row {
+    display: flex; align-items: flex-start; gap: 10px; padding: 10px 12px;
+    border: 1.5px solid var(--border); border-radius: var(--radius-sm);
+    cursor: pointer; transition: all .14s;
+  }
+  .radio-row:hover { border-color: var(--accent); background: var(--accent-soft); }
+  .radio-row input[type=radio] { margin-top: 3px; flex-shrink: 0; accent-color: var(--accent); }
+  .radio-row strong { font-size: 13px; font-weight: 500; }
+
+  /* EDIT STAFF TABS & RULES */
+  .edit-tab, .plan-tab {
+    padding: 8px 14px; border: none; background: transparent;
+    font-size: 12.5px; font-weight: 500; color: var(--text2);
+    cursor: pointer; border-bottom: 2px solid transparent;
+    transition: all .14s; margin-bottom: -1px; white-space: nowrap; flex-shrink: 0;
+  }
+  .edit-tab.active, .plan-tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+  .edit-tab:hover, .plan-tab:hover { color: var(--text); }
+  .plan-tab.disabled { color: var(--text3) !important; cursor: default !important; opacity: .45; pointer-events: none; }
+  .rules-section { margin-bottom: 14px; }
+  .rules-section-title { font-size: 10.5px; font-weight: 600; color: var(--text3); text-transform: uppercase; letter-spacing: .6px; margin-bottom: 8px; }
+  .rule-row { display: flex; align-items: flex-start; gap: 10px; padding: 8px 0; border-bottom: 1px solid var(--border); }
+  .rule-row:last-child { border-bottom: none; }
+  .rule-toggle { flex-shrink: 0; margin-top: 2px; cursor: pointer; }
+  .rule-toggle-track {
+    width: 34px; height: 20px; border-radius: 10px; background: var(--border);
+    position: relative; transition: background .2s;
+  }
+  .rule-toggle-track::after {
+    content:''; position:absolute; left:2px; top:2px;
+    width:16px; height:16px; border-radius:50%; background:#fff;
+    transition: transform .2s; box-shadow: 0 1px 3px rgba(0,0,0,.2);
+  }
+  .rule-toggle-track.on { background: var(--accent); }
+  .rule-toggle-track.on::after { transform: translateX(14px); }
+  .rule-body { flex: 1; min-width: 0; }
+  .rule-label { font-size: 12.5px; font-weight: 500; color: var(--text); }
+  .rule-desc { font-size: 11px; color: var(--text3); margin-top: 2px; line-height: 1.4; }
+  .rule-select { font-size: 12px; padding: 5px 8px; }
+  .rule-number { font-size: 12px; padding: 4px 8px; }
+
+  /* STAFF POPUP */
+  .staff-popup {
+    position: fixed; z-index: 300;
+    background: var(--surface); border-radius: 14px;
+    box-shadow: var(--shadow-lg); border: 1px solid var(--border);
+    padding: 14px; width: 300px;
+    pointer-events: none; opacity: 0; transition: opacity .15s;
+  }
+  .staff-popup.visible { opacity: 1; pointer-events: all; }
+  .staff-popup-header { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
+  .staff-popup-avatar { width: 34px; height: 34px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 700; color: #fff; flex-shrink: 0; }
+  .staff-popup-name { font-size: 14px; font-weight: 600; }
+  .staff-popup-role { font-size: 11px; color: var(--text2); }
+  .staff-popup-cards { display: grid; grid-template-columns: 1fr 1fr; gap: 7px; }
+  .staff-popup-card { background: var(--surface2); border-radius: var(--radius-sm); padding: 8px 10px; border: 1px solid var(--border); }
+  .staff-popup-card.wide { grid-column: 1 / -1; }
+  .spc-label { font-size: 9.5px; color: var(--text2); font-weight: 600; text-transform: uppercase; letter-spacing: .5px; }
+  .spc-value { font-size: 18px; font-weight: 600; letter-spacing: -.5px; margin-top: 2px; }
+  .spc-sub { font-size: 10px; color: var(--text3); }
+  .spc-bar { height: 3px; background: var(--border); border-radius: 2px; margin-top: 5px; overflow: hidden; }
+  .spc-bar-fill { height: 100%; border-radius: 2px; }
+
+  .spc-notes {
+    padding: 7px 10px; border-radius: var(--radius-sm);
+    background: rgba(191,90,242,.08); border-left: 3px solid var(--purple);
+    font-size: 11.5px; color: var(--text2); line-height: 1.5; grid-column: 1/-1;
+  }
+  .spc-notes-label { font-size: 9.5px; font-weight: 600; color: var(--purple); text-transform: uppercase; letter-spacing: .5px; margin-bottom: 3px; }
+
+  /* KI PREVIEW MODAL */
+  .modal-wide { width: 680px; max-width: 96vw; max-height: 88vh; display: flex; flex-direction: column; }
+  .ki-preview-scroll { flex: 1; overflow-y: auto; margin: 0 -4px; padding: 0 4px; }
+  .ki-staff-block { margin-bottom: 18px; }
+  .ki-staff-header {
+    display: flex; align-items: center; gap: 8px;
+    font-size: 12.5px; font-weight: 600; margin-bottom: 8px;
+    padding: 6px 10px; background: var(--surface2); border-radius: var(--radius-sm);
+  }
+  .ki-entries { display: flex; flex-wrap: wrap; gap: 6px; }
+  .ki-entry {
+    display: flex; align-items: center; gap: 5px;
+    padding: 5px 9px; border-radius: 8px; font-size: 11.5px;
+    border: 1.5px solid var(--border); background: var(--surface);
+    transition: all .14s; cursor: default;
+  }
+  .ki-entry.accepted { background: var(--green-soft); border-color: rgba(40,205,65,.3); }
+  .ki-entry.rejected { background: var(--red-soft); border-color: rgba(255,59,48,.2); opacity: .55; text-decoration: line-through; }
+  .ki-entry-date { font-size: 10px; color: var(--text3); min-width: 34px; }
+  .ki-entry-shift { font-size: 13px; }
+  .ki-entry-label { font-size: 11px; font-weight: 500; }
+  .ki-entry-btns { display: flex; gap: 3px; margin-left: 4px; }
+  .ki-btn { width: 20px; height: 20px; border-radius: 50%; border: none; cursor: pointer; font-size: 11px; display: flex; align-items: center; justify-content: center; transition: all .14s; }
+  .ki-btn-ok  { background: var(--green-soft); color: var(--green); }
+  .ki-btn-ok:hover  { background: var(--green); color: #fff; }
+  .ki-btn-no  { background: var(--red-soft); color: var(--red); }
+  .ki-btn-no:hover  { background: var(--red); color: #fff; }
+  .ki-summary {
+    display: flex; gap: 10px; padding: 10px 0 14px;
+    font-size: 12px; color: var(--text2); align-items: center; flex-wrap: wrap;
+  }
+  .ki-badge { padding: 3px 9px; border-radius: 20px; font-size: 11px; font-weight: 600; }
+  .ki-badge-green { background: var(--green-soft); color: #1a8a2e; }
+  .ki-badge-orange { background: var(--orange-soft); color: #8a4800; }
+  .ki-badge-red { background: var(--red-soft); color: var(--red); }
+  .ki-rule { font-size: 11px; color: var(--text3); padding: 2px 0; display: flex; align-items: flex-start; gap: 5px; }
+  .ki-rules-box { background: var(--surface2); border-radius: var(--radius-sm); padding: 10px 12px; margin-bottom: 14px; }
+
+  /* TOAST */
+  .toast-area { position: fixed; bottom: 24px; right: 24px; z-index: 200; display: flex; flex-direction: column; gap: 7px; }
+  .toast {
+    background: var(--text); color: #fff; padding: 10px 15px; border-radius: var(--radius-sm);
+    font-size: 12.5px; font-weight: 500; box-shadow: var(--shadow-lg);
+    transform: translateY(16px); opacity: 0; transition: all .25s; pointer-events: none; max-width: 280px;
+  }
+  .toast.show { transform: translateY(0); opacity: 1; }
+  #monthSlider::-webkit-scrollbar { display: none; }
+  #monthSlider { -ms-overflow-style: none; scrollbar-width: none; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: rgba(0,0,0,.14); border-radius: 3px; }
+</style>
+</head>
+<body>
+<div class="app">
+
+<!-- UNIFIED HEADER -->
+<header class="app-header">
+  <div class="app-header-left" style="position:relative">
+    <div class="logo" onclick="toggleSettingsMenu()" style="cursor:pointer" title="Einstellungen">
+      <div class="logo-icon"><img src="data:image/png;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/4gHYSUNDX1BST0ZJTEUAAQEAAAHIAAAAAAQwAABtbnRyUkdCIFhZWiAH4AABAAEAAAAAAABhY3NwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAQAA9tYAAQAAAADTLQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAlkZXNjAAAA8AAAACRyWFlaAAABFAAAABRnWFlaAAABKAAAABRiWFlaAAABPAAAABR3dHB0AAABUAAAABRyVFJDAAABZAAAAChnVFJDAAABZAAAAChiVFJDAAABZAAAAChjcHJ0AAABjAAAADxtbHVjAAAAAAAAAAEAAAAMZW5VUwAAAAgAAAAcAHMAUgBHAEJYWVogAAAAAAAAb6IAADj1AAADkFhZWiAAAAAAAABimQAAt4UAABjaWFlaIAAAAAAAACSgAAAPhAAAts9YWVogAAAAAAAA9tYAAQAAAADTLXBhcmEAAAAAAAQAAAACZmYAAPKnAAANWQAAE9AAAApbAAAAAAAAAABtbHVjAAAAAAAAAAEAAAAMZW5VUwAAACAAAAAcAEcAbwBvAGcAbABlACAASQBuAGMALgAgADIAMAAxADb/2wBDAAUDBAQEAwUEBAQFBQUGBwwIBwcHBw8LCwkMEQ8SEhEPERETFhwXExQaFRERGCEYGh0dHx8fExciJCIeJBweHx7/2wBDAQUFBQcGBw4ICA4eFBEUHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh7/wAARCACEAIwDASIAAhEBAxEB/8QAHQABAAEFAQEBAAAAAAAAAAAAAAgCBAUGBwMJAf/EAEQQAAEDAwIDBQMHCgMJAAAAAAECAwQABREGIQcSMQgTQVFhInGBFBUyQlJiciM4c4KRkpOhorJjscEWMzQ3Q0SDo7P/xAAaAQACAwEBAAAAAAAAAAAAAAAABAIDBQYB/8QAKxEAAgIBAwIGAQQDAAAAAAAAAAECAxEEEiExQQUTMlFhkXEUM1PRInKh/9oADAMBAAIRAxEAPwCZdKUoAUpXlLkxocdciXIajsoGVOOrCUp95OwoA9aVp83ijw5hqKX9b2DmT1Dc1DhH7pNWKOM3C9aygaztoI+0VAftIxU1VN9mQdkF3Rv1K1GLxP4dSSA1rjTwJ6BdwbR/cRWw2y72m6J5rZdIU5OM5jyEuD+kmvHCS6o9Uovoy9pSlRJClKUAKUpQApSlAClKUAKUrl/aY169oThu87bne7u1yX8jhqB9prIJW4PwpGx8FKTUoQc5KKIzkoRcmalx07QkTS0yRpzR7TNxvLRLciU5uxFV0KQB9NY8R0B65OQIsan1DqTVtxVcNR3iXcnySR3y/ZR6JSPZSPQACsXFZKzzKJJJySfGsowwABtXQafSwrXBhX6mVj5MeiGPKvT5EPKsolsDwqrkFNqtCjsMOYQ8qpERSFBSCUqHQjYis0UCvwtijy0eqw9LTrDW9mSE2vVl8iIHRtuc4Efu5x/KtzsvaC4rWsoDt4jXNtHREyGg596kBKj+2tFLIPhVCo4PhVMtNCXVFkdTOPRneLB2rrk2AjUGj4z+erkGUpvH6iwrP7wro2m+0lwzupSiZKuFlcI6TYpKc/ibKh8TioeLig+FW7kMeVLT8PrfRYGoa+xdXk+jWntRWDUMcv2K9W+5tgAqMWQlzl94B2+NZSvmawJUGSiVCkPRn2zlDrKyhaT5gjcV1XQXaF4g6YW2xdZCdRwE7Kbmn8sB914e1n1VzUlZ4dKPpeRuvXxfqWCbtK59wq4vaQ4htpYtspUO6hOV26VhLuw3KD0WOu43x1AroNIShKDxJD0ZKSymKUpUSQqLPbueWq4aRjZ9hLcpePUlof6VKaoy9uyCsxdJ3RKD3bbslhavAFQbUkf0rprR/vIW1f7LI3QkbCsigYFWEE7CsgnpXSQ6HOzP2lKVYQPeBDl3CY1CgxnpMl5XK200gqWs+QA3Ndq0j2e7k7B+c9aXmPYYqU8ymklK3Ej7yieRH9VatwU4hWnh/wDO0yVYVXC5SGkphvBQHd4zlJJ3CTkEkb7Vreudcal1nOVJvtycdbCstxkHlZa/Cjp8TknxJpWzz5y2w/xXv/QzX5MI7pcv2/s7G5p/s42Qhmdf3bk4nYqTIee5viwkJqtq1dmq7Zai3FUBZ2yp+S3j4ugpqOtKj+kf8kvsl+qX8cfo79fOz9b7pb1XLh9quNc2fqtPuIWFegdb2z6FI99cR1Lp+7adurlrvcB6FLb6tuDqPMEbKHqMiq9OX686duSLjZLjIgyUn6bS8BQ8lDooehyKkTYrpY+Pei37LeGWIOqre0XGXkD4d4nx5CcBSfDIPliDlbp+ZvdH37oko1X8QW2Xt2ZF1bQPhVs9HBHSszd7fLtV0lWye0WZUV1TLyD9VSTgj+VWa0ginMJoUUmnyYZCpMCW1MhPux5LKw4060opWhQOQQRuCKmx2Z+KLnELS70S7qQL9a+VEpQAAkIOeV0DwJwQoDYHfbmAEMpbYwa6N2Sro9bOONuioXytXKO/FeHgQGy4P6m01na2lSg33RoaO5xml2ZOKlKVgm4K5f2pNOnUXBm7d02VyLby3FkD/Dzzn+GpyuoV5ymGZUV2LJbS6y8gtuIUNlJIwQfeKnCWySl7EZx3RcT5qW9ewrKtnIqnWNhf0lre76ckc3NAlLaQpQwVozlCv1klJ+NelqMZUuOJinBG7xPfFvHMEZ9rGfHGcV1NUk45RzNkWnhl1a7dPuk1EK2wpE2Sv6LTDZWs/Ab11jSPZ61ldkoevD0SxsK3w6e9ex+BJx8CoGtnncYdCaGs6bVwysDUl1aAVyXm1Nozj65OHHFe/A8jXJNYcSNaaqUtN2vskx1/9swe6Zx5cqcZ/Wyao36i30ravnr9F2yir1Pc/jp9nXVcL+DOlttUa1MuSj6bIlIR/wCtsFY/bVKr12bLftHsy5mPEMSF5/iKFcp4e8NtR65t1zm2MRCm3gZQ87yqdUQSEI2IzgeJA6b1qc+HLt8x2FOjOxpLKilxp1BStB8iD0qKoU5NSsba+cHrvcEnGtJP4ySytQ4QT+HU3WcbRET5qiKUlxK7e33x5SAcb/eHiK05OoezhcP+J0+5Ez1zGeRj+Go1+aG/NI1D+kf/ALkVHiqaNOpua3Ph46l1+ocFB7Vys9CRY0DwI1Rtp/Vptry/920ZnLv5cj45j7ga9bBwd1dw+1bD1TpaZD1G1H5uaKpz5K48hSSCnJ5k+Oc56gbVHBCVLUEpSVKJwABkk1IHhxo7VmkOH83Vl41lcNJIaSHY0NSQ6gp/xGVHHMo4ATsf24qV8J1Rx5mU+MPnP1yRpnC2WdmGucrjH3wc346yJM/iNOukmwXCyLlpbUqPLb5Vc6UJSogjZQJGcjrWimpC6c45af1NB+YuJ1giuR1jBlNMlbYPmUbqSfvIJOegFcP1l8xp1NcBppT6rP3x+SF4Hm5PjvjrjO+MZ3pnTymlslHGPoX1EYt74yzn7NflfRreey3Ccm8eLGpCSURkyH3CPqpDKwD+8pI+NaBNcABqS/Yi0oWLXeNaSW8Llr+QxCRv3aSFOEeYKuUe9BqnW2KNbLdHBysRJKlKVzp0ApSlAEUO2zpIw7/ataxWsNTUfIpigNg6gEtqPqpGR/464RCcyBU++LukWtb8Pbtp1QT377PPFWr6j6fabOfAZAB9Ca+fbAdjSHI0htTTzSyhxChgpUDggjzBrc8Ou3Q2vsYuvq2z3LuZcHIpVDSsiq61UZbJHdlCW5A0HrCcyEqcjqDqAobEpaURn02r9b4lcKeI8VqLr+yC2XAJCRKwopB+66j2wPRQwPM1b9mL/llrn9Gr/wCK6jxWbGiNt1jfDTXK/BoyvlVTWlynnh/klHG0BpZ6wSbBpfi2pmzzMlyEZMeQg5wT0wR0HrtWEHArQdvOb1xGaQB1/KMMf3KVWH0jpnT8zszXq/SbREcukdx7upZR+UThSMb/ABNcPoqqsk5KNjWH7ILbIRUXKCeV7skixqPgfwyy/p2MrUF5bGEPJJdIPge9UAhPvQCfSuP8TOI2otezw5dHgzCaVmPCZJDTfqftK+8fhgbVp1Kaq0sIS3Pl+7FrNTKa2rheyFeTy8CvRRwKspjuAd6vk8Ioissohwpl5vEO0W9ovS5j6GGUD6y1EAD9pr6IaG09E0ppC16dhYLMCOlrmxjnV1Us+qlEqPvqMfYy0QbnqSXrmczmLbcx4PMNlPqT7Sh+FBx71jyqWtc/4hdunsXY3tBVthufcUpSs8fFKUoAVC3tb6NOmeJXz/Ea5bffgX9hsmQnAdHxyF+9R8qmlWjcctDo19w7n2VCU/L2x8pt6ztyvoB5RnwCgSk+QVnwpjS2+VYn2KNTV5tbXcgpEcykb1eDcViI5dYeWw+hTbraihaFDBSoHBBHgc1k2l5FdNCWUc3OOGdy7P2qdP2Ph9rSHdrrGhyHmSplp1eFO5aUnCB9Y5I2G+9cRpSvIVKEpSXc9na5xjF9iQ+hvzSNQ/pH/wC5FR4qQ+hvzSNQ/pH/AO5FR4qjS+qz/Yv1Xpr/AAKUqlasCmxQoeXgVa2+3zr7e4dmtrRemTX0sMoHipRwM+Q8z4CqZj2Ad6kb2NeHih3vES6sYKgpi1JUPDo498d0D9f0pTVXqqDY3pqXZJI79w+0vB0bo226bt4BahshKnMYLrh3Ws+qlEn44rPUpXNNtvLOiSSWEKUpXh6KUpQApSlAERO15w4csmof9u7THPzbcnAJ6UDZmQfrnyC/P7WftCuJRHgQN6+jl8tVvvdolWi6xW5UKW2WnmljZST/AJHxBG4O4qCnGvhpdOGepC0e9k2SUomBMI6jr3a/ALH8xuPEDZ0Oqytkupka3TYe+PQ1xCsiqqx0eSCOtXaHgfGtdSyZTjg6XYeJSLZwcumgja1OPTHVKRKDuEpSopJynGSfZ238fTfnVUd4KpU6B41GEIwy135PZTlPCfY9FKAq0kvAA71S/IAHWstw80Zf+IWpG7LYmMgYVJkrB7qMjP0lH/IdSelRssUVlk663J4RkuDGgJ3EnWrVtQHG7VGIduUlP/Tbz9EH7asYHxPQGp7W2FFttvj2+CwiPFjNJaZaQMJQhIwAPcBWB4aaJs2gdLMWKzNkpT7ch9Y/KSHCN1q/0HgMCtmrnNVqHdL4N/TUKmPyKUpSwyKUpQApSlAClKUAKsNQ2W1ahtD9ovUBidBkJ5XGXU5B9R4gjwI3B6Vf0oTxygayRS4m9mO5w3XZ+gJonRyeb5uluBDqPRDhwlQ/FykDxNcQv+m9VabcLd+09dLdg45n4ykoV7lYwR7jX0cpT1WvsgsPkSs0NcnlcHzME0edX9mtl9vz4j2Sz3C5On6sWOpw/HlBxX0fXGjrXzrjtKUPEoBNeoAAwBgVc/E32j/0pXhyzzIh/wAOOzVqi9ONzNZSRYoJIJjNqS5KcHltlKPeckfZqUmidJaf0ZZG7Pp23tw4yfaWRut1XipajupXqfcMDas5SkrtRO31Mdq08KvShSlKoLhSlKAFKUoAUpSgBSlKAFKUoAUpSgBSlKAFKUoAUpSgBSlKAFKUoA//2Q==" style="width:100%;height:100%;object-fit:cover;display:block"></div>
+      <div>
+        <div class="logo-text" style="font-size:11px;font-weight:600;letter-spacing:-.2px">Nicos Dienstplan</div>
+        <div class="logo-sub" style="font-size:9px;color:var(--text3);margin-top:1px">Palliativ Care</div>
+      </div>
+    </div>
+
+    <!-- Settings Menu -->
+    <div id="settingsMenu" style="display:none;position:absolute;top:57px;left:0;width:240px;background:var(--surface);border:1px solid var(--border);border-radius:12px;box-shadow:0 8px 32px rgba(0,0,0,.12);z-index:100;overflow:hidden">
+      <div style="padding:14px 16px;border-bottom:1px solid var(--border);background:var(--surface2)">
+        <div style="font-size:12px;font-weight:600;color:var(--text)" id="settingsUserName">–</div>
+        <div style="font-size:10px;color:var(--text3);margin-top:2px" id="settingsUserRole">–</div>
+      </div>
+      <div style="padding:6px 0">
+        <div class="settings-menu-item" onclick="openUserManagement()">👥 Benutzerverwaltung</div>
+        <div class="settings-menu-item" onclick="showToast('Standorte folgt bald')">🏢 Standorte</div>
+        <div class="settings-menu-item" onclick="showToast('Einstellungen folgt bald')">⚙️ Allgemeine Einstellungen</div>
+        <div class="settings-menu-item" onclick="showToast('Datenschutz & TOM folgt bald')">🔒 Datenschutz & TOM</div>
+      </div>
+    </div>
+  </div>
+  <div class="app-header-right">
+    <!-- Month Slider -->
+    <div id="monthSlider" style="position:relative;overflow:visible;height:57px;width:135px;flex-shrink:0;margin-left:45px;cursor:pointer"
+         onmousedown="sliderDragStart(event)" ontouchstart="sliderTouchStart(event)">
+      <div id="monthSliderTrack" style="display:flex;align-items:center;height:100%;position:absolute;top:0;left:0"></div>
+    </div>
+    <button class="btn btn-secondary btn-sm" onclick="openAddEntry()">+ Eintrag</button>
+    <button onclick="openAddStaff()" title="Personal hinzufügen" style="position:relative;width:32px;height:32px;border-radius:50%;border:1.5px solid var(--border);background:var(--surface2);cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--text2);transition:all .15s;flex-shrink:0" onmouseover="this.style.background='var(--accent-soft)';this.style.borderColor='var(--accent)';this.style.color='var(--accent)'" onmouseout="this.style.background='var(--surface2)';this.style.borderColor='var(--border)';this.style.color='var(--text2)'">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+        <circle cx="12" cy="7" r="4"/>
+      </svg>
+      <div style="position:absolute;top:-3px;right:-3px;width:13px;height:13px;border-radius:50%;background:var(--accent);display:flex;align-items:center;justify-content:center;border:1.5px solid white">
+        <svg width="7" height="7" viewBox="0 0 10 10" fill="white"><line x1="5" y1="1" x2="5" y2="9" stroke="white" stroke-width="2" stroke-linecap="round"/><line x1="1" y1="5" x2="9" y2="5" stroke="white" stroke-width="2" stroke-linecap="round"/></svg>
+      </div>
+    </button>
+    <button id="btnWuensche" onclick="toggleWuensche()" title="Wünsche" style="width:32px;height:32px;border-radius:50%;border:1.5px solid var(--border);background:var(--surface2);cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--text2);transition:all .15s;flex-shrink:0"
+      onmouseover="this.style.background='var(--red-soft)';this.style.borderColor='var(--red)';this.style.color='var(--red)'"
+      onmouseout="if(!state.showWuensche){this.style.background='var(--surface2)';this.style.borderColor='var(--border)';this.style.color='var(--text2)'}">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
+      </svg>
+    </button>
+    <button onclick="openKIModal()" title="KI-Modus" style="width:32px;height:32px;border-radius:50%;border:1.5px solid var(--border);background:var(--surface2);cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--text2);transition:all .15s;flex-shrink:0"
+      onmouseover="this.style.background='var(--accent-soft)';this.style.borderColor='var(--accent)';this.style.color='var(--accent)'"
+      onmouseout="this.style.background='var(--surface2)';this.style.borderColor='var(--border)';this.style.color='var(--text2)'">
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+        <!-- Roboter-Kopf eckig -->
+        <rect x="4" y="8" width="16" height="12" rx="2"/>
+        <!-- Augen -->
+        <circle cx="9" cy="13" r="1.5" fill="currentColor" stroke="none"/>
+        <circle cx="15" cy="13" r="1.5" fill="currentColor" stroke="none"/>
+        <!-- Mund -->
+        <line x1="9" y1="17" x2="15" y2="17"/>
+        <!-- Antenne -->
+        <line x1="12" y1="8" x2="12" y2="4"/>
+        <circle cx="12" cy="3.5" r="1.2" fill="currentColor" stroke="none"/>
+      </svg>
+    </button>
+    <button id="btnDraftStatus" onclick="openReleaseModal()" title="Plan freigeben / Entwurf" style="width:32px;height:32px;border-radius:50%;border:1.5px solid var(--border);background:var(--surface2);cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--text2);transition:all .15s;flex-shrink:0"
+      onmouseover="this.style.background='var(--surface2)';this.style.filter='brightness(.9)'"
+      onmouseout="this.style.filter=''">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+        <circle cx="5" cy="12" r="2.5" fill="currentColor" stroke="none"/>
+        <circle cx="12" cy="12" r="2.5" fill="currentColor" stroke="none"/>
+        <circle cx="19" cy="12" r="2.5" fill="currentColor" stroke="none"/>
+      </svg>
+    </button>
+    <button disabled title="Folgt bald" style="width:32px;height:32px;border-radius:50%;border:1.5px solid var(--border);background:var(--surface2);display:flex;align-items:center;justify-content:center;opacity:.35;flex-shrink:0;cursor:default"></button>
+    <button disabled title="Folgt bald" style="width:32px;height:32px;border-radius:50%;border:1.5px solid var(--border);background:var(--surface2);display:flex;align-items:center;justify-content:center;opacity:.35;flex-shrink:0;cursor:default"></button>
+    <div style="flex:1"></div>
+    <button onclick="doLogout()" title="Abmelden" style="width:32px;height:32px;border-radius:50%;border:1.5px solid var(--border);background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--text3);transition:all .15s;flex-shrink:0" onmouseover="this.style.background='var(--red-soft)';this.style.color='var(--red)';this.style.borderColor='var(--red)'" onmouseout="this.style.background='transparent';this.style.color='var(--text3)';this.style.borderColor='var(--border)'">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 3v9"/><path d="M6.3 5.7a8 8 0 1 0 11.4 0"/></svg>
+    </button>
+  </div>
+</header>
+
+<div class="app-body">
+
+
+<!-- MAIN -->
+<main class="main">
+
+  <div class="schedule-wrapper">
+    <div class="grid-scroll">
+      <div class="schedule-grid">
+        <div class="grid-header" id="gridHeader"></div>
+        <div id="gridBody"></div>
+      </div>
+    </div>
+  </div>
+</main>
+</div><!-- end app-body -->
+</div><!-- end app -->
+
+<!-- Entry Modal -->
+<div class="modal-overlay" id="entryModal">
+  <div class="modal">
+    <div class="modal-title" id="entryModalTitle">Dienst eintragen</div>
+    <div class="modal-sub" id="entryModalSub">Mitarbeiter, Tag und Dienst wählen</div>
+    <div class="form-group">
+      <label class="form-label">Mitarbeiter/in</label>
+      <select class="form-select" id="entryStaff"></select>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Tag</label>
+      <select class="form-select" id="entryDay"></select>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Dienst wählen</label>
+      <div class="shift-picker" id="shiftPicker"></div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Zusatzinfo (optional)</label>
+      <input type="text" class="form-input" id="entryInfo" placeholder="z.B. Vertretung, Tour 3, Notfallbereitschaft…" maxlength="80">
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" onclick="closeModal('entryModal')">Abbrechen</button>
+      <button class="btn btn-primary" onclick="saveEntry()">Speichern</button>
+    </div>
+  </div>
+</div>
+
+<!-- Staff Modal -->
+<div class="modal-overlay" id="staffModal">
+  <div class="modal">
+    <div class="modal-title">Personal hinzufügen</div>
+    <div class="modal-sub">Neue Mitarbeiter/in für den Dienstplan erfassen</div>
+    <div class="form-group">
+      <label class="form-label">Vorname &amp; Nachname</label>
+      <input type="text" class="form-input" id="newName" placeholder="z.B. Maria Müller">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Funktion</label>
+      <select class="form-select" id="newRole">
+        <option>Pflegefachkraft</option>
+        <option>Pflegehilfskraft</option>
+        <option>Ärztin/Arzt</option>
+        <option>Fallsteuerung</option>
+        <option>PDL</option>
+        <option>Hauswirtschaft</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Wochensoll-Stunden</label>
+      <input type="number" class="form-input" id="newSoll" value="38.5" min="1" max="60" step="0.5">
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" onclick="closeModal('staffModal')">Abbrechen</button>
+      <button class="btn btn-primary" onclick="saveStaff()">Hinzufügen</button>
+    </div>
+  </div>
+</div>
+
+<!-- Delete Staff Modal -->
+<div class="modal-overlay" id="deleteModal">
+  <div class="modal">
+    <div class="modal-title">Mitarbeiter/in löschen</div>
+    <div class="modal-sub" id="deleteModalSub"></div>
+    <div class="delete-warn">
+      ⚠️ Einträge für <strong id="deleteMonthLabel"></strong> werden ebenfalls entfernt. Dieser Vorgang kann nicht rückgängig gemacht werden.
+    </div>
+    <div class="form-group">
+      <label class="form-label">Was soll gelöscht werden?</label>
+      <select class="form-select" id="deleteScope">
+        <option value="month">Nur Einträge im aktuellen Monat löschen (Person bleibt im Plan)</option>
+        <option value="all">Person vollständig entfernen (alle Monate)</option>
+      </select>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" onclick="closeModal('deleteModal')">Abbrechen</button>
+      <button class="btn btn-danger" onclick="confirmDelete()">🗑 Löschen</button>
+    </div>
+  </div>
+</div>
+
+<!-- Release Modal -->
+<div class="modal-overlay" id="releaseModal">
+  <div class="modal">
+    <div class="modal-title">Plan freigeben</div>
+    <div class="modal-sub">Dienstplan für den ausgewählten Monat freigeben</div>
+    <div class="release-info" id="releaseInfo"></div>
+    <div class="form-group">
+      <label class="form-label">Notiz zur Freigabe (optional)</label>
+      <textarea class="form-textarea" id="releaseNote" placeholder="z.B. Alle Dienste besetzt, KW-Planung abgeschlossen…"></textarea>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" onclick="closeModal('releaseModal')">Abbrechen</button>
+      <button class="btn btn-primary" onclick="releaseMonth()">✅ Jetzt freigeben</button>
+    </div>
+  </div>
+</div>
+
+<!-- Shift Settings Modal -->
+<div class="modal-overlay" id="shiftSettingsModal">
+  <div class="modal">
+    <div class="modal-title">⚙️ Dienststunden anpassen</div>
+    <div class="modal-sub">Hinterlegte Arbeitsstunden pro Diensttyp bearbeiten</div>
+    <div id="shiftSettingsBody"></div>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" onclick="closeModal('shiftSettingsModal')">Schließen</button>
+      <button class="btn btn-primary" onclick="saveShiftSettings()">Speichern</button>
+    </div>
+  </div>
+</div>
+
+<!-- Edit Staff Modal – Stammdaten -->
+<div class="modal-overlay" id="editStaffModal">
+  <div class="modal" style="width:460px">
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:4px">
+      <button onclick="closeModal('editStaffModal')" style="width:14px;height:14px;border-radius:50%;background:#ff5f57;border:none;cursor:pointer;flex-shrink:0;transition:filter .14s" onmouseover="this.style.filter='brightness(.8)'" onmouseout="this.style.filter=''"></button>
+      <div class="modal-title" style="margin-bottom:0">👤 Mitarbeiter/in bearbeiten</div>
+    </div>
+    <div class="modal-sub" id="editStaffSub"></div>
+    <div class="form-group">
+      <label class="form-label">Vorname &amp; Nachname</label>
+      <input type="text" class="form-input" id="editNameInput" placeholder="z.B. Maria Müller">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Funktion / Berufsbeschreibung</label>
+      <select class="form-select" id="editRoleSelect">
+        <option>Pflegefachkraft</option>
+        <option>Pflegehilfskraft</option>
+        <option>Ärztin/Arzt</option>
+        <option>Fallsteuerung</option>
+        <option>PDL</option>
+        <option>Hauswirtschaft</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Wochensoll-Stunden</label>
+      <input type="number" class="form-input" id="editSollInput" min="1" max="60" step="0.5">
+    </div>
+    <div class="form-group">
+      <label class="form-label">📌 Notizen (nur für Menschen, nicht für KI)</label>
+      <textarea class="form-textarea" id="editNotesInput" placeholder="z.B. chronische Erkrankung beachten, Ansprechpartner für Tour 3…" style="min-height:70px"></textarea>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" onclick="closeModal('editStaffModal')">Abbrechen</button>
+      <button class="btn btn-secondary" onclick="openPlanRules()">📋 Planungsregeln</button>
+      <button class="btn btn-primary" onclick="saveEditStaff()">Speichern</button>
+    </div>
+  </div>
+</div>
+
+<!-- Planungsregeln Modal -->
+<div class="modal-overlay" id="planRulesModal">
+  <div class="modal" style="width:580px;max-height:90vh;display:flex;flex-direction:column">
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:4px">
+      <button onclick="closeModal('planRulesModal')" style="width:14px;height:14px;border-radius:50%;background:#ff5f57;border:none;cursor:pointer;flex-shrink:0;transition:filter .14s" onmouseover="this.style.filter='brightness(.8)'" onmouseout="this.style.filter=''"></button>
+      <div class="modal-title" style="margin-bottom:0">📋 Planungsregeln</div>
+    </div>
+    <div class="modal-sub" id="planRulesSub"></div>
+
+    <!-- Sub-Tabs -->
+    <div style="display:flex;gap:0;border-bottom:1px solid var(--border);flex-shrink:0;overflow-x:auto">
+      <button class="plan-tab active" id="ptab_vertrag"        onclick="switchPlanTab('vertrag')">📄 Vertrag</button>
+      <button class="plan-tab"        id="ptab_dienste"         onclick="switchPlanTab('dienste')">🔧 Dienste</button>
+      <button class="plan-tab"        id="ptab_rufbereitschaft" onclick="switchPlanTab('rufbereitschaft')">📲 Rufbereitschaft</button>
+      <button class="plan-tab"        id="ptab_wochenende"      onclick="switchPlanTab('wochenende')">📅 Wochenende</button>
+      <button class="plan-tab"        id="ptab_wechsel"         onclick="switchPlanTab('wechsel')">🔄 Kurzer Wechsel</button>
+      <button class="plan-tab"        id="ptab_frueh"           onclick="switchPlanTab('frueh')">🌅 Frühdienst</button>
+      <button class="plan-tab"        id="ptab_spaet"           onclick="switchPlanTab('spaet')">🌆 Spätdienst</button>
+      <button class="plan-tab"        id="ptab_frei"            onclick="switchPlanTab('frei')">✕ Frei</button>
+      <button class="plan-tab"        id="ptab_fza"             onclick="switchPlanTab('fza')">⚖️ FZA</button>
+    </div>
+
+    <div style="flex:1;overflow-y:auto;padding:18px 4px 8px">
+
+      <!-- ── TAB 1: VERTRAGSARBEITSZEIT ── -->
+      <div id="ptab_vertrag_content">
+        <div class="pr-info">📄 Definiert an welchen Wochentagen diese Person grundsätzlich arbeitet. Der KI-Modus plant sie an allen anderen Tagen <strong>nicht</strong> ein.</div>
+        <div class="form-group">
+          <label class="form-label">Vertragsarbeitszeit</label>
+          <select class="form-select" id="pr_vertrag_preset" onchange="applyVertragPreset()">
+            <option value="">– Vorlage wählen –</option>
+            <option value="moSo">Montag – Sonntag (Vollzeit alle Tage)</option>
+            <option value="moFr">Montag – Freitag</option>
+            <option value="moMi">Montag, Mittwoch</option>
+            <option value="custom">Individuell (unten wählen)</option>
+          </select>
+        </div>
+        <div class="form-group" style="margin-top:10px">
+          <label class="form-label">Arbeitstage (individuell)</label>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:6px" id="pr_vertrag_days">
+            <label class="day-check"><input type="checkbox" id="vd_1" value="1" onchange="updateWeTab()"><span>Mo</span></label>
+            <label class="day-check"><input type="checkbox" id="vd_2" value="2" onchange="updateWeTab()"><span>Di</span></label>
+            <label class="day-check"><input type="checkbox" id="vd_3" value="3" onchange="updateWeTab()"><span>Mi</span></label>
+            <label class="day-check"><input type="checkbox" id="vd_4" value="4" onchange="updateWeTab()"><span>Do</span></label>
+            <label class="day-check"><input type="checkbox" id="vd_5" value="5" onchange="updateWeTab()"><span>Fr</span></label>
+            <label class="day-check"><input type="checkbox" id="vd_6" value="6" onchange="updateWeTab()"><span>Sa</span></label>
+            <label class="day-check"><input type="checkbox" id="vd_0" value="0" onchange="updateWeTab()"><span>So</span></label>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── TAB 1b: DIENSTE ── -->
+      <div id="ptab_dienste_content" style="display:none">
+        <div class="pr-info">🔧 Welche Dienstarten sollen für diese Person vom KI-Modus berücksichtigt werden? Nicht angehakte Dienste werden nie eingeplant.</div>
+        <div style="display:flex;flex-direction:column;gap:10px;margin-top:4px">
+          <label class="radio-row" style="cursor:default">
+            <input type="checkbox" id="pr_dienst_F"  onchange="updateDiensteTabs()" style="accent-color:var(--accent);width:16px;height:16px">
+            <div><strong>🌅 Frühdienst</strong><div class="rule-desc">Frühschicht wird eingeplant</div></div>
+          </label>
+          <label class="radio-row" style="cursor:default">
+            <input type="checkbox" id="pr_dienst_S"  onchange="updateDiensteTabs()" style="accent-color:var(--accent);width:16px;height:16px">
+            <div><strong>🌆 Spätdienst</strong><div class="rule-desc">Spätschicht wird eingeplant</div></div>
+          </label>
+          <label class="radio-row" style="cursor:default">
+            <input type="checkbox" id="pr_dienst_RU" onchange="updateDiensteTabs()" style="accent-color:var(--accent);width:16px;height:16px">
+            <div><strong>📲 Rufbereitschaft</strong><div class="rule-desc">Rufbereitschaft wird eingeplant</div></div>
+          </label>
+          <label class="radio-row" style="cursor:default">
+            <input type="checkbox" id="pr_dienst_FS" onchange="updateDiensteTabs()" style="accent-color:var(--accent);width:16px;height:16px">
+            <div><strong>📋 Fallsteuerung</strong><div class="rule-desc">Fallsteuerungsdienst wird eingeplant</div></div>
+          </label>
+        </div>
+      </div>
+
+      <!-- ── TAB 2: RUFBEREITSCHAFT ── -->
+      <div id="ptab_rufbereitschaft_content" style="display:none">
+        <div class="pr-info">📲 Einstellungen zur Rufbereitschaft. Die Wichtigkeit bestimmt wie stark der KI-Modus diese Präferenz gewichtet.</div>
+
+        <!-- Keine RU Toggle -->
+        <div class="rule-row" style="background:var(--red-soft);border-radius:var(--radius-sm);border:1px solid rgba(255,59,48,.18);margin-bottom:12px">
+          <div class="rule-toggle" onclick="toggleKeinRU()"><div class="rule-toggle-track" id="tog_keinRU"></div></div>
+          <div class="rule-body"><div class="rule-label" style="color:var(--red)">Keine Rufbereitschaft!</div><div class="rule-desc">Diese Person wird nie für RU eingeplant – alle weiteren RU-Einstellungen entfallen</div></div>
+        </div>
+
+        <div id="ru_details_block">
+          <div class="pr-section-title">Folge-Regel nach RU</div>
+          <div class="rule-row">
+            <div class="rule-toggle" onclick="toggleRule('afterRuFrei',['afterRuSpaet'])"><div class="rule-toggle-track" id="tog_afterRuFrei"></div></div>
+            <div class="rule-body"><div class="rule-label">Nach Rufbereitschaft → Frei</div><div class="rule-desc">Tag nach RU automatisch freihalten</div></div>
+          </div>
+          <div class="rule-row">
+            <div class="rule-toggle" onclick="toggleRule('afterRuSpaet',['afterRuFrei'])"><div class="rule-toggle-track" id="tog_afterRuSpaet"></div></div>
+            <div class="rule-body"><div class="rule-label">Nach Rufbereitschaft → Spätdienst</div><div class="rule-desc">Tag nach RU als sanften Spätdienst planen</div></div>
+          </div>
+
+          <div class="pr-section-title" style="margin-top:14px">Rufbereitschaft gewünscht?</div>
+          <div class="pr-scale-row">
+            <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--text3);margin-bottom:4px"><span>eher nicht</span><span>neutral</span><span>sehr gerne</span></div>
+            <div class="pr-scale" id="pr_ruWunsch_scale">
+              <button class="pr-scale-btn" onclick="setPrScale('ruWunsch',1)">1</button>
+              <button class="pr-scale-btn" onclick="setPrScale('ruWunsch',2)">2</button>
+              <button class="pr-scale-btn" onclick="setPrScale('ruWunsch',3)">3</button>
+              <button class="pr-scale-btn" onclick="setPrScale('ruWunsch',4)">4</button>
+              <button class="pr-scale-btn" onclick="setPrScale('ruWunsch',5)">5</button>
+            </div>
+            <input type="hidden" id="pr_ruWunsch" value="3">
+          </div>
+
+          <div class="pr-section-title" style="margin-top:14px">Wichtigkeit dieser Präferenz</div>
+          <div class="pr-scale-row">
+            <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--text3);margin-bottom:4px"><span>unwichtig</span><span>mittel</span><span>sehr wichtig</span></div>
+            <div class="pr-scale" id="pr_ruWichtig_scale">
+              <button class="pr-scale-btn" onclick="setPrScale('ruWichtig',1)">1</button>
+              <button class="pr-scale-btn" onclick="setPrScale('ruWichtig',2)">2</button>
+              <button class="pr-scale-btn" onclick="setPrScale('ruWichtig',3)">3</button>
+              <button class="pr-scale-btn" onclick="setPrScale('ruWichtig',4)">4</button>
+              <button class="pr-scale-btn" onclick="setPrScale('ruWichtig',5)">5</button>
+            </div>
+            <input type="hidden" id="pr_ruWichtig" value="3">
+          </div>
+
+          <div class="pr-section-title" style="margin-top:14px">Anzahl Rufbereitschaften / Monat</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:8px">
+            <div><label class="form-label">Mindestens</label><input type="number" class="form-input" id="pr_ruMin" value="0" min="0" max="20"></div>
+            <div><label class="form-label">Höchstens</label><input type="number" class="form-input" id="pr_ruMax" value="4" min="0" max="20"></div>
+          </div>
+          <div class="rule-row" style="margin-top:12px">
+            <div class="rule-toggle" onclick="toggleRule('noConsecRu')"><div class="rule-toggle-track" id="tog_noConsecRu"></div></div>
+            <div class="rule-body"><div class="rule-label">Keine zwei RU-Dienste hintereinander</div></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── TAB 3: WOCHENENDE ── -->
+      <div id="ptab_wochenende_content" style="display:none">
+        <div class="pr-info">📅 Wie soll mit Wochenenden umgegangen werden?</div>
+        <div class="form-group">
+          <label class="form-label">Wochenend-Regelung</label>
+          <div style="display:flex;flex-direction:column;gap:8px;margin-top:8px" id="pr_we_options">
+            <label class="radio-row"><input type="radio" name="pr_we" id="pr_we_none"     value="none"     checked><div><strong>Keine Regelung</strong><div class="rule-desc">KI entscheidet frei</div></div></label>
+            <label class="radio-row"><input type="radio" name="pr_we" id="pr_we_immerFrei" value="immerFrei"><div><strong>Immer frei</strong><div class="rule-desc">Sa und So werden nie als Arbeitsdienst eingeplant</div></div></label>
+            <label class="radio-row"><input type="radio" name="pr_we" id="pr_we_alle2"    value="alle2"><div><strong>Regelmäßig alle 2 Wochenenden</strong><div class="rule-desc">Jedes zweite Wochenende ist frei, das andere wird eingeplant</div></div></label>
+            <label class="radio-row"><input type="radio" name="pr_we" id="pr_we_ganz"     value="ganz"><div><strong>Ganzes Wochenende am Stück</strong><div class="rule-desc">Wenn ein Wochenende eingeplant wird, immer beide Tage (Sa+So)</div></div></label>
+            <label class="radio-row"><input type="radio" name="pr_we" id="pr_we_geteilt"  value="geteilt"><div><strong>Geteiltes Wochenende</strong><div class="rule-desc">Sa oder So kann einzeln eingeplant werden</div></div></label>
+            <label class="radio-row"><input type="radio" name="pr_we" id="pr_we_ja"       value="ja"><div><strong>Arbeit am Wochenende bevorzugt</strong><div class="rule-desc">Diese Person möchte gerne am Wochenende arbeiten</div></div></label>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── TAB 4: KURZER WECHSEL ── -->
+      <div id="ptab_wechsel_content" style="display:none">
+        <div class="pr-info">🔄 Kurzer Wechsel = Spätdienst direkt gefolgt von Frühdienst am nächsten Tag. Gesundheitlich belastend – hier kannst du festlegen wie wichtig die Vermeidung ist.</div>
+        <div class="pr-section-title">Kurzen Wechsel (Spät → Früh) vermeiden</div>
+        <div class="rule-row">
+          <div class="rule-toggle" onclick="toggleRule('noFruehAfterSpaet')"><div class="rule-toggle-track" id="tog_noFruehAfterSpaet"></div></div>
+          <div class="rule-body"><div class="rule-label">Kein Frühdienst nach Spätdienst (hart)</div><div class="rule-desc">Wird vom KI-Modus absolut eingehalten</div></div>
+        </div>
+        <div class="pr-section-title" style="margin-top:14px">Wichtigkeit (wenn nicht hart geblockt)</div>
+        <div class="pr-scale-row">
+          <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--text3);margin-bottom:4px"><span>unwichtig</span><span>mittel</span><span>sehr wichtig</span></div>
+          <div class="pr-scale" id="pr_wechselWichtig_scale">
+            <button class="pr-scale-btn" onclick="setPrScale('wechselWichtig',1)">1</button>
+            <button class="pr-scale-btn" onclick="setPrScale('wechselWichtig',2)">2</button>
+            <button class="pr-scale-btn" onclick="setPrScale('wechselWichtig',3)">3</button>
+            <button class="pr-scale-btn" onclick="setPrScale('wechselWichtig',4)">4</button>
+            <button class="pr-scale-btn" onclick="setPrScale('wechselWichtig',5)">5</button>
+          </div>
+          <input type="hidden" id="pr_wechselWichtig" value="3">
+        </div>
+      </div>
+
+      <!-- ── TAB 5: FRÜHDIENST ── -->
+      <div id="ptab_frueh_content" style="display:none">
+        <div class="pr-info">🌅 Wie gerne und wie oft soll diese Person Frühdienste haben?</div>
+        <div class="pr-section-title">Frühdienst gewünscht?</div>
+        <div class="pr-scale-row">
+          <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--text3);margin-bottom:4px"><span>eher nicht</span><span>neutral</span><span>sehr gerne</span></div>
+          <div class="pr-scale" id="pr_fruehWunsch_scale">
+            <button class="pr-scale-btn" onclick="setPrScale('fruehWunsch',1)">1</button>
+            <button class="pr-scale-btn" onclick="setPrScale('fruehWunsch',2)">2</button>
+            <button class="pr-scale-btn" onclick="setPrScale('fruehWunsch',3)">3</button>
+            <button class="pr-scale-btn" onclick="setPrScale('fruehWunsch',4)">4</button>
+            <button class="pr-scale-btn" onclick="setPrScale('fruehWunsch',5)">5</button>
+          </div>
+          <input type="hidden" id="pr_fruehWunsch" value="3">
+        </div>
+        <div class="pr-section-title" style="margin-top:14px">Wichtigkeit dieser Präferenz</div>
+        <div class="pr-scale-row">
+          <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--text3);margin-bottom:4px"><span>unwichtig</span><span>mittel</span><span>sehr wichtig</span></div>
+          <div class="pr-scale" id="pr_fruehWichtig_scale">
+            <button class="pr-scale-btn" onclick="setPrScale('fruehWichtig',1)">1</button>
+            <button class="pr-scale-btn" onclick="setPrScale('fruehWichtig',2)">2</button>
+            <button class="pr-scale-btn" onclick="setPrScale('fruehWichtig',3)">3</button>
+            <button class="pr-scale-btn" onclick="setPrScale('fruehWichtig',4)">4</button>
+            <button class="pr-scale-btn" onclick="setPrScale('fruehWichtig',5)">5</button>
+          </div>
+          <input type="hidden" id="pr_fruehWichtig" value="3">
+        </div>
+        <div class="pr-section-title" style="margin-top:14px">Max. Frühdienste pro Woche</div>
+        <div class="rule-row">
+          <div class="rule-toggle" onclick="toggleRule('maxFruehWeek')"><div class="rule-toggle-track" id="tog_maxFruehWeek"></div></div>
+          <div class="rule-body">
+            <div class="rule-label">Begrenzung aktiv</div>
+            <div style="display:flex;align-items:center;gap:8px;margin-top:8px">
+              <input type="number" class="form-input rule-number" id="rule_maxFruehWeek_val" value="3" min="1" max="7" style="display:none;width:80px">
+              <span id="rule_maxFruehWeek_label" style="display:none;font-size:11.5px;color:var(--text2)">Frühdienste / Woche</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── TAB 6: SPÄTDIENST ── -->
+      <div id="ptab_spaet_content" style="display:none">
+        <div class="pr-info">🌆 Wie gerne und wie oft soll diese Person Spätdienste haben?</div>
+        <div class="pr-section-title">Spätdienst gewünscht?</div>
+        <div class="pr-scale-row">
+          <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--text3);margin-bottom:4px"><span>eher nicht</span><span>neutral</span><span>sehr gerne</span></div>
+          <div class="pr-scale" id="pr_spaetWunsch_scale">
+            <button class="pr-scale-btn" onclick="setPrScale('spaetWunsch',1)">1</button>
+            <button class="pr-scale-btn" onclick="setPrScale('spaetWunsch',2)">2</button>
+            <button class="pr-scale-btn" onclick="setPrScale('spaetWunsch',3)">3</button>
+            <button class="pr-scale-btn" onclick="setPrScale('spaetWunsch',4)">4</button>
+            <button class="pr-scale-btn" onclick="setPrScale('spaetWunsch',5)">5</button>
+          </div>
+          <input type="hidden" id="pr_spaetWunsch" value="3">
+        </div>
+        <div class="pr-section-title" style="margin-top:14px">Wichtigkeit dieser Präferenz</div>
+        <div class="pr-scale-row">
+          <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--text3);margin-bottom:4px"><span>unwichtig</span><span>mittel</span><span>sehr wichtig</span></div>
+          <div class="pr-scale" id="pr_spaetWichtig_scale">
+            <button class="pr-scale-btn" onclick="setPrScale('spaetWichtig',1)">1</button>
+            <button class="pr-scale-btn" onclick="setPrScale('spaetWichtig',2)">2</button>
+            <button class="pr-scale-btn" onclick="setPrScale('spaetWichtig',3)">3</button>
+            <button class="pr-scale-btn" onclick="setPrScale('spaetWichtig',4)">4</button>
+            <button class="pr-scale-btn" onclick="setPrScale('spaetWichtig',5)">5</button>
+          </div>
+          <input type="hidden" id="pr_spaetWichtig" value="3">
+        </div>
+        <div class="pr-section-title" style="margin-top:14px">Max. Spätdienste pro Woche</div>
+        <div class="rule-row">
+          <div class="rule-toggle" onclick="toggleRule('maxSpaetWeek')"><div class="rule-toggle-track" id="tog_maxSpaetWeek"></div></div>
+          <div class="rule-body">
+            <div class="rule-label">Begrenzung aktiv</div>
+            <div style="display:flex;align-items:center;gap:8px;margin-top:8px">
+              <input type="number" class="form-input rule-number" id="rule_maxSpaetWeek_val" value="2" min="1" max="7" style="display:none;width:80px">
+              <span id="rule_maxSpaetWeek_label" style="display:none;font-size:11.5px;color:var(--text2)">Spätdienste / Woche</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── TAB 7: FREI ── -->
+      <div id="ptab_frei_content" style="display:none">
+        <div class="pr-info">✕ Einstellungen zu Freitagen – insbesondere ob zusammenhängende freie Tage gewünscht sind.</div>
+        <div class="pr-section-title">Zusammenhängende Freitage bevorzugen</div>
+        <div class="pr-scale-row">
+          <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--text3);margin-bottom:4px"><span>unwichtig</span><span>mittel</span><span>sehr wichtig</span></div>
+          <div class="pr-scale" id="pr_freiBlock_scale">
+            <button class="pr-scale-btn" onclick="setPrScale('freiBlock',1)">1</button>
+            <button class="pr-scale-btn" onclick="setPrScale('freiBlock',2)">2</button>
+            <button class="pr-scale-btn" onclick="setPrScale('freiBlock',3)">3</button>
+            <button class="pr-scale-btn" onclick="setPrScale('freiBlock',4)">4</button>
+            <button class="pr-scale-btn" onclick="setPrScale('freiBlock',5)">5</button>
+          </div>
+          <input type="hidden" id="pr_freiBlock" value="3">
+        </div>
+        <div class="pr-section-title" style="margin-top:14px">Mindestens X freie Tage pro Woche</div>
+        <div class="rule-row">
+          <div class="rule-toggle" onclick="toggleRule('minFreiWeek')"><div class="rule-toggle-track" id="tog_minFreiWeek"></div></div>
+          <div class="rule-body">
+            <div class="rule-label">Begrenzung aktiv</div>
+            <div style="display:flex;align-items:center;gap:8px;margin-top:8px">
+              <input type="number" class="form-input rule-number" id="rule_minFreiWeek_val" value="2" min="1" max="7" style="display:none;width:80px">
+              <span id="rule_minFreiWeek_label" style="display:none;font-size:11.5px;color:var(--text2)">freie Tage / Woche</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── TAB 8: FZA ── -->
+      <div id="ptab_fza_content" style="display:none">
+        <div class="pr-info">⚖️ FZA = Freizeitausgleich. Diese Regeln sind <strong>harte Ausschlussregeln</strong> – der KI-Modus hält sie absolut ein.</div>
+        <div class="pr-section-title">FZA-Genehmigung</div>
+        <div style="display:flex;flex-direction:column;gap:8px;margin-top:10px">
+          <label class="radio-row"><input type="radio" name="pr_fza" id="pr_fza_ok"          value="ok"          checked><div><strong>FZA genehmigt</strong><div class="rule-desc">FZA kann jederzeit vom KI-Modus geplant werden</div></div></label>
+          <label class="radio-row"><input type="radio" name="pr_fza" id="pr_fza_nichtVorUrl"  value="nichtVorUrl"><div><strong>Nicht vor Urlaub</strong><div class="rule-desc">FZA wird nicht direkt vor einem Urlaubsblock eingeplant</div></div></label>
+          <label class="radio-row"><input type="radio" name="pr_fza" id="pr_fza_nichtNachUrl" value="nichtNachUrl"><div><strong>Nicht nach Urlaub</strong><div class="rule-desc">FZA wird nicht direkt nach einem Urlaubsblock eingeplant</div></div></label>
+          <label class="radio-row"><input type="radio" name="pr_fza" id="pr_fza_nichtUmUrl"   value="nichtUmUrl"><div><strong>Weder vor noch nach Urlaub</strong><div class="rule-desc">FZA wird weder direkt vor noch nach Urlaub eingeplant</div></div></label>
+          <label class="radio-row"><input type="radio" name="pr_fza" id="pr_fza_nein"         value="nein"><div><strong>FZA nicht genehmigt</strong><div class="rule-desc">KI-Modus plant niemals FZA für diese Person</div></div></label>
+        </div>
+      </div>
+
+    </div><!-- end scroll -->
+
+    <div class="modal-actions" style="border-top:1px solid var(--border);padding-top:14px;margin-top:4px;flex-shrink:0">
+      <button class="btn btn-secondary" onclick="closeModal('planRulesModal')">Abbrechen</button>
+      <button class="btn btn-primary" onclick="savePlanRules()">✓ Regeln speichern</button>
+    </div>
+  </div>
+</div>
+
+<!-- KI Config Modal -->
+<div class="modal-overlay" id="kiModal">
+  <div class="modal" style="width:500px;max-height:88vh;overflow-y:auto">
+    <div class="modal-title">🤖 KI-Modus – Dienstplan generieren</div>
+    <div class="modal-sub">Regelbasierter Vorschlag für <span id="kiMonthLabel"></span></div>
+    <div class="ki-rules-box">
+      <div style="font-size:11px;font-weight:600;color:var(--text2);margin-bottom:6px;text-transform:uppercase;letter-spacing:.5px;">Regeln des Algorithmus</div>
+      <div class="ki-rule">✅ Planungsregeln & Wünsche jedes Mitarbeiters werden eingehalten</div>
+      <div class="ki-rule">⚖️ Frühdienste werden gleichmäßig über Wochentage & Personal verteilt</div>
+      <div class="ki-rule">📊 Stundenkonto: max. 8h unter / 15h über Monatssoll</div>
+      <div class="ki-rule">🚫 AU / Urlaub / FZA / Fortbildung werden nicht überschrieben</div>
+    </div>
+
+    <!-- Frühdienst -->
+    <div style="background:var(--yellow-soft);border-radius:var(--radius-sm);padding:10px 12px;margin-bottom:10px">
+      <div style="font-size:11px;font-weight:600;color:#7a5e00;margin-bottom:8px;text-transform:uppercase;letter-spacing:.5px">🌅 Frühdienst</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:8px;align-items:end">
+        <div><label class="form-label" style="font-size:10.5px">Mo–Fr Min</label><input type="number" class="form-input" id="kiMinFruehWd" value="2" min="0" max="20"></div>
+        <div><label class="form-label" style="font-size:10.5px">Mo–Fr Max</label><input type="number" class="form-input" id="kiMaxFruehWd" value="5" min="0" max="20"></div>
+        <div><label class="form-label" style="font-size:10.5px">Sa–So Min</label><input type="number" class="form-input" id="kiMinFruehWe" value="1" min="0" max="20"></div>
+        <div><label class="form-label" style="font-size:10.5px">Sa–So Max</label><input type="number" class="form-input" id="kiMaxFruehWe" value="3" min="0" max="20"></div>
+      </div>
+    </div>
+
+    <!-- Spätdienst -->
+    <div style="background:var(--orange-soft);border-radius:var(--radius-sm);padding:10px 12px;margin-bottom:10px">
+      <div style="font-size:11px;font-weight:600;color:#7a3e00;margin-bottom:8px;text-transform:uppercase;letter-spacing:.5px">🌆 Spätdienst</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:8px;align-items:end">
+        <div><label class="form-label" style="font-size:10.5px">Mo–Fr Min</label><input type="number" class="form-input" id="kiMinSpaetWd" value="1" min="0" max="20"></div>
+        <div><label class="form-label" style="font-size:10.5px">Mo–Fr Max</label><input type="number" class="form-input" id="kiMaxSpaetWd" value="3" min="0" max="20"></div>
+        <div><label class="form-label" style="font-size:10.5px">Sa–So Min</label><input type="number" class="form-input" id="kiMinSpaetWe" value="0" min="0" max="20"></div>
+        <div><label class="form-label" style="font-size:10.5px">Sa–So Max</label><input type="number" class="form-input" id="kiMaxSpaetWe" value="2" min="0" max="20"></div>
+      </div>
+    </div>
+
+    <!-- Rufbereitschaft & Fallsteuerung -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px">
+      <div class="form-group" style="margin:0">
+        <label class="form-label">📲 Rufbereitschaft / Tag</label>
+        <input type="number" class="form-input" id="kiMinRU" value="1" min="0" max="5">
+      </div>
+      <div class="form-group" style="margin:0">
+        <label class="form-label">📋 Fallsteuerung / Tag</label>
+        <input type="number" class="form-input" id="kiMinFS" value="0" min="0" max="10">
+      </div>
+    </div>
+
+    <div class="modal-actions">
+      <button class="btn btn-secondary" onclick="closeModal('kiModal')">Abbrechen</button>
+      <button class="btn btn-primary" onclick="runKIPlanner()">🚀 Vorschlag generieren</button>
+    </div>
+  </div>
+</div>
+
+<!-- KI Preview Modal -->
+<div class="modal-overlay" id="kiPreviewModal">
+  <div class="modal modal-wide">
+    <div class="modal-title">🤖 KI-Vorschlag – Vorschau</div>
+    <div class="modal-sub" id="kiPreviewSub"></div>
+    <div class="ki-summary" id="kiSummary"></div>
+    <div class="ki-preview-scroll" id="kiPreviewBody"></div>
+    <div class="modal-actions" style="margin-top:14px;border-top:1px solid var(--border);padding-top:14px;">
+      <button class="btn btn-secondary" onclick="closeModal('kiPreviewModal')">Abbrechen</button>
+      <button class="btn btn-secondary btn-sm" onclick="kiAcceptAll()">✅ Alle annehmen</button>
+      <button class="btn btn-secondary btn-sm" onclick="kiRejectAll()">✕ Alle ablehnen</button>
+      <button class="btn btn-primary" onclick="kiApplyAccepted()">Akzeptierte übernehmen</button>
+    </div>
+  </div>
+</div>
+
+<!-- Wish Modal -->
+<div class="modal-overlay" id="wishModal">
+  <div class="modal">
+    <div class="modal-title" id="wishModalTitle">💬 Dienstwunsch</div>
+    <div class="modal-sub" id="wishModalSub"></div>
+    <div class="form-group">
+      <label class="form-label">Wunsch / Notiz für diesen Tag</label>
+      <input type="text" class="form-input" id="wishInput" placeholder="z.B. Frühdienst bevorzugt, kein Spätdienst, frei ab 14 Uhr…" maxlength="80">
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" onclick="closeModal('wishModal')">Abbrechen</button>
+      <button class="btn btn-danger btn-sm" onclick="saveWish(true)">Löschen</button>
+      <button class="btn btn-primary" onclick="saveWish(false)">Speichern</button>
+    </div>
+  </div>
+</div>
+
+<!-- Staff Popup -->
+<div class="staff-popup" id="staffPopup">
+  <div class="staff-popup-header">
+    <div class="staff-popup-avatar" id="spAvatar"></div>
+    <div><div class="staff-popup-name" id="spName"></div><div class="staff-popup-role" id="spRole"></div></div>
+  </div>
+  <div class="staff-popup-cards" id="spCards"></div>
+</div>
+
+<!-- User Management Modal -->
+<div class="modal-overlay" id="userMgmtModal" onclick="if(event.target===this)closeModal('userMgmtModal')">
+  <div class="modal modal-wide">
+    <div class="modal-title">👥 Benutzerverwaltung</div>
+    <div class="modal-sub">Benutzer einladen und Rollen verwalten</div>
+
+    <!-- Invite new user -->
+    <div style="background:var(--surface2);border-radius:10px;padding:14px;margin-bottom:16px">
+      <div style="font-size:11px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px">Neuen Benutzer einladen</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <input type="email" id="inviteEmail" placeholder="E-Mail-Adresse" style="flex:1;min-width:180px;padding:8px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;background:var(--surface);color:var(--text)">
+        <select id="inviteRole" style="padding:8px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;background:var(--surface);color:var(--text)">
+          <option value="mitarbeiter">Mitarbeiter</option>
+          <option value="planer">Planer</option>
+          <option value="betriebsrat">Betriebsrat</option>
+          <option value="personal">Personalabteilung</option>
+          <option value="admin">Admin</option>
+          <option value="master_admin">Master Admin</option>
+        </select>
+        <input type="password" id="invitePassword" placeholder="Passwort" style="flex:1;min-width:160px;padding:8px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;background:var(--surface);color:var(--text)">
+        <button class="btn btn-primary btn-sm" onclick="inviteUser()">+ Einladen</button>
+      </div>
+    </div>
+
+    <!-- User list -->
+    <div style="font-size:11px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">Alle Benutzer</div>
+    <div id="userList" style="display:flex;flex-direction:column;gap:6px;max-height:300px;overflow-y:auto"></div>
+
+    <div class="modal-actions" style="margin-top:16px;border-top:1px solid var(--border);padding-top:14px">
+      <button class="btn btn-secondary" onclick="closeModal('userMgmtModal')">Schließen</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast-area" id="toastArea"></div>
+
+<script>
+// ─── CONSTANTS ───
+const SHIFTS = [
+  { id:'F',    label:'Früh',           icon:'F',  cls:'chip-frueh',  hours:7.75 },
+  { id:'S',    label:'Spät',           icon:'S',  cls:'chip-spaet',  hours:7.75 },
+  { id:'FREI', label:'Frei',           icon:'✕', cls:'chip-frei',   hours:0    },
+  { id:'URL',  label:'Urlaub',         icon:'U',  cls:'chip-urlaub', hours:0    },
+  { id:'FB',   label:'Fortbildung',    icon:'📚', cls:'chip-fb',     hours:8    },
+  { id:'FZA',  label:'FZA',            icon:'FZA', cls:'chip-fza',    hours:0    },
+  { id:'AU',   label:'AU',             icon:'🤒', cls:'chip-au',     hours:0    },
+  { id:'RU',   label:'Rufbereitschaft',icon:'RB', cls:'chip-ru',     hours:3.5  },
+  { id:'FS',   label:'Fallsteuerung',  icon:'FS', cls:'chip-fs',     hours:7.75 },
+];
+const SHIFT_MAP = Object.fromEntries(SHIFTS.map(s=>[s.id,s]));
+const COLORS = ['#0071e3','#32d74b','#ff9f0a','#bf5af2','#ff375f','#5ac8fa','#ff6961','#6e9887'];
+const MONTH_NAMES = ['Januar','Februar','März','April','Mai','Juni','Juli','August','September','Oktober','November','Dezember'];
+const DAY_SHORT = ['So','Mo','Di','Mi','Do','Fr','Sa'];
+
+// ─── SUPABASE ───
+const SUPABASE_URL = 'https://pxztxkqzvjkwvbfymbst.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_bpKLnvsUQYffH7XEQay1Bg_Y__1XWEL';
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+// ─── STATE (localStorage als Fallback während Migration) ───
+function loadData() {
+  try { const r = localStorage.getItem('pflegeplan_v3'); if(r) return JSON.parse(r); } catch(e){}
+  return {
+    staff: [
+      {id:1, name:'Anna Bergmann',   role:'Pflegefachkraft', soll:38.5, color:'#0071e3'},
+      {id:2, name:'Dr. Klaus Weber', role:'Ärztin/Arzt',     soll:40,   color:'#32d74b'},
+      {id:3, name:'Mia Schulze',     role:'Pflegefachkraft', soll:30,   color:'#ff9f0a'},
+      {id:4, name:'Tom Fischer',     role:'Pflegehilfskraft',soll:20,   color:'#bf5af2'},
+      {id:5, name:'Sara Hoffmann',   role:'Fallsteuerung',   soll:38.5, color:'#ff375f'},
+    ],
+    entries: {},
+    releases: {},
+    nextId: 6,
+  };
+}
+
+function saveData(){
+  localStorage.setItem('pflegeplan_v3', JSON.stringify(state));
+  syncToSupabase();
+}
+
+let state = loadData();
+
+// ─── SUPABASE SYNC ───
+async function syncToSupabase(){
+  try {
+    // Upsert staff
+    if(state.staff && state.staff.length){
+      await sb.from('staff').upsert(
+        state.staff.map(s=>({
+          id: s.id,
+          name: s.name,
+          role: s.role,
+          soll: s.soll,
+          color: s.color,
+          notes: s.notes||'',
+          rules: s.rules||{}
+        }))
+      );
+    }
+    // Upsert entries
+    const entryRows = Object.entries(state.entries||{}).map(([key,val])=>({
+      key,
+      shift: val.shift,
+      info: val.info||''
+    }));
+    if(entryRows.length){
+      await sb.from('entries').upsert(entryRows);
+    }
+    // Upsert releases
+    const releaseRows = Object.entries(state.releases||{}).map(([key,val])=>({
+      key,
+      date: val.date,
+      note: val.note||''
+    }));
+    if(releaseRows.length){
+      await sb.from('releases').upsert(releaseRows);
+    }
+  } catch(e){
+    console.warn('Supabase sync error:', e.message);
+  }
+}
+
+async function loadFromSupabase(){
+  try {
+    showToast('⏳ Lade Daten vom Server…');
+    const [staffRes, entriesRes, releasesRes] = await Promise.all([
+      sb.from('staff').select('*'),
+      sb.from('entries').select('*'),
+      sb.from('releases').select('*'),
+    ]);
+    if(staffRes.error || entriesRes.error || releasesRes.error){
+      console.warn('Supabase load error – using local data');
+      return;
+    }
+    if(staffRes.data && staffRes.data.length){
+      state.staff = staffRes.data.map(s=>({
+        id: s.id, name: s.name, role: s.role,
+        soll: s.soll, color: s.color,
+        notes: s.notes||'', rules: s.rules||{}
+      }));
+      state.nextId = Math.max(...state.staff.map(s=>s.id)) + 1;
+    }
+    if(entriesRes.data){
+      state.entries = {};
+      entriesRes.data.forEach(e=>{ state.entries[e.key]={shift:e.shift,info:e.info||''}; });
+    }
+    if(releasesRes.data){
+      state.releases = {};
+      releasesRes.data.forEach(r=>{ state.releases[r.key]={date:r.date,note:r.note||''}; });
+    }
+    localStorage.setItem('pflegeplan_v3', JSON.stringify(state));
+    render();
+    showToast('✅ Daten geladen');
+  } catch(e){
+    console.warn('Supabase load failed:', e.message);
+    showToast('⚠️ Server nicht erreichbar – lokale Daten');
+  }
+}
+
+// ─── DATE HELPERS ───
+const TODAY = new Date(); TODAY.setHours(0,0,0,0);
+const TODAY_STR = fmtDate(TODAY);
+let currentYear  = TODAY.getFullYear();
+let currentMonth = TODAY.getMonth();
+
+function fmtDate(d){ return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
+function fmtDisp(d){ return d.toLocaleDateString('de-DE',{day:'2-digit',month:'2-digit'}); }
+function addDays(d,n){ const r=new Date(d); r.setDate(r.getDate()+n); return r; }
+function daysInMonth(y,m){ return new Date(y,m+1,0).getDate(); }
+function monthKey(y,m){ return `${y}-${String(m+1).padStart(2,'0')}`; }
+
+// ─── MONTH SLIDER ───
+
+
+// ─── RENDER ───
+// ─── MONTH SLIDER ───
+
+
+// ─── MONTH SLIDER ───
+const SLIDER_W = 55;
+
+function buildSlider(){
+  const track = document.getElementById('monthSliderTrack');
+  if(!track) return;
+  const items = [-1, 0, 1].map(offset => {
+    let m = currentMonth + offset, y = currentYear;
+    if(m < 0){ m += 12; y--; }
+    if(m > 11){ m -= 12; y++; }
+    return {m, y};
+  });
+  track.innerHTML = items.map(({m, y}, i) => {
+    const cur = i === 1;
+    return `<div onclick="sliderClickMonth(${i})" style="width:${SLIDER_W}px;flex-shrink:0;display:flex;flex-direction:column;align-items:center;justify-content:center;height:57px;cursor:pointer">
+      <div style="font-size:${cur?'12px':'7px'};font-weight:${cur?'600':'400'};color:${cur?'var(--text)':'var(--text3)'};white-space:nowrap;transition:all .3s">${MONTH_NAMES[m]}</div>
+      <div style="font-size:${cur?'10px':'7px'};color:${cur?'var(--text2)':'var(--text3)'};margin-top:1px;transition:all .3s">${y}</div>
+    </div>`;
+  }).join('');
+  track.style.transform = 'translateX(-55px)';
+}
+
+function sliderClickMonth(i){
+  if(_sdDragging) return;
+  if(i===0) prevMonth();
+  else if(i===2) nextMonth();
+}
+
+var _sdX=null, _sdDragging=false;
+
+function sliderDragStart(e){
+  _sdX = e.clientX ?? e.touches?.[0]?.clientX;
+  _sdDragging = false;
+  document.onmousemove = sliderDragMove;
+  document.onmouseup   = sliderDragEnd;
+}
+function sliderTouchStart(e){
+  _sdX = e.touches[0].clientX;
+  _sdDragging = false;
+  document.ontouchmove = sliderTouchMove;
+  document.ontouchend  = sliderDragEnd;
+}
+function sliderDragMove(e){
+  if(_sdX===null) return;
+  if(Math.abs((e.clientX??0)-_sdX)>8) _sdDragging=true;
+}
+function sliderTouchMove(e){
+  if(_sdX===null) return;
+  if(Math.abs(e.touches[0].clientX-_sdX)>8) _sdDragging=true;
+}
+function sliderDragEnd(e){
+  if(_sdX===null) return;
+  const ex = e.clientX ?? e.changedTouches?.[0]?.clientX ?? _sdX;
+  const dx = ex - _sdX;
+  const wasDragging = _sdDragging;
+  _sdX=null; _sdDragging=false;
+  document.onmousemove=null; document.onmouseup=null;
+  document.ontouchmove=null; document.ontouchend=null;
+  if(!wasDragging) return;
+  if(dx < -40) nextMonth();
+  else if(dx > 40) prevMonth();
+}
+
+function render(){
+  buildSlider();
+  renderBanner();
+  renderGrid();
+  // Restore wishes button state
+  const btn=document.getElementById('btnWuensche');
+  if(btn && state.showWuensche){
+    btn.style.background='var(--red-soft)';
+    btn.style.borderColor='var(--red)';
+    btn.style.color='var(--red)';
+  }
+  // Update draft status button (three dots)
+  updateDraftStatus();
+}
+
+function updateDraftStatus(){
+  const dots=document.querySelectorAll('#btnDraftStatus circle');
+  if(!dots.length) return;
+  const mk=monthKey(currentYear,currentMonth);
+  const released=state.releases[mk];
+  const days=daysInMonth(currentYear,currentMonth);
+  let hasEntries=false;
+  for(let d=1;d<=days;d++){
+    const ds=fmtDate(new Date(currentYear,currentMonth,d));
+    for(const s of state.staff){
+      const e=state.entries[`${s.id}_${ds}`];
+      if(e && e.shift){ hasEntries=true; break; }
+    }
+    if(hasEntries) break;
+  }
+  let color;
+  if(released) color='var(--green)';
+  else if(hasEntries) color='#cc9900';
+  else color='var(--text2)';
+  dots.forEach(c=>c.setAttribute('fill', color));
+}
+
+function renderBanner(){
+  // Sidebar removed – no pill to update
+}
+
+
+
+
+
+
+function renderGrid(){
+  const days=daysInMonth(currentYear,currentMonth);
+
+  // Header
+  let hHtml=`<div class="gh-staff"><div class="gh-staff-label">Mitarbeiter/in</div></div>`;
+  for(let d=1;d<=days;d++){
+    const dt=new Date(currentYear,currentMonth,d);
+    const ds=fmtDate(dt);
+    const isToday=ds===TODAY_STR;
+    const dow=dt.getDay(); const isWE=dow===0||dow===6;
+    const holName=getHolidayName(ds);
+    let cls='gh-day';
+    if(isToday) cls+=' today-col';
+    else if(holName) cls+=' holiday';
+    else if(isWE) cls+=' weekend';
+    const title=holName?` title="${holName}"`:'';
+    hHtml+=`<div class="${cls}"${title}>${String(d).padStart(2,'0')}<span class="day-name">${DAY_SHORT[dow]}${holName?'🔴':''}</span></div>`;
+  }
+  hHtml+=`<div class="gh-tail">SOLL h</div><div class="gh-tail">IST h</div>`;
+  document.getElementById('gridHeader').innerHTML=hHtml;
+
+  // Body
+  const body=document.getElementById('gridBody'); body.innerHTML='';
+  state.staff.forEach(staff=>{
+    const init=staff.name.split(' ').map(p=>p[0]).join('').slice(0,2).toUpperCase();
+    const row=document.createElement('div'); row.className='grid-row';
+    let html=`<div class="cell-staff">
+      <div class="staff-avatar" style="background:${staff.color}">${init}</div>
+      <div style="flex:1;min-width:0;cursor:pointer" onmouseenter="showStaffPopup(event,${staff.id})" onmouseleave="hideStaffPopup()">
+        <div class="staff-name">${staff.name}</div>
+        <div class="staff-role">${staff.role}</div>
+      </div>
+      <button class="staff-edit" onclick="openEditStaff(${staff.id})" title="Bearbeiten">✎</button>
+      <button class="staff-delete" onclick="openDeleteStaff(${staff.id})" title="Person löschen">✕</button>
+    </div>`;
+
+    let ist=0;
+    for(let d=1;d<=days;d++){
+      const dt=new Date(currentYear,currentMonth,d);
+      const ds=fmtDate(dt);
+      const isToday=ds===TODAY_STR;
+      const dow=dt.getDay(); const isWE=dow===0||dow===6;
+      const holName=getHolidayName(ds);
+      let dayCls='cell-day';
+      if(isToday) dayCls+=' today-col';
+      else if(holName) dayCls+=' holiday';
+      else if(isWE) dayCls+=' weekend';
+      const key=`${staff.id}_${ds}`;
+      const entry=state.entries[key];
+      const shift=entry?SHIFT_MAP[entry.shift]:null;
+      ist+=shift?shift.hours:0;
+      const tipExtra=holName?' ('+holName+')':'';
+      html+=`<div class="${dayCls}">`;
+      if(shift){
+        html+=`<button class="shift-chip ${shift.cls}" onclick="quickEdit('${staff.id}','${ds}')" title="${shift.label}${entry?.info?' – '+entry.info:''}${tipExtra}">${shift.icon}</button>`;
+      } else {
+        html+=`<button class="shift-chip chip-frei" onclick="quickEdit('${staff.id}','${ds}')" title="${holName?holName+' – ':''}Frei / Eintrag ändern">✕</button>`;
+      }
+      html+='</div>';
+    }
+    const monthSoll=calcMonthSoll(staff.soll, currentYear, currentMonth);
+    const diff=ist-monthSoll;
+    html+=`<div class="cell-tail"><span class="h-ist">${monthSoll.toFixed(0)}</span><span class="h-soll">/Monat</span></div>`;
+    html+=`<div class="cell-tail"><span class="h-ist">${ist.toFixed(0)}</span><span class="${diff>=0?'h-diff-pos':'h-diff-neg'}">${diff>=0?'+':''}${diff.toFixed(1)}</span></div>`;
+    row.innerHTML=html; body.appendChild(row);
+
+    // Wish row (only if enabled)
+    if(state.showWuensche){
+      const wrow=document.createElement('div'); wrow.className='wish-row';
+      let whtml=`<div class="cell-wish-label">💬 Wunsch</div>`;
+      for(let d=1;d<=days;d++){
+        const dt=new Date(currentYear,currentMonth,d);
+        const ds=fmtDate(dt);
+        const dow=dt.getDay(); const isWE=dow===0||dow===6;
+        const holName=getHolidayName(ds);
+        const isToday=ds===TODAY_STR;
+        let wcls='cell-wish';
+        if(isToday) wcls+=' today-col';
+        else if(holName) wcls+=' holiday';
+        else if(isWE) wcls+=' weekend';
+        const wkey=`w_${staff.id}_${ds}`;
+        const wish=state.wishes&&state.wishes[wkey];
+        whtml+=`<div class="${wcls}">`;
+        if(wish){
+          whtml+=`<button class="wish-chip" onclick="openWish('${staff.id}','${ds}')" title="${wish}">💬</button>`;
+        } else {
+          whtml+=`<button class="wish-chip wish-empty" onclick="openWish('${staff.id}','${ds}')" title="Wunsch eintragen">+</button>`;
+        }
+        whtml+='</div>';
+      }
+      whtml+=`<div class="cell-wish-tail"></div><div class="cell-wish-tail"></div>`;
+      wrow.innerHTML=whtml; body.appendChild(wrow);
+    }
+  });
+}
+
+// ─── FEIERTAGE SCHLESWIG-HOLSTEIN ───
+function getEaster(y){
+  // Gauss/Anonymous algorithm
+  const a=y%19, b=Math.floor(y/100), c=y%100;
+  const d=Math.floor(b/4), e=b%4, f=Math.floor((b+8)/25);
+  const g=Math.floor((b-f+1)/3), h=(19*a+b-d-g+15)%30;
+  const i=Math.floor(c/4), k=c%4, l=(32+2*e+2*i-h-k)%7;
+  const m=Math.floor((a+11*h+22*l)/451);
+  const month=Math.floor((h+l-7*m+114)/31)-1; // 0-based
+  const day=((h+l-7*m+114)%31)+1;
+  return new Date(y, month, day);
+}
+
+function getHolidaysSH(year){
+  const e = getEaster(year);
+  const ed = e.getTime();
+  const off = n => { const d=new Date(ed); d.setDate(d.getDate()+n); return fmtDate(d); };
+  const fix = (m,d) => `${year}-${String(m).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+
+  return {
+    [fix(1,1)]:   'Neujahr',
+    [off(-2)]:    'Karfreitag',
+    [off(0)]:     'Ostersonntag',
+    [off(1)]:     'Ostermontag',
+    [fix(5,1)]:   'Tag der Arbeit',
+    [off(39)]:    'Christi Himmelfahrt',
+    [off(49)]:    'Pfingstsonntag',
+    [off(50)]:    'Pfingstmontag',
+    [fix(10,3)]:  'Tag der Deutschen Einheit',
+    [fix(10,31)]: 'Reformationstag',          // nur SH
+    [fix(12,25)]: '1. Weihnachtstag',
+    [fix(12,26)]: '2. Weihnachtstag',
+  };
+}
+
+// Cache holidays per year
+const _holidayCache = {};
+function holidaysForYear(y){
+  if(!_holidayCache[y]) _holidayCache[y] = getHolidaysSH(y);
+  return _holidayCache[y];
+}
+function getHolidayName(dateStr){
+  const y = parseInt(dateStr.slice(0,4));
+  return holidaysForYear(y)[dateStr] || null;
+}
+
+// ─── NAVIGATION ───
+// Correct monthly SOLL: count Mon–Fri workdays minus holidays × daily hours (soll/5)
+function calcMonthSoll(soll, year, month){
+  const days = daysInMonth(year, month);
+  const hols = holidaysForYear(year);
+  let workdays = 0;
+  for(let d=1; d<=days; d++){
+    const dt = new Date(year, month, d);
+    const dow = dt.getDay();
+    const ds = fmtDate(dt);
+    if(dow >= 1 && dow <= 5 && !hols[ds]) workdays++;
+  }
+  return workdays * (soll / 5);
+}
+function prevMonth(){ currentMonth--; if(currentMonth<0){currentMonth=11;currentYear--;} render(); }
+function nextMonth(){ currentMonth++; if(currentMonth>11){currentMonth=0;currentYear++;} render(); }
+function goCurrentMonth(){ currentYear=TODAY.getFullYear(); currentMonth=TODAY.getMonth(); render(); }
+
+// ─── MODALS ───
+function openModal(id){ document.getElementById(id).classList.add('open'); }
+function closeModal(id){ document.getElementById(id).classList.remove('open'); }
+document.querySelectorAll('.modal-overlay').forEach(m=>m.addEventListener('click',e=>{ if(e.target===m) m.classList.remove('open'); }));
+
+let _editStaffId=null, _editDate=null;
+
+function openAddEntry(){
+  _editStaffId=null; _editDate=null;
+  document.getElementById('entryModalTitle').textContent='Dienst eintragen';
+  document.getElementById('entryModalSub').textContent='Mitarbeiter, Tag und Dienst wählen';
+  document.getElementById('entryInfo').value='';
+  populateStaffSelect(null);
+  populateDaySelect(null);
+  renderShiftPicker(null);
+  openModal('entryModal');
+}
+
+function quickEdit(staffId,dateStr){
+  _editStaffId=staffId; _editDate=dateStr;
+  const staff=state.staff.find(s=>s.id==staffId);
+  const entry=state.entries[`${staffId}_${dateStr}`];
+  document.getElementById('entryModalTitle').textContent=staff.name;
+  document.getElementById('entryModalSub').textContent=new Date(dateStr+'T12:00:00').toLocaleDateString('de-DE',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
+  document.getElementById('entryInfo').value=entry?.info||'';
+  populateStaffSelect(staffId);
+  populateDaySelect(dateStr);
+  renderShiftPicker(entry?.shift);
+  openModal('entryModal');
+}
+
+function populateStaffSelect(sel){
+  document.getElementById('entryStaff').innerHTML=state.staff.map(s=>
+    `<option value="${s.id}" ${s.id==sel?'selected':''}>${s.name} (${s.role})</option>`
+  ).join('');
+}
+
+function populateDaySelect(selDate){
+  const sel=document.getElementById('entryDay'); sel.innerHTML='';
+  const days=daysInMonth(currentYear,currentMonth);
+  for(let d=1;d<=days;d++){
+    const dt=new Date(currentYear,currentMonth,d); const ds=fmtDate(dt);
+    sel.innerHTML+=`<option value="${ds}" ${ds===selDate?'selected':''}>${DAY_SHORT[dt.getDay()]}, ${fmtDisp(dt)}</option>`;
+  }
+}
+
+let _selectedShift=null;
+function renderShiftPicker(cur){
+  _selectedShift=cur||null;
+  document.getElementById('shiftPicker').innerHTML=
+    SHIFTS.map(s=>`<button class="shift-chip ${s.cls}" style="${_selectedShift===s.id?'outline:2px solid var(--accent);outline-offset:2px;':''}" onclick="selectShift('${s.id}')">${s.icon} ${s.label}</button>`).join('')+
+    `<button class="shift-chip chip-empty" onclick="selectShift('')">✕ Löschen</button>`;
+}
+function selectShift(id){ _selectedShift=id; renderShiftPicker(id); }
+
+function saveEntry(){
+  const staffId=_editStaffId||document.getElementById('entryStaff').value;
+  const dateStr=_editDate||document.getElementById('entryDay').value;
+  const info=document.getElementById('entryInfo').value.trim();
+  const key=`${staffId}_${dateStr}`;
+  if(!_selectedShift){ delete state.entries[key]; }
+  else { state.entries[key]={shift:_selectedShift,info}; }
+  saveData(); closeModal('entryModal'); render(); showToast('Dienst gespeichert ✓');
+}
+
+// ─── STAFF ───
+function openAddStaff(){
+  document.getElementById('newName').value='';
+  document.getElementById('newSoll').value='38.5';
+  openModal('staffModal');
+}
+function saveStaff(){
+  const name=document.getElementById('newName').value.trim();
+  if(!name){ showToast('Bitte Namen eingeben'); return; }
+  const role=document.getElementById('newRole').value;
+  const soll=parseFloat(document.getElementById('newSoll').value);
+  const color=COLORS[state.staff.length%COLORS.length];
+  state.staff.push({id:state.nextId++,name,role,soll,color});
+  saveData(); closeModal('staffModal'); render(); showToast(`${name} hinzugefügt ✓`);
+}
+
+let _deleteStaffId=null;
+function openDeleteStaff(staffId){
+  _deleteStaffId=staffId;
+  const staff=state.staff.find(s=>s.id==staffId);
+  document.getElementById('deleteModalSub').textContent=`„${staff.name}" (${staff.role}) entfernen?`;
+  document.getElementById('deleteMonthLabel').textContent=`${MONTH_NAMES[currentMonth]} ${currentYear}`;
+  document.getElementById('deleteScope').value='month';
+  openModal('deleteModal');
+}
+function confirmDelete(){
+  const staff=state.staff.find(s=>s.id==_deleteStaffId);
+  const scope=document.getElementById('deleteScope').value;
+  if(scope==='all'){
+    state.staff=state.staff.filter(s=>s.id!=_deleteStaffId);
+    Object.keys(state.entries).forEach(k=>{ if(k.startsWith(_deleteStaffId+'_')) delete state.entries[k]; });
+    showToast(`${staff.name} vollständig entfernt`);
+  } else {
+    const days=daysInMonth(currentYear,currentMonth);
+    for(let d=1;d<=days;d++){
+      delete state.entries[`${_deleteStaffId}_${fmtDate(new Date(currentYear,currentMonth,d))}`];
+    }
+    showToast(`Einträge für ${MONTH_NAMES[currentMonth]} gelöscht`);
+  }
+  saveData(); closeModal('deleteModal'); render();
+}
+
+// ─── RELEASE ───
+function openReleaseModal(){
+  const mk=monthKey(currentYear,currentMonth);
+  const released=state.releases[mk];
+  const firstDay=new Date(currentYear,currentMonth,1);
+  const sixWeeks=addDays(firstDay,-42);
+  const canRelease=TODAY>=sixWeeks;
+  document.getElementById('releaseInfo').innerHTML=`
+    <div class="release-info-row"><span>Monat:</span><strong>${MONTH_NAMES[currentMonth]} ${currentYear}</strong></div>
+    <div class="release-info-row"><span>Früheste Freigabe:</span><strong>${sixWeeks.toLocaleDateString('de-DE')}</strong></div>
+    <div class="release-info-row"><span>Status:</span><strong style="color:${released?'var(--green)':canRelease?'var(--accent)':'var(--orange)'}">${released?'Bereits freigegeben':canRelease?'Freigabe möglich':'Noch gesperrt'}</strong></div>
+  `;
+  document.getElementById('releaseNote').value='';
+  openModal('releaseModal');
+}
+function releaseMonth(){
+  const mk=monthKey(currentYear,currentMonth);
+  const firstDay=new Date(currentYear,currentMonth,1);
+  const sixWeeks=addDays(firstDay,-42);
+  if(TODAY<sixWeeks){ showToast(`Freigabe erst ab ${sixWeeks.toLocaleDateString('de-DE')} möglich`); return; }
+  state.releases[mk]={date:new Date().toISOString(),note:document.getElementById('releaseNote').value.trim()};
+  saveData(); closeModal('releaseModal'); render(); showToast('Plan freigegeben ✓');
+}
+
+// ─── TOAST ───
+function showToast(msg){
+  const area=document.getElementById('toastArea');
+  const t=document.createElement('div'); t.className='toast'; t.textContent=msg;
+  area.appendChild(t);
+  requestAnimationFrame(()=>t.classList.add('show'));
+  setTimeout(()=>{ t.classList.remove('show'); setTimeout(()=>t.remove(),280); },2800);
+}
+
+// ─── SHIFT SETTINGS ───
+function getShiftHours(id){
+  return (state.shiftHours && state.shiftHours[id] !== undefined)
+    ? state.shiftHours[id]
+    : (SHIFTS.find(s=>s.id===id)?.hours ?? 0);
+}
+function applyShiftHours(){
+  SHIFTS.forEach(s=>{ s.hours = getShiftHours(s.id); });
+  SHIFTS.forEach(s=>{ SHIFT_MAP[s.id] = s; });
+}
+function openShiftSettings(){
+  document.getElementById('shiftSettingsBody').innerHTML = SHIFTS.map(s=>`
+    <div class="form-group">
+      <label class="form-label">${s.icon} ${s.label}</label>
+      <input type="number" class="form-input" id="sh_${s.id}" value="${s.hours}" min="0" max="24" step="0.25">
+    </div>
+  `).join('');
+  openModal('shiftSettingsModal');
+}
+function saveShiftSettings(){
+  if(!state.shiftHours) state.shiftHours={};
+  SHIFTS.forEach(s=>{
+    const el=document.getElementById('sh_'+s.id);
+    if(el){ const v=parseFloat(el.value); if(!isNaN(v)) state.shiftHours[s.id]=v; }
+  });
+  applyShiftHours();
+  saveData(); closeModal('shiftSettingsModal'); render();
+  showToast('Dienststunden gespeichert ✓');
+}
+
+// ─── EDIT STAFF ───
+const ALL_RULES = ['weekend','moFr','dayShift','afterRuFrei','afterRuSpaet','noConsecRu',
+  'noFruehAfterSpaet','afterAuFrei','beforeUrlFrei','afterUrlFrei','weAroundUrl',
+  'maxRuMonth','maxFruehWeek','maxSpaetWeek','minFreiWeek','preferShift','preferNoWeekend'];
+
+const PLAN_TABS = ['vertrag','dienste','rufbereitschaft','wochenende','wechsel','frueh','spaet','frei','fza'];
+const SCALE_KEYS = ['ruWunsch','ruWichtig','wechselWichtig','fruehWunsch','fruehWichtig','spaetWunsch','spaetWichtig','freiBlock'];
+const TOGGLE_RULES = ['afterRuFrei','afterRuSpaet','noConsecRu','noFruehAfterSpaet','maxFruehWeek','maxSpaetWeek','minFreiWeek'];
+
+function switchPlanTab(tab){
+  const btn=document.getElementById('ptab_'+tab);
+  if(btn&&btn.classList.contains('disabled')) return;
+  PLAN_TABS.forEach(t=>{
+    const c=document.getElementById('ptab_'+t+'_content');
+    const b=document.getElementById('ptab_'+t);
+    if(c) c.style.display = t===tab ? '' : 'none';
+    if(b) b.classList.toggle('active', t===tab);
+  });
+}
+
+function setPrScale(key, val){
+  document.getElementById('pr_'+key).value = val;
+  document.querySelectorAll(`#pr_${key}_scale .pr-scale-btn`).forEach((btn,i)=>{
+    btn.classList.toggle('active', i+1<=val);
+  });
+}
+
+function updateDiensteTabs(){
+  const F  = document.getElementById('pr_dienst_F')?.checked;
+  const S  = document.getElementById('pr_dienst_S')?.checked;
+  const RU = document.getElementById('pr_dienst_RU')?.checked;
+  const FS = document.getElementById('pr_dienst_FS')?.checked;
+  const keinRU = document.getElementById('tog_keinRU')?.classList.contains('on');
+
+  // Frühdienst-Reiter ausgrauen
+  document.getElementById('ptab_frueh')?.classList.toggle('disabled', !F);
+  // Spätdienst-Reiter ausgrauen
+  document.getElementById('ptab_spaet')?.classList.toggle('disabled', !S);
+  // Rufbereitschaft-Reiter ausgrauen wenn nicht ausgewählt ODER keinRU aktiv
+  document.getElementById('ptab_rufbereitschaft')?.classList.toggle('disabled', !RU || !!keinRU);
+  // Kurzer Wechsel ausgrauen wenn weder F noch S aktiv (nur FS oder nichts)
+  const wechselMöglich = F || S;
+  document.getElementById('ptab_wechsel')?.classList.toggle('disabled', !wechselMöglich);
+}
+
+function toggleKeinRU(){
+  const track=document.getElementById('tog_keinRU');
+  const isOn=track.classList.toggle('on');
+  document.getElementById('ru_details_block').style.display=isOn?'none':'';
+  const cb=document.getElementById('pr_dienst_RU');
+  if(cb) cb.checked=!isOn;
+  updateDiensteTabs();
+}
+
+function updateWeTab(){
+  // If Sa(6) and So(0) are both unchecked → disable Wochenende tab
+  const sa=document.getElementById('vd_6');
+  const so=document.getElementById('vd_0');
+  const tab=document.getElementById('ptab_wochenende');
+  const noWE = tab && sa && so && !sa.checked && !so.checked;
+  if(tab) tab.classList.toggle('disabled', !!noWE);
+}
+
+function applyVertragPreset(){
+  const preset=document.getElementById('pr_vertrag_preset').value;
+  const map={moSo:[1,2,3,4,5,6,0],moFr:[1,2,3,4,5],moMi:[1,3],custom:[]};
+  const days=map[preset]||[];
+  [0,1,2,3,4,5,6].forEach(d=>{
+    const el=document.getElementById('vd_'+d);
+    if(el){ el.checked=days.includes(d); }
+  });
+  updateWeTab();
+}
+
+
+
+function toggleRule(key, mutuallyExclusive=[]){
+  const track=document.getElementById('tog_'+key);
+  if(!track) return;
+  const isOn=track.classList.toggle('on');
+  mutuallyExclusive.forEach(other=>{
+    const ot=document.getElementById('tog_'+other);
+    if(ot){ ot.classList.remove('on'); showRuleDeps(other,false); }
+  });
+  showRuleDeps(key,isOn);
+}
+
+function showRuleDeps(key,isOn){
+  ['_shift','_val','_grid','_label'].forEach(suffix=>{
+    const el=document.getElementById('rule_'+key+suffix);
+    if(el) el.style.display=isOn?'':'none';
+  });
+}
+
+function populateRuleShiftSelects(){
+  const opts='<option value="">– kein –</option>'+
+    SHIFTS.map(s=>`<option value="${s.id}">${s.icon} ${s.label}</option>`).join('');
+  ['rule_moFr_shift','rule_preferShift_val','ds_0','ds_1','ds_2','ds_3','ds_4','ds_5','ds_6']
+    .forEach(id=>{ const el=document.getElementById(id); if(el) el.innerHTML=opts; });
+}
+
+let _editStaffSollId=null;
+
+function openEditStaff(staffId){
+  _editStaffSollId=staffId;
+  const staff=state.staff.find(s=>s.id==staffId);
+  document.getElementById('editStaffSub').textContent=`${staff.name} · ${staff.role}`;
+  document.getElementById('editNameInput').value=staff.name;
+  document.getElementById('editRoleSelect').value=staff.role;
+  document.getElementById('editSollInput').value=staff.soll;
+  document.getElementById('editNotesInput').value=staff.notes||'';
+  openModal('editStaffModal');
+}
+
+function saveEditStaff(){
+  const staff=state.staff.find(s=>s.id==_editStaffSollId);
+  const name=document.getElementById('editNameInput').value.trim();
+  const role=document.getElementById('editRoleSelect').value;
+  const val=parseFloat(document.getElementById('editSollInput').value);
+  const notes=document.getElementById('editNotesInput').value.trim();
+  if(!name){ showToast('Bitte Namen eingeben'); return; }
+  if(isNaN(val)||val<=0){ showToast('Ungültige Stundenanzahl'); return; }
+  staff.name=name; staff.role=role; staff.soll=val; staff.notes=notes;
+  saveData(); closeModal('editStaffModal'); render();
+  showToast(`${name} aktualisiert ✓`);
+}
+
+function openPlanRules(){
+  const staff=state.staff.find(s=>s.id==_editStaffSollId);
+  document.getElementById('planRulesSub').textContent=`${staff.name} · ${staff.role}`;
+  switchPlanTab('vertrag');
+  const r=staff.rules||{};
+
+  // Vertragsarbeitstage
+  const vdays=r.vertragDays||[1,2,3,4,5];
+  [0,1,2,3,4,5,6].forEach(d=>{
+    const el=document.getElementById('vd_'+d);
+    if(el) el.checked=vdays.includes(d);
+  });
+  updateWeTab();
+
+  // Dienste checkboxes
+  const dienste=r.pr_dienste||{F:true,S:true,RU:true,FS:true};
+  ['F','S','RU','FS'].forEach(id=>{
+    const cb=document.getElementById('pr_dienst_'+id);
+    if(cb) cb.checked=dienste[id]!==false;
+  });
+
+  // Keine RU toggle
+  const keinRU=!!r.pr_keinRU;
+  const keinTrack=document.getElementById('tog_keinRU');
+  if(keinTrack) keinTrack.classList.toggle('on',keinRU);
+  const block=document.getElementById('ru_details_block');
+  if(block) block.style.display=keinRU?'none':'';
+
+  // Toggle rules
+  TOGGLE_RULES.forEach(key=>{
+    const track=document.getElementById('tog_'+key);
+    if(!track) return;
+    const on=!!r[key];
+    track.classList.toggle('on',on);
+    showRuleDeps(key,on);
+    const num=document.getElementById('rule_'+key+'_val');
+    if(num&&r[key+'_val']) num.value=r[key+'_val'];
+  });
+
+  // Scales
+  SCALE_KEYS.forEach(key=>{
+    setPrScale(key, r['pr_'+key]||3);
+  });
+
+  // RU min/max
+  const ruMinEl=document.getElementById('pr_ruMin');
+  const ruMaxEl=document.getElementById('pr_ruMax');
+  if(ruMinEl) ruMinEl.value=r.pr_ruMin??0;
+  if(ruMaxEl) ruMaxEl.value=r.pr_ruMax??4;
+
+  // Wochenende radio
+  const we=r.pr_we||'none';
+  const weEl=document.getElementById('pr_we_'+we);
+  if(weEl) weEl.checked=true;
+
+  // FZA radio
+  const fza=r.pr_fza||'ok';
+  const fzaEl=document.getElementById('pr_fza_'+fza);
+  if(fzaEl) fzaEl.checked=true;
+
+  updateDiensteTabs();
+  openModal('planRulesModal');
+}
+
+function savePlanRules(){
+  const staff=state.staff.find(s=>s.id==_editStaffSollId);
+  if(!staff.rules) staff.rules={};
+  const r=staff.rules;
+
+  // Vertragsarbeitstage
+  r.vertragDays=[0,1,2,3,4,5,6].filter(d=>document.getElementById('vd_'+d)?.checked);
+
+  // Dienste
+  r.pr_dienste={};
+  ['F','S','RU','FS'].forEach(id=>{
+    const cb=document.getElementById('pr_dienst_'+id);
+    r.pr_dienste[id]=cb?cb.checked:true;
+  });
+
+  // Keine RU
+  const keinTrack=document.getElementById('tog_keinRU');
+  r.pr_keinRU=keinTrack?keinTrack.classList.contains('on'):false;
+
+  // Toggle rules
+  TOGGLE_RULES.forEach(key=>{
+    const track=document.getElementById('tog_'+key);
+    if(!track) return;
+    r[key]=track.classList.contains('on');
+    const num=document.getElementById('rule_'+key+'_val');
+    if(num) r[key+'_val']=num.value;
+  });
+
+  // Scales
+  SCALE_KEYS.forEach(key=>{
+    r['pr_'+key]=parseInt(document.getElementById('pr_'+key)?.value)||3;
+  });
+
+  // RU min/max
+  r.pr_ruMin=parseInt(document.getElementById('pr_ruMin')?.value)||0;
+  r.pr_ruMax=parseInt(document.getElementById('pr_ruMax')?.value)||4;
+
+  // Wochenende
+  const weEl=document.querySelector('input[name="pr_we"]:checked');
+  r.pr_we=weEl?weEl.value:'none';
+
+  // FZA
+  const fzaEl=document.querySelector('input[name="pr_fza"]:checked');
+  r.pr_fza=fzaEl?fzaEl.value:'ok';
+
+  saveData();
+  // Stay in planRulesModal – do NOT close
+  showToast('Planungsregeln gespeichert ✓');
+}
+
+// ─── STAFF POPUP ───
+let _popupTimeout=null;
+function showStaffPopup(e, staffId){
+  clearTimeout(_popupTimeout);
+  const staff=state.staff.find(s=>s.id==staffId);
+  const days=daysInMonth(currentYear,currentMonth);
+  let ist=0, cF=0, cS=0, cRU=0;
+  for(let d=1;d<=days;d++){
+    const en=state.entries[`${staff.id}_${fmtDate(new Date(currentYear,currentMonth,d))}`];
+    if(en){
+      ist+=(SHIFT_MAP[en.shift]?.hours||0);
+      if(en.shift==='F') cF++;
+      else if(en.shift==='S') cS++;
+      else if(en.shift==='RU') cRU++;
+    }
+  }
+  const soll=calcMonthSoll(staff.soll, currentYear, currentMonth);
+  const pct=soll>0?Math.min(100,Math.round(ist/soll*100)):0;
+  const diff=ist-soll;
+  const init=staff.name.split(' ').map(p=>p[0]).join('').slice(0,2).toUpperCase();
+
+  const pop=document.getElementById('staffPopup');
+  document.getElementById('spAvatar').textContent=init;
+  document.getElementById('spAvatar').style.background=staff.color;
+  document.getElementById('spName').textContent=staff.name;
+  document.getElementById('spRole').textContent=staff.role;
+  document.getElementById('spCards').innerHTML=`
+    <div class="staff-popup-card wide">
+      <div class="spc-label">Gesamt IST / Monat</div>
+      <div class="spc-value">${ist.toFixed(0)} <span style="font-size:12px;color:var(--text3)">h</span></div>
+      <div class="spc-sub">Soll: ${soll.toFixed(0)} h &nbsp;·&nbsp; <span style="color:${diff>=0?'var(--green)':'var(--red)'}">${diff>=0?'+':''}${diff.toFixed(1)} h</span></div>
+      <div class="spc-bar"><div class="spc-bar-fill ${pct<80?'bar-warn':pct<=100?'bar-ok':'bar-over'}" style="width:${pct}%;background:${pct<80?'var(--orange)':pct<=100?'var(--green)':'var(--red)'}"></div></div>
+    </div>
+    <div class="staff-popup-card">
+      <div class="spc-label">🌅 Frühschichten</div>
+      <div class="spc-value">${cF}</div>
+    </div>
+    <div class="staff-popup-card">
+      <div class="spc-label">🌆 Spätschichten</div>
+      <div class="spc-value">${cS}</div>
+    </div>
+    <div class="staff-popup-card wide">
+      <div class="spc-label">📲 Rufbereitschaft</div>
+      <div class="spc-value">${cRU}</div>
+    </div>
+    ${staff.notes ? `<div class="spc-notes"><div class="spc-notes-label">📌 Notizen</div>${staff.notes}</div>` : ''}
+    ${(()=>{ const r=staff.rules||{}; const n=Object.keys(r).filter(k=>r[k]===true).length; return n>0?`<div class="spc-notes" style="background:var(--accent-soft);border-color:var(--accent)"><div class="spc-notes-label" style="color:var(--accent)">📋 Planungsregeln</div>${n} Regel${n!==1?'n':''} aktiv</div>`:''; })()}
+  `;
+
+  // Position popup: prefer right of cursor, flip if off-screen
+  const vw=window.innerWidth, vh=window.innerHeight;
+  let x=e.clientX+14, y=e.clientY-10;
+  pop.style.display='block';
+  const pw=pop.offsetWidth||300, ph=pop.offsetHeight||200;
+  if(x+pw>vw-16) x=e.clientX-pw-14;
+  if(y+ph>vh-16) y=vh-ph-16;
+  pop.style.left=x+'px'; pop.style.top=y+'px';
+  pop.classList.add('visible');
+}
+function hideStaffPopup(){
+  _popupTimeout=setTimeout(()=>{
+    document.getElementById('staffPopup').classList.remove('visible');
+  },120);
+}
+document.getElementById('staffPopup').addEventListener('mouseenter',()=>clearTimeout(_popupTimeout));
+document.getElementById('staffPopup').addEventListener('mouseleave',hideStaffPopup);
+
+// ─── MONTH SLIDER ───
+const SLOT_W = 100; // px per month slot
+
+function renderMonthSlider(){
+  const track = document.getElementById('monthSliderTrack');
+  if(!track) return;
+  // Show: prev, current, next
+  const months = [-1, 0, 1].map(offset => {
+    let m = currentMonth + offset;
+    let y = currentYear;
+    if(m < 0){ m += 12; y--; }
+    if(m > 11){ m -= 12; y++; }
+    return { m, y };
+  });
+  track.innerHTML = months.map(({m, y}, i) => {
+    const isActive = i === 1;
+    return `<div style="
+      width:${SLOT_W}px; flex-shrink:0; text-align:center;
+      font-size:${isActive ? '17px' : '13px'};
+      font-weight:${isActive ? '600' : '400'};
+      color:${isActive ? 'var(--text)' : 'var(--text3)'};
+      opacity:${isActive ? '1' : '0.55'};
+      letter-spacing:${isActive ? '-.3px' : '0'};
+      transition: all .32s;
+      cursor: pointer;
+      padding: 0 8px;
+      white-space:nowrap;
+    " onclick="sliderClickMonth(${i})">${MONTH_NAMES[m]}<br>
+    <span style="font-size:10px;font-weight:400;color:var(--text3);opacity:${isActive?'.5':'0'}">${y}</span>
+    </div>`;
+  }).join('');
+  // Center on active slot
+  track.style.transform = `translateX(-${SLOT_W}px)`;
+  track.style.transition = 'none';
+  requestAnimationFrame(()=>{ track.style.transition = 'transform .32s cubic-bezier(.4,0,.2,1)'; });
+}
+
+
+
+
+
+
+
+let _kiProposal = []; // [{staffId, dateStr, shift, status:'pending'|'accepted'|'rejected'}]
+
+function openKIModal(){
+  document.getElementById('kiMonthLabel').textContent = `${MONTH_NAMES[currentMonth]} ${currentYear}`;
+  openModal('kiModal');
+}
+
+function runKIPlanner(){
+  const minFruehWd = parseInt(document.getElementById('kiMinFruehWd').value)||2;
+  const maxFruehWd = parseInt(document.getElementById('kiMaxFruehWd').value)||5;
+  const minFruehWe = parseInt(document.getElementById('kiMinFruehWe').value)||1;
+  const maxFruehWe = parseInt(document.getElementById('kiMaxFruehWe').value)||3;
+  const minSpaetWd = parseInt(document.getElementById('kiMinSpaetWd').value)||1;
+  const maxSpaetWd = parseInt(document.getElementById('kiMaxSpaetWd').value)||3;
+  const minSpaetWe = parseInt(document.getElementById('kiMinSpaetWe').value)||0;
+  const maxSpaetWe = parseInt(document.getElementById('kiMaxSpaetWe').value)||2;
+  const minRU  = parseInt(document.getElementById('kiMinRU').value)||1;
+  const minFS  = parseInt(document.getElementById('kiMinFS').value)||0;
+
+  // Helper for getters
+  const minF = (isWE) => isWE ? minFruehWe : minFruehWd;
+  const maxF = (isWE) => isWE ? maxFruehWe : maxFruehWd;
+  const minS = (isWE) => isWE ? minSpaetWe : minSpaetWd;
+  const maxS = (isWE) => isWE ? maxSpaetWe : maxSpaetWd;
+
+  const days = daysInMonth(currentYear, currentMonth);
+  const hols = holidaysForYear(currentYear);
+
+  // Wochenende = Samstag (6) und Sonntag (0) – fest definiert
+  const WEEKEND_DAYS = new Set([0, 6]); // 0=Sonntag, 6=Samstag/Sonnabend
+  const isWeekend = dow => WEEKEND_DAYS.has(dow);
+
+  // Alle Diensteinträge des aktuellen Monats löschen (Wünsche w_ bleiben erhalten)
+  for(let d=1; d<=days; d++){
+    const ds = fmtDate(new Date(currentYear, currentMonth, d));
+    state.staff.forEach(s=>{ delete state.entries[`${s.id}_${ds}`]; });
+  }
+
+  // Blocked shifts per person (AU, URL, FB, FZA) – do not overwrite
+  const BLOCKED = new Set(['AU','URL','FB','FZA']);
+
+  // Parse wishes: day-specific wishes from wish row
+  // wishes stored as state.wishes[`w_${staffId}_${dateStr}`]
+  // notes: staff.notes (free text) – we look for keywords
+
+  function getWish(staffId, dateStr){ return state.wishes&&state.wishes[`w_${staffId}_${dateStr}`]||''; }
+  function match(text, patterns){ const t=text.toLowerCase(); return patterns.some(p=>t.includes(p.toLowerCase())); }
+
+  // Returns null if hard-blocked, else numeric score
+  function scoreAssignment(staff, dateStr, shiftId, assignedCount, curDayProposal){
+    const curProp = curDayProposal||[];
+    const dow = new Date(dateStr+'T12:00:00').getDay();
+    const isWE = isWeekend(dow);
+    const wish = getWish(staff.id, dateStr);
+    const r = staff.rules||{};
+
+    // ── DIENSTE-ERLAUBNIS ──
+    if(r.pr_dienste && r.pr_dienste[shiftId]===false) return null;
+    if(r.pr_keinRU && shiftId==='RU') return null;
+    if(r.vertragDays && r.vertragDays.length>0 && shiftId!=='FREI'){
+      if(!r.vertragDays.includes(dow)) return null;
+    }
+
+    // ── STUNDENKONTO: max 15h über Monatssoll ──
+    const monthSoll = calcMonthSoll(staff.soll, currentYear, currentMonth);
+    const shiftHrs  = SHIFT_MAP[shiftId]?.hours||0;
+    if(staffHours[staff.id] + shiftHrs > monthSoll + 15) return null;
+
+    // ── MAX per day: F and S global cap ──
+    const todayF = curProp.filter(p=>p.shift==='F').length;
+    const todayS = curProp.filter(p=>p.shift==='S').length;
+    if(shiftId==='F' && todayF >= maxF(isWE)) return null;
+    if(shiftId==='S' && todayS >= maxS(isWE)) return null;
+
+    // ── WOCHENENDE-REGELUNG ──
+    if(isWE && shiftId!=='FREI'){
+      if(r.pr_we==='immerFrei') return null;
+    }
+
+    // ── FZA-AUSSCHLUSS ──
+    if(shiftId==='FZA'){
+      if(r.pr_fza==='nein') return null;
+      if(r.pr_fza==='nichtVorUrl'||r.pr_fza==='nichtUmUrl'){
+        // Check if next day is URL
+        const nextDs=fmtDate(new Date(new Date(dateStr+'T12:00:00').getTime()+86400000));
+        const nextE=state.entries[`${staff.id}_${nextDs}`];
+        if(nextE&&nextE.shift==='URL') return null;
+      }
+      if(r.pr_fza==='nichtNachUrl'||r.pr_fza==='nichtUmUrl'){
+        const prevDs=fmtDate(new Date(new Date(dateStr+'T12:00:00').getTime()-86400000));
+        const prevE=state.entries[`${staff.id}_${prevDs}`];
+        if(prevE&&prevE.shift==='URL') return null;
+      }
+    }
+
+    // ── KURZER WECHSEL: Kein Früh nach Spät ──
+    if(r.noFruehAfterSpaet && shiftId==='F'){
+      const prevDs=fmtDate(new Date(new Date(dateStr+'T12:00:00').getTime()-86400000));
+      const prev=state.entries[`${staff.id}_${prevDs}`];
+      if(prev&&prev.shift==='S') return null;
+    }
+
+    // ── RU: Max pro Monat ──
+    if(shiftId==='RU' && r.pr_ruMax!==undefined){
+      const countRU=Object.keys(state.entries).filter(k=>
+        k.startsWith(staff.id+'_')&&state.entries[k]?.shift==='RU'
+      ).length;
+      if(countRU>=r.pr_ruMax) return null;
+    }
+
+    // ── KEINE zwei RU hintereinander ──
+    if(r.noConsecRu && shiftId==='RU'){
+      const prevDs=fmtDate(new Date(new Date(dateStr+'T12:00:00').getTime()-86400000));
+      const prev=state.entries[`${staff.id}_${prevDs}`];
+      if(prev&&prev.shift==='RU') return null;
+    }
+
+    // ── HARD BLOCKS from day wish ──
+    const w=wish.toLowerCase();
+    if(w&&match(wish,['kein früh','nicht früh'])&&shiftId==='F') return null;
+    if(w&&match(wish,['kein spät','nicht spät'])&&shiftId==='S') return null;
+    if(w&&match(wish,['frei','urlaub','krank'])&&shiftId!=='FREI') return null;
+
+    // ── SCORE ──
+    let score = 100;
+
+    // ── Fair distribution of Frühdienste across staff ──
+    // Prefer staff who have fewer F-shifts so far
+    if(shiftId==='F') score -= (staffShiftByType[staff.id]?.F||0) * 12;
+    if(shiftId==='S') score -= (staffShiftByType[staff.id]?.S||0) * 8;
+    if(shiftId==='RU') score -= (staffShiftByType[staff.id]?.RU||0) * 8;
+
+    // ── Stundenkonto: prefer underplanned staff ──
+    const monthSoll2 = calcMonthSoll(staff.soll, currentYear, currentMonth);
+    const diff = staffHours[staff.id] - monthSoll2;
+    if(diff > 8)  score -= (diff - 8)  * 5;  // reduce score if already 8h over
+    if(diff < -8) score += (-diff - 8) * 3;  // boost score if 8h+ under planned
+
+    // Scale-basierte Gewichtung (Wichtigkeit × Wunsch-Richtung)
+    const fruehWunsch=(r.pr_fruehWunsch||3)-3; // -2..+2
+    const spaetWunsch=(r.pr_spaetWunsch||3)-3;
+    const ruWunsch   =(r.pr_ruWunsch   ||3)-3;
+    const fruehWichtig=(r.pr_fruehWichtig||3);
+    const spaetWichtig=(r.pr_spaetWichtig||3);
+    const ruWichtig   =(r.pr_ruWichtig  ||3);
+    const wechselW    =(r.pr_wechselWichtig||3);
+
+    if(shiftId==='F') score += fruehWunsch * fruehWichtig * 6;
+    if(shiftId==='S') score += spaetWunsch * spaetWichtig * 6;
+    if(shiftId==='RU') score += ruWunsch * ruWichtig * 6;
+
+    // Kurzer Wechsel soft-penalty
+    if(shiftId==='F' && wechselW>1){
+      const prevDs=fmtDate(new Date(new Date(dateStr+'T12:00:00').getTime()-86400000));
+      const prev=state.entries[`${staff.id}_${prevDs}`];
+      if(prev&&prev.shift==='S') score -= wechselW * 15;
+    }
+
+    // Wochenende-Präferenz
+    if(isWE){
+      if(r.pr_we==='ja') score += 20;
+      else if(r.pr_we==='alle2'||r.pr_we==='ganz') score -= 10;
+    }
+
+    // Day-wish boosts
+    if(w&&match(wish,['früh','frühschicht'])&&shiftId==='F') score+=70;
+    if(w&&match(wish,['spät','spätschicht'])&&shiftId==='S') score+=70;
+    if(w&&match(wish,['ruf','rufbereitschaft'])&&shiftId==='RU') score+=70;
+
+    // Fairness
+    score -= assignedCount * 4;
+    score += Math.random() * 6;
+    return score;
+  }
+
+  // Build proposal
+  const proposal = [];
+  // Track per-staff counts: total shifts, per-shift-type count, and accrued hours
+  const staffShiftCount = {};   // total assigned this month
+  const staffShiftByType = {};  // {F:0, S:0, RU:0, FS:0, ...}
+  const staffHours = {};        // accrued hours so far this month
+  state.staff.forEach(s=>{
+    staffShiftCount[s.id]=0;
+    staffShiftByType[s.id]={F:0,S:0,RU:0,FS:0};
+    staffHours[s.id]=0;
+  });
+
+  for(let d=1; d<=days; d++){
+    const dt = new Date(currentYear, currentMonth, d);
+    const ds = fmtDate(dt);
+    const dow = dt.getDay();
+    const isWE = isWeekend(dow);
+    const isHol = !!hols[ds];
+
+    // Shuffle staff for fairness
+    const shuffled = [...state.staff].sort(()=>Math.random()-.5);
+
+    // Slots to fill per day (respect Min; Max enforced in scoring)
+    const slots = [
+      ...Array(minF(isWE)).fill('F'),
+      ...Array(minS(isWE)).fill('S'),
+      ...Array(minRU).fill('RU'),
+      ...Array(minFS).fill('FS'),
+    ];
+    const daySlots = slots; // no longer reduce on weekends – min values already handle that
+
+    // Track which staff are already assigned this day
+    const assignedToday = new Set();
+    const dayProposal = []; // sammelt alle Einträge für diesen Tag
+
+    // ── PHASE 1: Harte Tageswünsche – exakter Dienst in Wunschzeile ──
+    // Steht in der Wunschzeile ein konkreter Dienst-ID (z.B. "FZA", "F", "URL"),
+    // wird dieser als feste Vorgabe eingetragen – vor allen anderen Überlegungen.
+    const SHIFT_IDS = new Set(SHIFTS.map(s=>s.id));
+    // Ausnahmen: diese Dienste in der Wunschzeile überschreiben auch Regeln aus Hinweisen
+    const WISH_EXCEPTIONS = new Set(['FZA','AU','URL','FREI']);
+
+    for(const staff of state.staff){
+      const wish = getWish(staff.id, ds);
+      const notes = (staff.notes || ''); // ← hier definiert, für Phase 1a + 1b
+
+      // ── PHASE 1a: Wunschzeile – exakter Dienst hat absolute Priorität ──
+      if(wish){
+        const wishUpper = wish.toUpperCase().trim();
+        let pinnedShift = null;
+        // Längere IDs zuerst prüfen (FS vor F, RU vor R, FZA vor F)
+        const sortedIds = [...SHIFT_IDS].sort((a,b)=>b.length-a.length);
+        for(const sid of sortedIds){
+          const re = new RegExp('(^|[^A-ZÄÖÜa-zäöü])' + sid + '($|[^A-ZÄÖÜa-zäöü])');
+          if(re.test(wishUpper)){ pinnedShift = sid; break; }
+        }
+        if(pinnedShift){
+          dayProposal.push({staffId:staff.id, dateStr:ds, shift:pinnedShift});
+          assignedToday.add(staff.id);
+          const hrs=SHIFT_MAP[pinnedShift]?.hours||0;
+          if(hrs>0){ staffShiftCount[staff.id]++; staffHours[staff.id]+=hrs; }
+          if(staffShiftByType[staff.id]) staffShiftByType[staff.id][pinnedShift]=(staffShiftByType[staff.id][pinnedShift]||0)+1;
+          continue;
+        }
+      }
+
+      // ── PHASE 1b: Strukturierte Planungsregeln ──
+      if(!assignedToday.has(staff.id)){
+        const r = staff.rules||{};
+
+        // Wochenende immer Frei (from pr_we)
+        if(r.pr_we==='immerFrei' && isWE && shiftId!=='FREI'){
+          // handled in score
+        }
+
+        // Mo–Fr fester Dienst (legacy moFr rule still supported)
+        if(r.moFr && r.moFr_shift && !isWE && !isHol && dow>=1 && dow<=5){
+          const wishUp=(wish||'').toUpperCase();
+          const wishOverrides=[...WISH_EXCEPTIONS].some(ex=>new RegExp('(^|\\W)'+ex+'(\\W|$)').test(wishUp));
+          if(!wishOverrides){
+            dayProposal.push({staffId:staff.id,dateStr:ds,shift:r.moFr_shift});
+            assignedToday.add(staff.id);
+            const hrs=SHIFT_MAP[r.moFr_shift]?.hours||0;
+            if(hrs>0){ staffShiftCount[staff.id]++; staffHours[staff.id]+=hrs; }
+            if(staffShiftByType[staff.id]) staffShiftByType[staff.id][r.moFr_shift]=(staffShiftByType[staff.id][r.moFr_shift]||0)+1;
+          }
+        }
+
+        // Einzelne Wochentage → fester Dienst (legacy dayShift rule)
+        if(r.dayShift && !assignedToday.has(staff.id)){
+          const dayRule = r['ds_'+dow];
+          if(dayRule){
+            const wishUp=(wish||'').toUpperCase();
+            const wishOverrides=[...WISH_EXCEPTIONS].some(ex=>new RegExp('(^|\\W)'+ex+'(\\W|$)').test(wishUp));
+            if(!wishOverrides){
+              dayProposal.push({staffId:staff.id,dateStr:ds,shift:dayRule});
+              assignedToday.add(staff.id);
+              const hrs=SHIFT_MAP[dayRule]?.hours||0;
+              if(hrs>0){ staffShiftCount[staff.id]++; staffHours[staff.id]+=hrs; }
+              if(staffShiftByType[staff.id]) staffShiftByType[staff.id][dayRule]=(staffShiftByType[staff.id][dayRule]||0)+1;
+            }
+          }
+        }
+
+        // Nach Rufbereitschaft → Frei
+        if(r.afterRuFrei && !assignedToday.has(staff.id) && d>1){
+          const prevDs=fmtDate(new Date(currentYear,currentMonth,d-1));
+          const prevEntry=state.entries[`${staff.id}_${prevDs}`];
+          if(prevEntry&&prevEntry.shift==='RU'){
+            dayProposal.push({staffId:staff.id,dateStr:ds,shift:'FREI'});
+            assignedToday.add(staff.id);
+          }
+        }
+
+        // Nach Rufbereitschaft → Spät
+        if(r.afterRuSpaet && !assignedToday.has(staff.id) && d>1){
+          const prevDs=fmtDate(new Date(currentYear,currentMonth,d-1));
+          const prevEntry=state.entries[`${staff.id}_${prevDs}`];
+          if(prevEntry&&prevEntry.shift==='RU'){
+            dayProposal.push({staffId:staff.id,dateStr:ds,shift:'S'});
+            assignedToday.add(staff.id);
+            staffShiftCount[staff.id]++;
+            staffHours[staff.id]+=(SHIFT_MAP['S']?.hours||0);
+            if(staffShiftByType[staff.id]) staffShiftByType[staff.id]['S']=(staffShiftByType[staff.id]['S']||0)+1;
+          }
+        }
+
+        // Nach AU/Urlaub → Frei
+        if(r.afterAuFrei && !assignedToday.has(staff.id) && d>1){
+          const prevDs=fmtDate(new Date(currentYear,currentMonth,d-1));
+          const prevEntry=state.entries[`${staff.id}_${prevDs}`];
+          if(prevEntry&&(prevEntry.shift==='AU'||prevEntry.shift==='URL')){
+            dayProposal.push({staffId:staff.id,dateStr:ds,shift:'FREI'});
+            assignedToday.add(staff.id);
+          }
+        }
+
+        // Tag vor Urlaub → Frei
+        if(r.beforeUrlFrei && !assignedToday.has(staff.id) && d<days){
+          const nextDs=fmtDate(new Date(currentYear,currentMonth,d+1));
+          const nextEntry=state.entries[`${staff.id}_${nextDs}`];
+          if(nextEntry&&nextEntry.shift==='URL'){
+            dayProposal.push({staffId:staff.id,dateStr:ds,shift:'FREI'});
+            assignedToday.add(staff.id);
+          }
+        }
+
+        // Tag nach Urlaub → Frei
+        if(r.afterUrlFrei && !assignedToday.has(staff.id) && d>1){
+          const prevDs=fmtDate(new Date(currentYear,currentMonth,d-1));
+          const prevEntry=state.entries[`${staff.id}_${prevDs}`];
+          if(prevEntry&&prevEntry.shift==='URL'){
+            dayProposal.push({staffId:staff.id,dateStr:ds,shift:'FREI'});
+            assignedToday.add(staff.id);
+          }
+        }
+      }
+    }
+
+    // ── PHASE 2: Slots füllen für nicht bereits verplante Mitarbeiter ──
+
+    // ── PHASE 2: Slots füllen für nicht bereits verplante Mitarbeiter ──
+    for(const targetShift of daySlots){
+      let bestStaff = null, bestScore = -Infinity;
+      for(const staff of shuffled){
+        if(assignedToday.has(staff.id)) continue;
+        const key = `${staff.id}_${ds}`;
+        const existing = state.entries[key];
+        if(existing && BLOCKED.has(existing.shift)) continue;
+        const sc = scoreAssignment(staff, ds, targetShift, staffShiftCount[staff.id], dayProposal);
+        if(sc === null) continue;
+        if(sc > bestScore){ bestScore=sc; bestStaff=staff; }
+      }
+      if(bestStaff){
+        dayProposal.push({staffId:bestStaff.id, dateStr:ds, shift:targetShift});
+        assignedToday.add(bestStaff.id);
+        const hrs=SHIFT_MAP[targetShift]?.hours||0;
+        if(hrs>0){ staffShiftCount[bestStaff.id]++; staffHours[bestStaff.id]+=hrs; }
+        if(staffShiftByType[bestStaff.id]) staffShiftByType[bestStaff.id][targetShift]=(staffShiftByType[bestStaff.id][targetShift]||0)+1;
+      }
+    }
+
+    // ── PHASE 3: Extra-Runde für stark unterplante Mitarbeiter ──
+    // Wenn ein Mitarbeiter auf Kurs ist, mehr als 8h unter dem Monatssoll zu landen,
+    // bekommt er einen zusätzlichen Dienst (F bevorzugt), sofern der Max-Cap nicht erreicht ist.
+    if(!isWE && !isHol){
+      const remainingDays = days - d + 1; // Tage noch im Monat inkl. heute
+      for(const staff of shuffled){
+        if(assignedToday.has(staff.id)) continue;
+        const key=`${staff.id}_${ds}`;
+        const existing=state.entries[key];
+        if(existing && BLOCKED.has(existing.shift)) continue;
+        const monthSoll = calcMonthSoll(staff.soll, currentYear, currentMonth);
+        const hoursLeft = monthSoll - staffHours[staff.id];
+        // Projected shortfall: if no more shifts planned, will they be >8h under?
+        const projectedShortfall = hoursLeft - (remainingDays - 1) * (staff.soll / 5);
+        if(projectedShortfall > 8){
+          // Try to assign an extra F or S shift
+          for(const extraShift of ['F','S','FS']){
+            const sc = scoreAssignment(staff, ds, extraShift, staffShiftCount[staff.id], dayProposal);
+            if(sc !== null){
+              dayProposal.push({staffId:staff.id, dateStr:ds, shift:extraShift});
+              assignedToday.add(staff.id);
+              const hrs=SHIFT_MAP[extraShift]?.hours||0;
+              if(hrs>0){ staffShiftCount[staff.id]++; staffHours[staff.id]+=hrs; }
+              if(staffShiftByType[staff.id]) staffShiftByType[staff.id][extraShift]=(staffShiftByType[staff.id][extraShift]||0)+1;
+              break;
+            }
+          }
+        }
+      }
+    }
+
+    // Remaining staff: assign FREI (workdays only) – FREI does NOT block work shifts
+    // We use a separate set so FREI assignment doesn't interfere with work slot filling
+    if(!isWE && !isHol){
+      for(const staff of shuffled){
+        if(assignedToday.has(staff.id)) continue;
+        const key=`${staff.id}_${ds}`;
+        const existing=state.entries[key];
+        if(existing && (BLOCKED.has(existing.shift)||existing.shift)) continue;
+        // Only assign FREI if person is on contract for this day
+        const r=staff.rules||{};
+        if(r.vertragDays && r.vertragDays.length>0 && !r.vertragDays.includes(dow)) continue;
+        dayProposal.push({staffId:staff.id, dateStr:ds, shift:'FREI'});
+        // Note: do NOT add to assignedToday here – FREI is just a label, not a lock
+      }
+    }
+
+    proposal.push(...dayProposal);
+  }
+
+  _kiProposal = proposal.map(p=>({...p, status:'pending'}));
+  closeModal('kiModal');
+  showKIPreview();
+}
+
+function showKIPreview(){
+  const total = _kiProposal.length;
+  const pending = _kiProposal.filter(p=>p.status==='pending').length;
+  document.getElementById('kiPreviewSub').textContent =
+    `${MONTH_NAMES[currentMonth]} ${currentYear} · ${total} Vorschläge`;
+
+  // Summary badges
+  const counts = {};
+  _kiProposal.forEach(p=>{ counts[p.shift]=(counts[p.shift]||0)+1; });
+  document.getElementById('kiSummary').innerHTML =
+    Object.entries(counts).map(([sh,n])=>{
+      const s=SHIFT_MAP[sh]; if(!s) return '';
+      return `<span class="ki-badge ki-badge-green">${s.icon} ${s.label}: ${n}</span>`;
+    }).join('') +
+    `<span style="margin-left:auto;font-size:11px;color:var(--text3)">${pending} ausstehend</span>`;
+
+  // Group by staff
+  const byStaff = {};
+  _kiProposal.forEach(p=>{
+    if(!byStaff[p.staffId]) byStaff[p.staffId]=[];
+    byStaff[p.staffId].push(p);
+  });
+
+  let html = '';
+  state.staff.forEach(staff=>{
+    const entries = byStaff[staff.id];
+    if(!entries||entries.length===0) return;
+    const init = staff.name.split(' ').map(x=>x[0]).join('').slice(0,2).toUpperCase();
+    html += `<div class="ki-staff-block">
+      <div class="ki-staff-header">
+        <span style="width:22px;height:22px;border-radius:50%;background:${staff.color};display:inline-flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;color:#fff;flex-shrink:0">${init}</span>
+        ${staff.name} <span style="font-size:10.5px;color:var(--text3);font-weight:400">${staff.role}</span>
+      </div>
+      <div class="ki-entries">`;
+    entries.sort((a,b)=>a.dateStr.localeCompare(b.dateStr)).forEach((p,i)=>{
+      const shift = SHIFT_MAP[p.shift];
+      const dt = new Date(p.dateStr+'T12:00:00');
+      const dayLabel = DAY_SHORT[dt.getDay()]+' '+dt.getDate();
+      const wish = state.wishes&&state.wishes[`w_${p.staffId}_${p.dateStr}`];
+      const staffObj = state.staff.find(s=>s.id==p.staffId);
+      const hasNotes = staffObj&&staffObj.notes&&staffObj.notes.trim();
+      const wishTip = wish ? ` title="💬 Tageswunsch: ${wish}"` : (hasNotes ? ` title="📌 Allg. Hinweise beachtet"` : '');
+      const globalIdx = _kiProposal.indexOf(p);
+      html += `<div class="ki-entry${p.status==='accepted'?' accepted':p.status==='rejected'?' rejected':''}" id="kie_${globalIdx}"${wishTip}>
+        <span class="ki-entry-date">${dayLabel}</span>
+        <span class="ki-entry-shift">${shift.icon}</span>
+        <span class="ki-entry-label">${shift.label}</span>
+        ${wish?'<span title="Tageswunsch berücksichtigt" style="font-size:10px">💬</span>':hasNotes?'<span title="Allg. Hinweise berücksichtigt" style="font-size:10px">📌</span>':''}
+        <div class="ki-entry-btns">
+          <button class="ki-btn ki-btn-ok"  onclick="kiToggle(${globalIdx},'accepted')">✓</button>
+          <button class="ki-btn ki-btn-no"  onclick="kiToggle(${globalIdx},'rejected')">✕</button>
+        </div>
+      </div>`;
+    });
+    html += '</div></div>';
+  });
+  document.getElementById('kiPreviewBody').innerHTML = html;
+  openModal('kiPreviewModal');
+}
+
+function kiToggle(idx, status){
+  _kiProposal[idx].status = _kiProposal[idx].status===status ? 'pending' : status;
+  const el=document.getElementById('kie_'+idx);
+  el.className='ki-entry'+(status==='accepted'?' accepted':' rejected');
+  if(_kiProposal[idx].status==='pending') el.className='ki-entry';
+}
+function kiAcceptAll(){ _kiProposal.forEach((_,i)=>{ _kiProposal[i].status='accepted'; }); showKIPreview(); }
+function kiRejectAll(){ _kiProposal.forEach((_,i)=>{ _kiProposal[i].status='rejected'; }); showKIPreview(); }
+
+function kiApplyAccepted(){
+  let count=0;
+  _kiProposal.forEach(p=>{
+    if(p.status==='accepted'){
+      state.entries[`${p.staffId}_${p.dateStr}`]={ shift:p.shift, info:'' };
+      count++;
+    }
+  });
+  saveData(); closeModal('kiPreviewModal'); render();
+  showToast(`${count} Einträge übernommen ✓`);
+}
+
+// ─── WÜNSCHE ───
+function toggleWuensche(){
+  state.showWuensche = !state.showWuensche;
+  if(!state.wishes) state.wishes={};
+  const btn=document.getElementById('btnWuensche');
+  if(btn){
+    if(state.showWuensche){
+      btn.style.background='var(--red-soft)';
+      btn.style.borderColor='var(--red)';
+      btn.style.color='var(--red)';
+    } else {
+      btn.style.background='var(--surface2)';
+      btn.style.borderColor='var(--border)';
+      btn.style.color='var(--text2)';
+    }
+  }
+  saveData(); render();
+}
+
+let _wishStaffId=null, _wishDate=null;
+function openWish(staffId, dateStr){
+  _wishStaffId=staffId; _wishDate=dateStr;
+  const staff=state.staff.find(s=>s.id==staffId);
+  const wkey=`w_${staffId}_${dateStr}`;
+  const existing=(state.wishes&&state.wishes[wkey])||'';
+  document.getElementById('wishModalTitle').textContent='💬 Dienstwunsch – '+staff.name;
+  document.getElementById('wishModalSub').textContent=new Date(dateStr+'T12:00:00').toLocaleDateString('de-DE',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
+  document.getElementById('wishInput').value=existing;
+  openModal('wishModal');
+}
+function saveWish(del){
+  if(!state.wishes) state.wishes={};
+  const wkey=`w_${_wishStaffId}_${_wishDate}`;
+  if(del || !document.getElementById('wishInput').value.trim()){
+    delete state.wishes[wkey];
+  } else {
+    state.wishes[wkey]=document.getElementById('wishInput').value.trim();
+  }
+  saveData(); closeModal('wishModal'); render();
+  showToast(del?'Wunsch gelöscht':'Wunsch gespeichert ✓');
+}
+
+async function doLogout(){
+  await sb.auth.signOut();
+  window.location.href='nicode_login.html';
+}
+
+// ─── SETTINGS MENU ───
+function toggleSettingsMenu(){
+  const menu = document.getElementById('settingsMenu');
+  const isOpen = menu.style.display !== 'none';
+  menu.style.display = isOpen ? 'none' : 'block';
+  if(!isOpen) updateSettingsUserInfo();
+}
+
+function updateSettingsUserInfo(){
+  const nameEl = document.getElementById('settingsUserName');
+  const roleEl = document.getElementById('settingsUserRole');
+  if(!nameEl || !roleEl) return;
+  // Get email from Supabase session
+  sb.auth.getSession().then(({data:{session}})=>{
+    if(session){
+      nameEl.textContent = session.user.email;
+      const roleLabels = {
+        owner:'Owner', master_admin:'Master Admin', admin:'Admin',
+        personal:'Personalabteilung', betriebsrat:'Betriebsrat',
+        planer:'Planer', mitarbeiter:'Mitarbeiter'
+      };
+      roleEl.textContent = roleLabels[currentUserRole] || currentUserRole || '–';
+    }
+  });
+}
+
+// Close menu when clicking outside
+document.addEventListener('click', e=>{
+  const menu = document.getElementById('settingsMenu');
+  const logo = document.querySelector('.logo');
+  if(menu && !menu.contains(e.target) && logo && !logo.contains(e.target)){
+    menu.style.display = 'none';
+  }
+});
+
+function openUserManagement(){
+  document.getElementById('settingsMenu').style.display = 'none';
+  loadUserList();
+  openModal('userMgmtModal');
+}
+
+const ROLE_LABELS = {
+  owner:'Owner', master_admin:'Master Admin', admin:'Admin',
+  personal:'Personalabteilung', betriebsrat:'Betriebsrat',
+  planer:'Planer', mitarbeiter:'Mitarbeiter'
+};
+
+async function loadUserList(){
+  const list = document.getElementById('userList');
+  list.innerHTML = '<div style="color:var(--text3);font-size:12px;padding:8px">Lade Benutzer…</div>';
+
+  // Fetch all user_roles – needs admin policy in Supabase
+  const { data, error } = await sb.from('user_roles').select('*').order('created_at');
+  if(error || !data){ 
+    list.innerHTML = '<div style="color:var(--red);font-size:12px;padding:8px">Fehler beim Laden – prüfe RLS Policy</div>'; 
+    return; 
+  }
+  if(!data.length){ list.innerHTML = '<div style="color:var(--text3);font-size:12px;padding:8px">Keine Benutzer gefunden</div>'; return; }
+  
+  const canManageUsers = ['owner','master_admin','admin'];
+  const canEdit = canManageUsers.includes(currentUserRole);
+
+  list.innerHTML = data.map(u=>`
+    <div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:var(--surface2);border-radius:8px">
+      <div style="width:32px;height:32px;border-radius:50%;background:var(--accent-soft);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:var(--accent);flex-shrink:0">${(ROLE_LABELS[u.role]||'?')[0].toUpperCase()}</div>
+      <div style="flex:1;min-width:0">
+        <div style="font-size:12px;font-weight:500;color:var(--text)">${u.user_id === currentUserId ? '👤 Du' : u.user_id.substring(0,12)+'…'}</div>
+        <div style="font-size:10px;color:var(--text3)">${ROLE_LABELS[u.role]||u.role}</div>
+      </div>
+      ${canEdit ? `
+      <select onchange="changeUserRole('${u.user_id}', this.value)" style="font-size:11px;padding:4px 8px;border:1px solid var(--border);border-radius:6px;background:var(--surface);color:var(--text)">
+        ${Object.entries(ROLE_LABELS).map(([v,l])=>`<option value="${v}"${u.role===v?' selected':''}>${l}</option>`).join('')}
+      </select>
+      ${u.user_id !== currentUserId ? `<button onclick="deleteUser('${u.user_id}')" style="width:26px;height:26px;border:none;background:var(--red-soft);color:var(--red);border-radius:6px;cursor:pointer;font-size:14px;flex-shrink:0">✕</button>` : ''}
+      ` : ''}
+    </div>
+  `).join('');
+}
+
+async function inviteUser(){
+  const email = document.getElementById('inviteEmail').value.trim();
+  const role  = document.getElementById('inviteRole').value;
+  const password = document.getElementById('invitePassword').value;
+  if(!email || !password){ showToast('Bitte E-Mail und Passwort eingeben'); return; }
+
+  const { data: { session } } = await sb.auth.getSession();
+  const response = await fetch(`${SUPABASE_URL}/functions/v1/create-user`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${session.access_token}`
+    },
+    body: JSON.stringify({ email, password, role })
+  });
+
+  const result = await response.json();
+  if(result.error){ showToast('Fehler: ' + result.error); return; }
+
+  document.getElementById('inviteEmail').value = '';
+  document.getElementById('invitePassword').value = '';
+  showToast(`✅ ${email} als ${ROLE_LABELS[role]} angelegt`);
+  loadUserList();
+}
+
+async function changeUserRole(userId, newRole){
+  const { error } = await sb.from('user_roles').update({ role: newRole }).eq('user_id', userId);
+  if(error){ showToast('Fehler beim Ändern der Rolle'); return; }
+  showToast('✅ Rolle aktualisiert');
+}
+
+async function deleteUser(userId){
+  if(!confirm('Benutzer wirklich entfernen?')) return;
+  const { error } = await sb.from('user_roles').delete().eq('user_id', userId);
+  if(error){ showToast('Fehler beim Löschen'); return; }
+  showToast('✅ Benutzer entfernt');
+  loadUserList();
+}
+
+// ─── ROLLE ───
+let currentUserRole = null;
+let currentUserId = null;
+
+async function loadUserRole(){
+  const { data: { session } } = await sb.auth.getSession();
+  if(!session) return;
+  currentUserId = session.user.id;
+  const { data, error } = await sb.from('user_roles').select('role').eq('user_id', currentUserId).single();
+  if(data) currentUserRole = data.role;
+  console.log('Rolle:', currentUserRole);
+  applyRolePermissions();
+}
+
+function applyRolePermissions(){
+  const readOnly = ['mitarbeiter','betriebsrat'];
+  const noUsers  = ['planer','personal','betriebsrat','mitarbeiter'];
+  const canManageUsers = ['owner','master_admin','admin'];
+
+  // Schreibgeschützt: Chips ausgegraut
+  if(readOnly.includes(currentUserRole)){
+    document.querySelectorAll('.shift-chip').forEach(b=>{
+      b.style.pointerEvents='none';
+      b.style.opacity='.5';
+      b.style.cursor='default';
+    });
+  }
+
+  // Planer darf Dienstplan bearbeiten aber kein Personal anlegen
+  if(currentUserRole === 'planer'){
+    const btnPersonal = document.querySelector('button[onclick="openAddStaff()"]');
+    if(btnPersonal) btnPersonal.style.display='none';
+  }
+
+  // + Eintrag Button ausblenden für readOnly
+  const btnEintrag = document.querySelector('button[onclick="openAddEntry()"]');
+  if(btnEintrag && readOnly.includes(currentUserRole)) btnEintrag.style.display='none';
+
+  // + Personal Button ausblenden
+  const btnPersonal = document.querySelector('button[onclick="openAddStaff()"]');
+  if(btnPersonal && noUsers.includes(currentUserRole)) btnPersonal.style.display='none';
+
+  // KI-Button ausblenden für readOnly
+  const btnKI = document.querySelector('button[onclick="openKIModal()"]');
+  if(btnKI && readOnly.includes(currentUserRole)) btnKI.style.display='none';
+
+  // Benutzerverwaltung im Menü ausblenden für nicht-Admins
+  const menuUserMgmt = document.querySelector('.settings-menu-item[onclick="openUserManagement()"]');
+  if(menuUserMgmt){
+    menuUserMgmt.style.display = canManageUsers.includes(currentUserRole) ? '' : 'none';
+  }
+}
+// 1. Beim Verlassen der Seite ausloggen
+window.addEventListener('beforeunload', ()=>{ sb.auth.signOut(); });
+
+// 2. Nach 15 Minuten Inaktivität ausloggen
+let _inactivityTimer;
+const INACTIVITY_MS = 15 * 60 * 1000; // 15 Minuten
+
+function resetInactivityTimer(){
+  clearTimeout(_inactivityTimer);
+  _inactivityTimer = setTimeout(async ()=>{
+    await sb.auth.signOut();
+    window.location.href = 'nicode_login.html';
+  }, INACTIVITY_MS);
+}
+
+// Aktivität überwachen
+['mousemove','mousedown','keydown','touchstart','scroll','click'].forEach(evt=>{
+  document.addEventListener(evt, resetInactivityTimer, { passive: true });
+});
+
+resetInactivityTimer(); // Timer starten
+
+// ─── AUTH GUARD ───
+(async function(){
+  const { data: { session } } = await sb.auth.getSession();
+  if(!session){
+    window.location.href = 'nicode_login.html';
+  }
+})();
+
+// apply any saved shift hours on startup
+applyShiftHours();
+// restore Wünsche button state
+if(state.showWuensche){
+  const btn=document.getElementById('btnWuensche');
+  if(btn){ btn.style.background='var(--red-soft)'; btn.style.borderColor='var(--red)'; btn.style.color='var(--red)'; }
+}
+render();
+// Load from Supabase
+loadFromSupabase();
+// Load user role
+loadUserRole();
+</script>
+</body>
+</html>
