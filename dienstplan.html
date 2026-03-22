@@ -2882,6 +2882,8 @@ async function addLoginToStaff(staffId, staffName){
   showToast(`✅ Login für ${staffName} angelegt`);
   loadUserList();
 }
+
+const ROLE_LABELS = {
   owner:'Owner', master_admin:'Master Admin', admin:'Admin',
   personal:'Personalabteilung', betriebsrat:'Betriebsrat',
   planer:'Planer', mitarbeiter:'Mitarbeiter'
