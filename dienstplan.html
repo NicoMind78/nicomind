@@ -1222,6 +1222,80 @@
   </div>
 </div>
 
+<!-- Edit User Modal -->
+<div class="modal-overlay" id="editUserModal" onclick="if(event.target===this)closeModal('editUserModal')">
+  <div class="modal modal-wide" style="max-height:85vh;display:flex;flex-direction:column">
+    <div class="modal-title">✎ Benutzer bearbeiten</div>
+    <div class="modal-sub" id="editUserSub">–</div>
+    <div style="overflow-y:auto;flex:1;padding-right:4px">
+
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:8px">
+        <div>
+          <div style="font-size:10px;color:var(--text3);margin-bottom:3px">Name</div>
+          <input type="text" id="euName" style="width:100%;padding:7px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:12px;background:var(--surface);color:var(--text)">
+        </div>
+        <div>
+          <div style="font-size:10px;color:var(--text3);margin-bottom:3px">Vorname</div>
+          <input type="text" id="euVorname" style="width:100%;padding:7px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:12px;background:var(--surface);color:var(--text)">
+        </div>
+        <div>
+          <div style="font-size:10px;color:var(--text3);margin-bottom:3px">Position</div>
+          <div style="display:flex;gap:4px">
+            <select id="euPosition" style="flex:1;padding:7px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:12px;background:var(--surface);color:var(--text)">
+              <option value="">– wählen –</option>
+              <option>Pflegefachkraft</option>
+              <option>Pflegehilfskraft</option>
+              <option>Ärztin/Arzt</option>
+              <option>Fallsteuerung</option>
+              <option>PDL</option>
+              <option>Hauswirtschaft</option>
+            </select>
+            <button onclick="addEuPositionOption()" style="padding:0 8px;border:1.5px solid var(--border);border-radius:8px;background:var(--surface);color:var(--text2);cursor:pointer;font-size:16px">+</button>
+          </div>
+        </div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:8px">
+        <div>
+          <div style="font-size:10px;color:var(--text3);margin-bottom:3px">Handy</div>
+          <input type="tel" id="euHandy" style="width:100%;padding:7px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:12px;background:var(--surface);color:var(--text)">
+        </div>
+        <div>
+          <div style="font-size:10px;color:var(--text3);margin-bottom:3px">Kostenstelle</div>
+          <input type="text" id="euKostenstelle" style="width:100%;padding:7px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:12px;background:var(--surface);color:var(--text)">
+        </div>
+        <div>
+          <div style="font-size:10px;color:var(--text3);margin-bottom:3px">Wöchtl. Arbeitszeit (h)</div>
+          <input type="number" id="euSoll" min="0" max="60" step="0.5" style="width:100%;padding:7px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:12px;background:var(--surface);color:var(--text)">
+        </div>
+      </div>
+
+      <div style="margin-bottom:8px">
+        <div style="font-size:10px;color:var(--text3);margin-bottom:6px">Standort(e)</div>
+        <div id="euStandortCheckboxes" style="display:flex;flex-wrap:wrap;gap:8px"></div>
+      </div>
+      <div style="margin-bottom:8px">
+        <div style="font-size:10px;color:var(--text3);margin-bottom:6px">Gruppe(n)</div>
+        <div id="euGruppeCheckboxes" style="display:flex;flex-wrap:wrap;gap:8px"></div>
+      </div>
+
+      <div style="display:flex;gap:24px;align-items:center;margin-bottom:12px">
+        <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text);cursor:pointer">
+          <input type="checkbox" id="euAuto1" style="width:15px;height:15px;cursor:pointer"> 1% Auto
+        </label>
+        <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text);cursor:pointer">
+          <input type="checkbox" id="euPoolAuto" style="width:15px;height:15px;cursor:pointer"> Pool Auto
+        </label>
+      </div>
+    </div>
+
+    <div class="modal-actions" style="margin-top:16px;border-top:1px solid var(--border);padding-top:14px;flex-shrink:0">
+      <button class="btn btn-secondary" onclick="closeModal('editUserModal')">Abbrechen</button>
+      <button class="btn btn-primary" onclick="saveEditUser()">Speichern</button>
+    </div>
+  </div>
+</div>
+
 <div class="toast-area" id="toastArea"></div>
 
 <script>
@@ -2932,6 +3006,7 @@ async function loadUserList(){
           <div style="font-size:10px;color:var(--text3)">${subLabel} · 🔑 Login aktiv</div>
         </div>
         ${canEdit ? `
+        <button onclick="openEditUser('${u.user_id}')" style="font-size:11px;padding:4px 8px;border:1px solid var(--border);border-radius:6px;background:var(--surface);color:var(--text2);cursor:pointer">✎</button>
         <select onchange="changeUserRole('${u.user_id}', this.value)" style="font-size:11px;padding:4px 8px;border:1px solid var(--border);border-radius:6px;background:var(--surface);color:var(--text)">
           ${Object.entries(ROLE_LABELS).map(([v,l])=>`<option value="${v}"${u.role===v?' selected':''}>${l}</option>`).join('')}
         </select>
@@ -2956,6 +3031,7 @@ async function loadUserList(){
           <div style="font-size:12px;font-weight:500;color:var(--text)">${s.name}</div>
           <div style="font-size:10px;color:var(--text3)">${s.role||'–'}${location?' · '+location:''} · ⏳ Kein Login</div>
         </div>
+        <button onclick="openEditStaffOnly(${s.id})" style="font-size:11px;padding:4px 8px;border:1px solid var(--border);border-radius:6px;background:var(--surface);color:var(--text2);cursor:pointer">✎</button>
         <button onclick="addLoginToStaff(${s.id},'${s.name}')" style="font-size:11px;padding:4px 8px;border:1px solid var(--accent);border-radius:6px;background:var(--accent-soft);color:var(--accent);cursor:pointer">+ Login</button>
       </div>`;
   }) : [];
@@ -3038,7 +3114,126 @@ function applyRolePermissions(){
     menuUserMgmt.style.display = canManageUsers.includes(currentUserRole) ? '' : 'none';
   }
 }
-// ─── STANDORTE & GRUPPEN ───
+// ─── BENUTZER BEARBEITEN ───
+let _editUserId   = null;
+
+async function openEditUser(userId){
+  _editUserId  = userId;
+  _editStaffId = null;
+  const { data: profile } = await sb.from('user_profiles').select('*').eq('user_id', userId).single();
+  document.getElementById('editUserSub').textContent = profile ? `${profile.vorname||''} ${profile.name||''}`.trim() : userId.substring(0,12)+'…';
+  document.getElementById('euName').value        = profile?.name || '';
+  document.getElementById('euVorname').value     = profile?.vorname || '';
+  document.getElementById('euHandy').value       = profile?.handy || '';
+  document.getElementById('euKostenstelle').value= profile?.kostenstelle || '';
+  document.getElementById('euSoll').value        = profile?.soll || 38.5;
+  document.getElementById('euAuto1').checked     = profile?.auto1 || false;
+  document.getElementById('euPoolAuto').checked  = profile?.pool_auto || false;
+  // Position
+  const sel = document.getElementById('euPosition');
+  const pos = profile?.position || '';
+  if(pos && !sel.querySelector(`option[value="${pos}"]`)){
+    const opt = document.createElement('option'); opt.value=pos; opt.textContent=pos; sel.appendChild(opt);
+  }
+  sel.value = pos;
+  renderEuCheckboxes(profile?.standort_ids||[], profile?.gruppe_ids||[]);
+  openModal('editUserModal');
+}
+
+async function openEditStaffOnly(staffId){
+  _editStaffId = staffId;
+  _editUserId  = null;
+  const { data: s } = await sb.from('staff').select('*').eq('id', staffId).single();
+  if(!s) return;
+  const parts = s.name.split(' ');
+  document.getElementById('editUserSub').textContent = s.name;
+  document.getElementById('euVorname').value     = parts[0] || '';
+  document.getElementById('euName').value        = parts.slice(1).join(' ') || '';
+  document.getElementById('euHandy').value       = '';
+  document.getElementById('euKostenstelle').value= '';
+  document.getElementById('euSoll').value        = s.soll || 38.5;
+  document.getElementById('euAuto1').checked     = false;
+  document.getElementById('euPoolAuto').checked  = false;
+  const sel = document.getElementById('euPosition');
+  sel.value = s.role || '';
+  renderEuCheckboxes(s.standort_id?[s.standort_id]:[], s.gruppe_id?[s.gruppe_id]:[]);
+  openModal('editUserModal');
+}
+
+function renderEuCheckboxes(selectedStandortIds, selectedGruppeIds){
+  const sBox = document.getElementById('euStandortCheckboxes');
+  const gBox = document.getElementById('euGruppeCheckboxes');
+  sBox.innerHTML = allStandorte.map(s=>`
+    <label style="display:flex;align-items:center;gap:5px;font-size:12px;color:var(--text);cursor:pointer;padding:5px 10px;border:1.5px solid ${selectedStandortIds.includes(s.id)?'var(--accent)':'var(--border)'};border-radius:8px;background:var(--surface)">
+      <input type="checkbox" class="eu-standort-cb" value="${s.id}" ${selectedStandortIds.includes(s.id)?'checked':''} onchange="updateEuGruppeCheckboxes('${selectedGruppeIds.join(',')}')">
+      ${s.name}
+    </label>`).join('');
+  updateEuGruppeCheckboxes(selectedGruppeIds.join(','));
+}
+
+function updateEuGruppeCheckboxes(selectedGruppeIdsStr){
+  const gBox = document.getElementById('euGruppeCheckboxes');
+  const selectedGruppeIds = selectedGruppeIdsStr ? selectedGruppeIdsStr.split(',').filter(Boolean) : [];
+  const selectedStandorte = [...document.querySelectorAll('.eu-standort-cb:checked')].map(c=>c.value);
+  const filtered = selectedStandorte.length ? allGruppen.filter(g=>selectedStandorte.includes(g.standort_id)) : allGruppen;
+  gBox.innerHTML = filtered.map(g=>{
+    const s = allStandorte.find(s=>s.id===g.standort_id);
+    return `<label style="display:flex;align-items:center;gap:5px;font-size:12px;color:var(--text);cursor:pointer;padding:5px 10px;border:1.5px solid ${selectedGruppeIds.includes(g.id)?'var(--accent)':'var(--border)'};border-radius:8px;background:var(--surface)">
+      <input type="checkbox" class="eu-gruppe-cb" value="${g.id}" ${selectedGruppeIds.includes(g.id)?'checked':''}>
+      ${s?.name||''} – ${g.name}
+    </label>`;
+  }).join('');
+}
+
+function addEuPositionOption(){
+  const newPos = prompt('Neue Position eingeben:');
+  if(!newPos) return;
+  const sel = document.getElementById('euPosition');
+  const opt = document.createElement('option');
+  opt.value=newPos; opt.textContent=newPos; opt.selected=true;
+  sel.appendChild(opt);
+}
+
+async function saveEditUser(){
+  const name        = document.getElementById('euName').value.trim();
+  const vorname     = document.getElementById('euVorname').value.trim();
+  const position    = document.getElementById('euPosition').value;
+  const handy       = document.getElementById('euHandy').value.trim();
+  const kostenstelle= document.getElementById('euKostenstelle').value.trim();
+  const soll        = parseFloat(document.getElementById('euSoll').value)||38.5;
+  const auto1       = document.getElementById('euAuto1').checked;
+  const poolAuto    = document.getElementById('euPoolAuto').checked;
+  const standortIds = [...document.querySelectorAll('.eu-standort-cb:checked')].map(c=>c.value);
+  const gruppeIds   = [...document.querySelectorAll('.eu-gruppe-cb:checked')].map(c=>c.value);
+  const fullName    = `${vorname} ${name}`.trim();
+
+  if(_editUserId){
+    // Auth-Benutzer: Profil updaten
+    const { error } = await sb.from('user_profiles').upsert({
+      user_id: _editUserId, name, vorname, position, handy, kostenstelle,
+      soll, auto1, pool_auto: poolAuto, standort_ids: standortIds, gruppe_ids: gruppeIds
+    });
+    if(error){ showToast('Fehler: ' + error.message); return; }
+    // Staff-Name updaten falls vorhanden
+    await sb.from('staff').update({ name: fullName, role: position, soll,
+      standort_id: standortIds[0]||null, gruppe_id: gruppeIds[0]||null
+    }).eq('name', document.getElementById('editUserSub').textContent);
+  }
+
+  if(_editStaffId){
+    // Staff-only: Staff-Eintrag updaten
+    const { error } = await sb.from('staff').update({
+      name: fullName, role: position, soll,
+      standort_id: standortIds[0]||null, gruppe_id: gruppeIds[0]||null
+    }).eq('id', _editStaffId);
+    if(error){ showToast('Fehler: ' + error.message); return; }
+  }
+
+  showToast('✅ Gespeichert');
+  closeModal('editUserModal');
+  loadUserList();
+  loadFromSupabase();
+}
 async function loadStandorteData(){
   const [sRes, gRes] = await Promise.all([
     sb.from('standorte').select('*').order('name'),
