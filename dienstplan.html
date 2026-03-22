@@ -471,6 +471,7 @@
       </div>
       <div style="padding:6px 0">
         <div class="settings-menu-item" onclick="openUserManagement()">👥 Benutzerverwaltung</div>
+        <div class="settings-menu-item" id="menuUnternehmen" onclick="openUnternehmenModal()">🏭 Unternehmen</div>
         <div class="settings-menu-item" onclick="openStandorteModal()">🏢 Standorte</div>
         <div class="settings-menu-item" onclick="showToast('Einstellungen folgt bald')">⚙️ Allgemeine Einstellungen</div>
         <div class="settings-menu-item" onclick="showToast('Datenschutz & TOM folgt bald')">🔒 Datenschutz & TOM</div>
@@ -483,6 +484,7 @@
          onmousedown="sliderDragStart(event)" ontouchstart="sliderTouchStart(event)">
       <div id="monthSliderTrack" style="display:flex;align-items:center;height:100%;position:absolute;top:0;left:0"></div>
     </div>
+    <div id="unternehmenLabel" style="font-size:10px;color:var(--text3);white-space:nowrap;margin-right:2px;padding:2px 8px;border:1px solid var(--border);border-radius:20px">–</div>
     <div id="standortLabel" style="font-size:11px;color:var(--text3);white-space:nowrap;margin-right:4px">–</div>
     <button onclick="openAddStaff()" title="Personal hinzufügen" style="position:relative;width:32px;height:32px;border-radius:50%;border:1.5px solid var(--border);background:var(--surface2);cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--text2);transition:all .15s;flex-shrink:0" onmouseover="this.style.background='var(--accent-soft)';this.style.borderColor='var(--accent)';this.style.color='var(--accent)'" onmouseout="this.style.background='var(--surface2)';this.style.borderColor='var(--border)';this.style.color='var(--text2)'">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -1099,6 +1101,44 @@
   <div class="staff-popup-cards" id="spCards"></div>
 </div>
 
+<!-- Unternehmen Modal -->
+<div class="modal-overlay" id="unternehmenModal" onclick="if(event.target===this)closeModal('unternehmenModal')">
+  <div class="modal modal-wide" style="max-height:85vh;display:flex;flex-direction:column">
+    <div class="modal-title">🏭 Unternehmen</div>
+    <div class="modal-sub">Unternehmen verwalten und wechseln</div>
+
+    <div style="overflow-y:auto;flex:1">
+      <!-- Neues Unternehmen anlegen -->
+      <div style="background:var(--surface2);border-radius:10px;padding:14px;margin-bottom:16px">
+        <div style="font-size:11px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px">Neues Unternehmen anlegen</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
+          <div>
+            <div style="font-size:10px;color:var(--text3);margin-bottom:3px">Name *</div>
+            <input type="text" id="newUnternehmenName" placeholder="z.B. Pflegedienst Müller GmbH" style="width:100%;padding:7px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:12px;background:var(--surface);color:var(--text)">
+          </div>
+          <div>
+            <div style="font-size:10px;color:var(--text3);margin-bottom:3px">Kontakt</div>
+            <input type="text" id="newUnternehmenKontakt" placeholder="E-Mail oder Telefon" style="width:100%;padding:7px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:12px;background:var(--surface);color:var(--text)">
+          </div>
+        </div>
+        <div style="margin-bottom:10px">
+          <div style="font-size:10px;color:var(--text3);margin-bottom:3px">Adresse</div>
+          <input type="text" id="newUnternehmenAdresse" placeholder="Straße, PLZ Ort" style="width:100%;padding:7px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:12px;background:var(--surface);color:var(--text)">
+        </div>
+        <button class="btn btn-primary btn-sm" onclick="createUnternehmen()" style="width:100%">+ Unternehmen anlegen</button>
+      </div>
+
+      <!-- Unternehmen Liste -->
+      <div style="font-size:11px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">Alle Unternehmen</div>
+      <div id="unternehmenList" style="display:flex;flex-direction:column;gap:8px"></div>
+    </div>
+
+    <div class="modal-actions" style="margin-top:16px;border-top:1px solid var(--border);padding-top:14px;flex-shrink:0">
+      <button class="btn btn-secondary" onclick="closeModal('unternehmenModal')">Schließen</button>
+    </div>
+  </div>
+</div>
+
 <!-- Standorte Modal -->
 <div class="modal-overlay" id="standorteModal" onclick="if(event.target===this)closeModal('standorteModal')">
   <div class="modal modal-wide">
@@ -1328,11 +1368,13 @@ const SUPABASE_URL = 'https://pxztxkqzvjkwvbfymbst.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_bpKLnvsUQYffH7XEQay1Bg_Y__1XWEL';
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-// ─── STANDORT / GRUPPE ───
+// ─── STANDORT / GRUPPE / UNTERNEHMEN ───
+let currentUnternehmenId = 'aaaaaaaa-0000-0000-0000-000000000001';
 let currentStandortId = '11111111-0000-0000-0000-000000000001';
 let currentGruppeId   = null;
 let allStandorte      = [];
 let allGruppen        = [];
+let allUnternehmen    = [];
 
 // ─── STATE (localStorage als Fallback während Migration) ───
 function loadData() {
@@ -1404,8 +1446,8 @@ async function loadFromSupabase(){
   try {
     showToast('⏳ Lade Daten vom Server…');
 
-    // Staff nach aktuellem Standort/Gruppe filtern (über neue Array-Felder)
-    let staffQuery = sb.from('staff').select('*');
+    // Staff nach aktuellem Unternehmen + Standort/Gruppe filtern
+    let staffQuery = sb.from('staff').select('*').eq('unternehmen_id', currentUnternehmenId);
     // Lade alle Staff und filtere clientseitig nach standort_ids/gruppe_ids
     const [staffRes, releasesRes] = await Promise.all([
       staffQuery,
@@ -3186,6 +3228,12 @@ function applyRolePermissions(){
   const btnKI = document.querySelector('button[onclick="openKIModal()"]');
   if(btnKI && readOnly.includes(currentUserRole)) btnKI.style.display='none';
 
+  // Unternehmen-Menü nur für Owner/Master Admin
+  const menuUnternehmen = document.getElementById('menuUnternehmen');
+  if(menuUnternehmen){
+    menuUnternehmen.style.display = ['owner','master_admin'].includes(currentUserRole) ? '' : 'none';
+  }
+
   // Benutzerverwaltung im Menü ausblenden für nicht-Admins
   const menuUserMgmt = document.querySelector('.settings-menu-item[onclick="openUserManagement()"]');
   if(menuUserMgmt){
@@ -3313,10 +3361,119 @@ async function saveEditUser(){
   loadUserList();
   loadFromSupabase();
 }
+  closeModal('editUserModal');
+  loadUserList();
+  loadFromSupabase();
+}
+
+// ─── UNTERNEHMEN ───
+async function loadUnternehmenData(){
+  const { data } = await sb.from('unternehmen').select('*').order('name');
+  if(data) allUnternehmen = data;
+  updateUnternehmenLabel();
+}
+
+function updateUnternehmenLabel(){
+  const u = allUnternehmen.find(u=>u.id===currentUnternehmenId);
+  const el = document.getElementById('unternehmenLabel');
+  if(el) el.textContent = u?.name || '–';
+}
+
+async function openUnternehmenModal(){
+  document.getElementById('settingsMenu').style.display='none';
+  await loadUnternehmenData();
+  renderUnternehmenList();
+  openModal('unternehmenModal');
+}
+
+function renderUnternehmenList(){
+  const list = document.getElementById('unternehmenList');
+  if(!allUnternehmen.length){ list.innerHTML='<div style="color:var(--text3);font-size:12px;padding:8px">Keine Unternehmen gefunden</div>'; return; }
+  list.innerHTML = allUnternehmen.map(u=>{
+    const isActive = u.id === currentUnternehmenId;
+    return `
+      <div style="border:1.5px solid ${isActive?'var(--accent)':'var(--border)'};border-radius:10px;overflow:hidden">
+        <div style="padding:12px 14px;background:${isActive?'var(--accent-soft)':'var(--surface2)'};display:flex;align-items:center;gap:10px">
+          <div style="flex:1">
+            <div style="font-size:13px;font-weight:600;color:${isActive?'var(--accent)':'var(--text)'}">${u.name}${isActive?' ✓':''}</div>
+            ${u.adresse?`<div style="font-size:10px;color:var(--text3);margin-top:2px">${u.adresse}</div>`:''}
+            ${u.kontakt?`<div style="font-size:10px;color:var(--text3)">${u.kontakt}</div>`:''}
+          </div>
+          <div style="display:flex;gap:6px">
+            ${!isActive?`<button onclick="switchUnternehmen('${u.id}')" style="font-size:11px;padding:5px 10px;border:1px solid var(--accent);border-radius:6px;background:var(--accent-soft);color:var(--accent);cursor:pointer">Wechseln</button>`:''}
+            <button onclick="openUnternehmenStandorte('${u.id}','${u.name}')" style="font-size:11px;padding:5px 10px;border:1px solid var(--border);border-radius:6px;background:var(--surface);color:var(--text2);cursor:pointer">🏢 Standorte</button>
+            <button onclick="renameUnternehmen('${u.id}','${u.name}')" style="font-size:11px;padding:5px 10px;border:1px solid var(--border);border-radius:6px;background:var(--surface);color:var(--text2);cursor:pointer">✎</button>
+          </div>
+        </div>
+      </div>`;
+  }).join('');
+}
+
+async function createUnternehmen(){
+  const name    = document.getElementById('newUnternehmenName').value.trim();
+  const kontakt = document.getElementById('newUnternehmenKontakt').value.trim();
+  const adresse = document.getElementById('newUnternehmenAdresse').value.trim();
+  if(!name){ showToast('Bitte einen Namen eingeben'); return; }
+
+  const { data, error } = await sb.from('unternehmen').insert({ name, kontakt, adresse }).select().single();
+  if(error){ showToast('Fehler: ' + error.message); return; }
+
+  // Automatisch 4 Standorte + je 4 Gruppen anlegen
+  for(const sName of ['Standort Ost','Standort Süd','Standort West','Standort Nord']){
+    const { data: sData } = await sb.from('standorte').insert({ name:sName, unternehmen_id:data.id }).select().single();
+    if(sData){
+      for(let g=1;g<=4;g++){
+        await sb.from('gruppen').insert({ name:`Gruppe ${g}`, position:g, standort_id:sData.id, unternehmen_id:data.id });
+      }
+    }
+  }
+
+  document.getElementById('newUnternehmenName').value='';
+  document.getElementById('newUnternehmenKontakt').value='';
+  document.getElementById('newUnternehmenAdresse').value='';
+  showToast(`✅ ${name} angelegt mit 4 Standorten`);
+  await loadUnternehmenData();
+  renderUnternehmenList();
+}
+
+async function switchUnternehmen(id){
+  currentUnternehmenId = id;
+  const { data: standorte } = await sb.from('standorte').select('*').eq('unternehmen_id',id).order('name').limit(1);
+  if(standorte?.length){
+    currentStandortId = standorte[0].id;
+    const { data: gruppen } = await sb.from('gruppen').select('*').eq('standort_id',standorte[0].id).order('position').limit(1);
+    if(gruppen?.length) currentGruppeId = gruppen[0].id;
+  }
+  updateUnternehmenLabel();
+  await loadStandorteData();
+  closeModal('unternehmenModal');
+  loadFromSupabase();
+  showToast(`✅ Gewechselt zu ${allUnternehmen.find(u=>u.id===id)?.name}`);
+}
+
+async function renameUnternehmen(id, currentName){
+  const newName = prompt('Neuer Name:', currentName);
+  if(!newName || newName===currentName) return;
+  const {error} = await sb.from('unternehmen').update({name:newName}).eq('id',id);
+  if(error){ showToast('Fehler: '+error.message); return; }
+  await loadUnternehmenData();
+  renderUnternehmenList();
+  showToast('✅ Umbenannt');
+}
+
+async function openUnternehmenStandorte(unternehmenId, unternehmenName){
+  currentUnternehmenId = unternehmenId;
+  await loadStandorteData();
+  closeModal('unternehmenModal');
+  renderStandorteList();
+  document.querySelector('#standorteModal .modal-sub').textContent = `Standorte für: ${unternehmenName}`;
+  openModal('standorteModal');
+}
+
 async function loadStandorteData(){
   const [sRes, gRes] = await Promise.all([
-    sb.from('standorte').select('*').order('name'),
-    sb.from('gruppen').select('*').order('position')
+    sb.from('standorte').select('*').eq('unternehmen_id', currentUnternehmenId).order('name'),
+    sb.from('gruppen').select('*').eq('unternehmen_id', currentUnternehmenId).order('position')
   ]);
   if(sRes.data) allStandorte = sRes.data;
   if(gRes.data) allGruppen   = gRes.data;
@@ -3432,12 +3589,10 @@ if(state.showWuensche){
   if(btn){ btn.style.background='var(--red-soft)'; btn.style.borderColor='var(--red)'; btn.style.color='var(--red)'; }
 }
 render();
-// Load from Supabase
 loadFromSupabase();
-// Load user role
 loadUserRole();
-// Load Standorte
 loadStandorteData();
+loadUnternehmenData();
 </script>
 </body>
 </html>
