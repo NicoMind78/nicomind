@@ -428,6 +428,13 @@
   .ki-rule { font-size: 11px; color: var(--text3); padding: 2px 0; display: flex; align-items: flex-start; gap: 5px; }
   .ki-rules-box { background: var(--surface2); border-radius: var(--radius-sm); padding: 10px 12px; margin-bottom: 14px; }
 
+  .shift-chip { position: relative; }
+  .chip-conflict-dot {
+    position: absolute; top: -3px; right: -3px;
+    width: 8px; height: 8px; border-radius: 50%;
+    background: #ff9f0a; border: 1.5px solid white;
+    pointer-events: none;
+  }
   /* TOAST */
   .toast-area { position: fixed; bottom: 24px; right: 24px; z-index: 200; display: flex; flex-direction: column; gap: 7px; }
   .toast {
@@ -1395,15 +1402,9 @@ async function loadFromSupabase(){
   try {
     showToast('⏳ Lade Daten vom Server…');
 
-    // Staff nach aktuellem Standort/Gruppe filtern
+    // Staff nach aktuellem Standort/Gruppe filtern (über neue Array-Felder)
     let staffQuery = sb.from('staff').select('*');
-    if(currentGruppeId){
-      staffQuery = staffQuery.eq('gruppe_id', currentGruppeId);
-    } else if(currentStandortId){
-      staffQuery = staffQuery.eq('standort_id', currentStandortId);
-    }
-
-    // Entries nur für aktuelle Staff-IDs laden (nach dem Staff-Load)
+    // Lade alle Staff und filtere clientseitig nach standort_ids/gruppe_ids
     const [staffRes, releasesRes] = await Promise.all([
       staffQuery,
       sb.from('releases').select('*'),
@@ -1415,15 +1416,31 @@ async function loadFromSupabase(){
     }
 
     if(staffRes.data && staffRes.data.length){
-      state.staff = staffRes.data.map(s=>({
+      // Clientseitig filtern: Mitarbeiter die diesem Standort/Gruppe zugewiesen sind
+      const filtered = staffRes.data.filter(s=>{
+        const sIds = s.standort_ids || (s.standort_id ? [s.standort_id] : []);
+        const gIds = s.gruppe_ids   || (s.gruppe_id   ? [s.gruppe_id]   : []);
+        if(currentGruppeId)   return gIds.includes(currentGruppeId);
+        if(currentStandortId) return sIds.includes(currentStandortId);
+        return true;
+      });
+      state.staff = filtered.map(s=>({
         id: s.id, name: s.name, role: s.role,
         soll: s.soll, color: s.color,
         notes: s.notes||'', rules: s.rules||{},
-        standort_id: s.standort_id, gruppe_id: s.gruppe_id
+        standort_id: s.standort_id, gruppe_id: s.gruppe_id,
+        standort_ids: s.standort_ids||[], gruppe_ids: s.gruppe_ids||[]
       }));
-      state.nextId = Math.max(...state.staff.map(s=>s.id)) + 1;
+      state.nextId = Math.max(...staffRes.data.map(s=>s.id)) + 1;
     } else {
       state.staff = [];
+    }
+
+    // Alle Entries laden (auch andere Standorte für Konflikt-Erkennung)
+    const allEntriesRes = await sb.from('entries').select('*');
+    state.allEntries = {};
+    if(allEntriesRes.data){
+      allEntriesRes.data.forEach(e=>{ state.allEntries[e.key]={shift:e.shift,info:e.info||''}; });
     }
 
     // Entries nur für aktuelle Mitarbeiter laden
@@ -1455,6 +1472,32 @@ async function loadFromSupabase(){
     console.warn('Supabase load failed:', e.message);
     showToast('⚠️ Server nicht erreichbar – lokale Daten');
   }
+}
+
+// ─── KONFLIKT-ERKENNUNG ───
+// Prüft ob ein Mitarbeiter an einem Datum in einem ANDEREN Standort/Gruppe eingeplant ist
+function hasConflict(staffId, dateStr){
+  if(!state.allEntries) return false;
+  const key = `${staffId}_${dateStr}`;
+  // Hat der Mitarbeiter überhaupt einen Eintrag an diesem Tag?
+  const entry = state.allEntries[key];
+  if(!entry || !entry.shift || entry.shift==='FREI') return false;
+  // Ist der Eintrag für den aktuellen Standort/Gruppe?
+  const currentEntry = state.entries[key];
+  // Wenn der Eintrag in allEntries existiert aber nicht in state.entries (gefilterter Ansicht)
+  // dann ist er in einem anderen Standort
+  if(!currentEntry && entry.shift && entry.shift!=='FREI') return true;
+  return false;
+}
+
+function getConflictStandort(staffId, dateStr){
+  // Finde welcher Standort den Konflikt hat
+  const staff = state.staff.find(s=>s.id===staffId);
+  if(!staff) return '–';
+  const standortIds = staff.standort_ids||[];
+  const conflictStandortId = standortIds.find(sid=>sid!==currentStandortId);
+  const s = allStandorte.find(st=>st.id===conflictStandortId);
+  return s?.name || 'anderem Standort';
 }
 
 // ─── DATE HELPERS ───
@@ -1638,10 +1681,12 @@ function renderGrid(){
       ist+=shift?shift.hours:0;
       const tipExtra=holName?' ('+holName+')':'';
       html+=`<div class="${dayCls}">`;
+      const conflict = hasConflict(staff.id, ds);
+      const conflictDot = conflict ? `<span class="chip-conflict-dot" title="Bereits in ${getConflictStandort(staff.id, ds)} eingeplant"></span>` : '';
       if(shift){
-        html+=`<button class="shift-chip ${shift.cls}" onclick="quickEdit('${staff.id}','${ds}')" title="${shift.label}${entry?.info?' – '+entry.info:''}${tipExtra}">${shift.icon}</button>`;
+        html+=`<button class="shift-chip ${shift.cls}" onclick="quickEdit('${staff.id}','${ds}')" title="${shift.label}${entry?.info?' – '+entry.info:''}${tipExtra}${conflict?' ⚡ Konflikt!':''}" style="position:relative">${shift.icon}${conflictDot}</button>`;
       } else {
-        html+=`<button class="shift-chip chip-frei" onclick="quickEdit('${staff.id}','${ds}')" title="${holName?holName+' – ':''}Frei / Eintrag ändern">✕</button>`;
+        html+=`<button class="shift-chip chip-frei" onclick="quickEdit('${staff.id}','${ds}')" title="${holName?holName+' – ':''}Frei / Eintrag ändern${conflict?' ⚡ Bereits woanders eingeplant':''}" style="position:relative">✕${conflictDot}</button>`;
       }
       html+='</div>';
     }
@@ -1800,13 +1845,29 @@ function renderShiftPicker(cur){
 }
 function selectShift(id){ _selectedShift=id; renderShiftPicker(id); }
 
-function saveEntry(){
-  const staffId=_editStaffId||document.getElementById('entryStaff').value;
+async function saveEntry(){
+  const staffId=parseInt(_editStaffId||document.getElementById('entryStaff').value);
   const dateStr=_editDate||document.getElementById('entryDay').value;
   const info=document.getElementById('entryInfo').value.trim();
   const key=`${staffId}_${dateStr}`;
-  if(!_selectedShift){ delete state.entries[key]; }
-  else { state.entries[key]={shift:_selectedShift,info}; }
+
+  // Konflikt-Prüfung: ist dieser Mitarbeiter an diesem Tag woanders eingeplant?
+  if(_selectedShift && _selectedShift!=='FREI' && hasConflict(staffId, dateStr)){
+    const conflictStandort = getConflictStandort(staffId, dateStr);
+    const confirm = window.confirm(
+      `⚠️ ${state.staff.find(s=>s.id===staffId)?.name} ist an diesem Tag bereits in ${conflictStandort} eingeplant.\n\nTrotzdem hier einplanen? Der Eintrag in ${conflictStandort} wird automatisch gelöscht.`
+    );
+    if(!confirm) return;
+    // Eintrag in anderen Standorten löschen
+    await sb.from('entries').delete().eq('key', key);
+    delete state.allEntries[key];
+  }
+
+  if(!_selectedShift){ delete state.entries[key]; delete state.allEntries?.[key]; }
+  else { 
+    state.entries[key]={shift:_selectedShift,info}; 
+    if(state.allEntries) state.allEntries[key]={shift:_selectedShift,info};
+  }
   saveData(); closeModal('entryModal'); render(); showToast('Dienst gespeichert ✓');
 }
 
@@ -3208,23 +3269,24 @@ async function saveEditUser(){
   const fullName    = `${vorname} ${name}`.trim();
 
   if(_editUserId){
-    // Auth-Benutzer: Profil updaten
     const { error } = await sb.from('user_profiles').upsert({
       user_id: _editUserId, name, vorname, position, handy, kostenstelle,
       soll, auto1, pool_auto: poolAuto, standort_ids: standortIds, gruppe_ids: gruppeIds
     });
     if(error){ showToast('Fehler: ' + error.message); return; }
-    // Staff-Name updaten falls vorhanden
-    await sb.from('staff').update({ name: fullName, role: position, soll,
-      standort_id: standortIds[0]||null, gruppe_id: gruppeIds[0]||null
+    // Staff updaten
+    await sb.from('staff').update({ 
+      name: fullName, role: position, soll,
+      standort_id: standortIds[0]||null, gruppe_id: gruppeIds[0]||null,
+      standort_ids: standortIds, gruppe_ids: gruppeIds
     }).eq('name', document.getElementById('editUserSub').textContent);
   }
 
   if(_editStaffId){
-    // Staff-only: Staff-Eintrag updaten
     const { error } = await sb.from('staff').update({
       name: fullName, role: position, soll,
-      standort_id: standortIds[0]||null, gruppe_id: gruppeIds[0]||null
+      standort_id: standortIds[0]||null, gruppe_id: gruppeIds[0]||null,
+      standort_ids: standortIds, gruppe_ids: gruppeIds
     }).eq('id', _editStaffId);
     if(error){ showToast('Fehler: ' + error.message); return; }
   }
