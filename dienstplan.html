@@ -1480,10 +1480,10 @@ function hasConflict(staffId, dateStr){
   if(!state.allEntries) return false;
   const key = `${staffId}_${dateStr}`;
   const entry = state.allEntries[key];
-  if(!entry || !entry.shift || entry.shift==='FREI') return false;
-  // Konflikt wenn der Eintrag einer ANDEREN Gruppe zugeordnet ist
+  if(!entry || !entry.shift) return false;
+  // Konflikt wenn der Eintrag einer ANDEREN Gruppe zugeordnet ist (auch FREI)
   if(entry.gruppe_id && currentGruppeId && entry.gruppe_id !== currentGruppeId) return true;
-  if(entry.standort_id && currentStandortId && entry.standort_id !== currentStandortId) return true;
+  if(!entry.gruppe_id && entry.standort_id && currentStandortId && entry.standort_id !== currentStandortId) return true;
   return false;
 }
 
@@ -1659,7 +1659,6 @@ function renderGrid(){
         <div class="staff-role">${staff.role}</div>
       </div>
       <button class="staff-edit" onclick="openEditStaff(${staff.id})" title="Bearbeiten">✎</button>
-      <button class="staff-delete" onclick="openDeleteStaff(${staff.id})" title="Person löschen">✕</button>
     </div>`;
 
     let ist=0;
@@ -1850,12 +1849,14 @@ async function saveEntry(){
   const key=`${staffId}_${dateStr}`;
 
   // Konflikt-Prüfung: ist dieser Mitarbeiter an diesem Tag woanders eingeplant?
-  if(_selectedShift && _selectedShift!=='FREI' && hasConflict(staffId, dateStr)){
+  if(_selectedShift && hasConflict(staffId, dateStr)){
     const conflictStandort = getConflictStandort(staffId, dateStr);
-    const confirm = window.confirm(
-      `⚠️ ${state.staff.find(s=>s.id===staffId)?.name} ist an diesem Tag bereits in ${conflictStandort} eingeplant.\n\nTrotzdem hier einplanen? Der Eintrag in ${conflictStandort} wird automatisch gelöscht.`
+    const conflictEntry = state.allEntries[`${staffId}_${dateStr}`];
+    const conflictShift = conflictEntry?.shift === 'FREI' ? 'als Frei eingetragen' : `mit ${SHIFT_MAP[conflictEntry?.shift]?.label||conflictEntry?.shift} eingeplant`;
+    const confirmed = window.confirm(
+      `⚠️ ${state.staff.find(s=>s.id===staffId)?.name} ist an diesem Tag in ${conflictStandort} ${conflictShift}.\n\nTrotzdem hier einplanen? Der Eintrag in ${conflictStandort} wird automatisch überschrieben.`
     );
-    if(!confirm) return;
+    if(!confirmed) return;
     // Eintrag in anderen Standorten löschen
     await sb.from('entries').delete().eq('key', key);
     delete state.allEntries[key];
