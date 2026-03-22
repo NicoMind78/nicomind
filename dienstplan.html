@@ -432,7 +432,7 @@
   .chip-conflict-dot {
     position: absolute; top: -3px; right: -3px;
     width: 8px; height: 8px; border-radius: 50%;
-    background: #ff9f0a; border: 1.5px solid white;
+    background: var(--red); border: 1.5px solid white;
     pointer-events: none;
   }
   /* TOAST */
@@ -2999,6 +2999,18 @@ async function inviteUser(){
   loadFromSupabase();
 }
 
+async function deleteStaffOnly(staffId, staffName){
+  if(!confirm(`„${staffName}" wirklich aus dem Dienstplan entfernen?\nAlle Einträge dieses Mitarbeiters werden ebenfalls gelöscht.`)) return;
+  // Staff löschen
+  const { error } = await sb.from('staff').delete().eq('id', staffId);
+  if(error){ showToast('Fehler: ' + error.message); return; }
+  // Alle Einträge löschen
+  await sb.from('entries').delete().like('key', `${staffId}_%`);
+  showToast(`✅ ${staffName} entfernt`);
+  loadUserList();
+  loadFromSupabase();
+}
+
 async function addLoginToStaff(staffId, staffName){
   const email    = prompt(`E-Mail für ${staffName}:`);
   if(!email) return;
@@ -3095,6 +3107,7 @@ async function loadUserList(){
         </div>
         <button onclick="openEditStaffOnly(${s.id})" style="font-size:11px;padding:4px 8px;border:1px solid var(--border);border-radius:6px;background:var(--surface);color:var(--text2);cursor:pointer">✎</button>
         <button onclick="addLoginToStaff(${s.id},'${s.name}')" style="font-size:11px;padding:4px 8px;border:1px solid var(--accent);border-radius:6px;background:var(--accent-soft);color:var(--accent);cursor:pointer">+ Login</button>
+        <button onclick="deleteStaffOnly(${s.id},'${s.name}')" style="width:26px;height:26px;border:none;background:var(--red-soft);color:var(--red);border-radius:6px;cursor:pointer;font-size:14px;flex-shrink:0">✕</button>
       </div>`;
   }) : [];
 
