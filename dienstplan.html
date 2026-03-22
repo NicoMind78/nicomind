@@ -1369,8 +1369,8 @@ const SUPABASE_KEY = 'sb_publishable_bpKLnvsUQYffH7XEQay1Bg_Y__1XWEL';
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 // ─── STANDORT / GRUPPE / UNTERNEHMEN ───
-let currentUnternehmenId = 'aaaaaaaa-0000-0000-0000-000000000001';
-let currentStandortId = '11111111-0000-0000-0000-000000000001';
+let currentUnternehmenId = null;
+let currentStandortId = null;
 let currentGruppeId   = null;
 let allStandorte      = [];
 let allGruppen        = [];
@@ -3366,6 +3366,10 @@ async function saveEditUser(){
 async function loadUnternehmenData(){
   const { data } = await sb.from('unternehmen').select('*').order('name');
   if(data) allUnternehmen = data;
+  // Erstes Unternehmen automatisch wählen falls noch keines gesetzt
+  if(!currentUnternehmenId && allUnternehmen.length){
+    currentUnternehmenId = allUnternehmen[0].id;
+  }
   updateUnternehmenLabel();
 }
 
@@ -3434,12 +3438,8 @@ async function createUnternehmen(){
 
 async function switchUnternehmen(id){
   currentUnternehmenId = id;
-  const { data: standorte } = await sb.from('standorte').select('*').eq('unternehmen_id',id).order('name').limit(1);
-  if(standorte?.length){
-    currentStandortId = standorte[0].id;
-    const { data: gruppen } = await sb.from('gruppen').select('*').eq('standort_id',standorte[0].id).order('position').limit(1);
-    if(gruppen?.length) currentGruppeId = gruppen[0].id;
-  }
+  currentStandortId = null;
+  currentGruppeId = null;
   updateUnternehmenLabel();
   await loadStandorteData();
   closeModal('unternehmenModal');
@@ -3473,8 +3473,14 @@ async function loadStandorteData(){
   ]);
   if(sRes.data) allStandorte = sRes.data;
   if(gRes.data) allGruppen   = gRes.data;
+  // Auto-select ersten Standort falls nicht gesetzt
+  if(!currentStandortId && allStandorte.length){
+    currentStandortId = allStandorte[0].id;
+  }
+  // Auto-select erste Gruppe falls nicht gesetzt
   if(!currentGruppeId && allGruppen.length){
-    const grp = allGruppen.find(g=>g.standort_id===currentStandortId && g.position===1);
+    const grp = allGruppen.find(g=>g.standort_id===currentStandortId && g.position===1)
+             || allGruppen[0];
     if(grp) currentGruppeId = grp.id;
   }
   updateStandortLabel();
@@ -3585,10 +3591,13 @@ if(state.showWuensche){
   if(btn){ btn.style.background='var(--red-soft)'; btn.style.borderColor='var(--red)'; btn.style.color='var(--red)'; }
 }
 render();
-loadFromSupabase();
-loadUserRole();
-loadStandorteData();
-loadUnternehmenData();
+// Erst Unternehmen laden, dann Standorte, dann Daten
+(async()=>{
+  await loadUnternehmenData();
+  await loadStandorteData();
+  await loadFromSupabase();
+  loadUserRole();
+})();
 </script>
 </body>
 </html>
