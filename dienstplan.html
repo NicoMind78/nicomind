@@ -3099,20 +3099,37 @@ async function loadUserList(){
   const list = document.getElementById('userList');
   list.innerHTML = '<div style="color:var(--text3);font-size:12px;padding:8px">Lade Benutzer…</div>';
 
+  const canEdit = ['owner','master_admin','admin'].includes(currentUserRole);
+
   const [rolesResult, profilesResult, staffResult] = await Promise.all([
     callManageRoles('getAll'),
-    sb.from('user_profiles').select('user_id, name, vorname, position'),
-    sb.from('staff').select('id, name, role, standort_id, gruppe_id')
+    sb.from('user_profiles').select('user_id, name, vorname, position, standort_ids, gruppe_ids'),
+    sb.from('staff').select('id, name, role, standort_id, gruppe_id, unternehmen_id')
+      .eq('unternehmen_id', currentUnternehmenId)
   ]);
 
   const rolesData  = rolesResult.data || [];
   const profiles   = profilesResult.data || [];
   const staffData  = staffResult.data || [];
 
-  const canEdit = ['owner','master_admin','admin'].includes(currentUserRole);
+  // Alle Rollen filtern: nur Benutzer die zum aktuellen Unternehmen gehören
+  const isOwnerRole = ['owner','master_admin'].includes(currentUserRole);
+  const currentStandortIds = allStandorte.map(s=>s.id);
+  const filteredRoles = rolesData.filter(u => {
+    if(u.user_id === currentUserId) return true; // immer sich selbst anzeigen
+    // Owner/Master Admin anderer Accounts: nur für Owner sichtbar, gefiltert nach Kontext
+    if(['owner','master_admin'].includes(u.role)){
+      return isOwnerRole; // Nur Owner sehen andere Owner – aber nur wenn im gleichen Unternehmen
+    }
+    // Normale User: nach Standort-Zugehörigkeit zum aktuellen Unternehmen filtern
+    const profile = profiles.find(p=>p.user_id===u.user_id);
+    if(!profile) return false;
+    const sIds = profile.standort_ids || [];
+    return sIds.some(sid=>currentStandortIds.includes(sid));
+  });
 
   // Mitarbeiter MIT Auth-Account
-  const authUsers = rolesData.map(u=>{
+  const authUsers = filteredRoles.map(u=>{
     const profile = profiles.find(p=>p.user_id===u.user_id);
     const displayName = profile ? `${profile.vorname||''} ${profile.name||''}`.trim()||'–' : u.user_id.substring(0,12)+'…';
     const subLabel = profile?.position ? `${ROLE_LABELS[u.role]||u.role} · ${profile.position}` : ROLE_LABELS[u.role]||u.role;
@@ -3197,44 +3214,42 @@ async function loadUserRole(){
 }
 
 function applyRolePermissions(){
-  const readOnly = ['mitarbeiter','betriebsrat'];
-  const noUsers  = ['planer','personal','betriebsrat','mitarbeiter'];
-  const canManageUsers = ['owner','master_admin','admin'];
+  const readOnly       = ['mitarbeiter','betriebsrat'];
+  const noUsers        = ['planer','personal','betriebsrat','mitarbeiter'];
+  const canManageUsers = ['owner','master_admin','admin','personal'];
 
   // Schreibgeschützt: Chips ausgegraut
   if(readOnly.includes(currentUserRole)){
     document.querySelectorAll('.shift-chip').forEach(b=>{
-      b.style.pointerEvents='none';
-      b.style.opacity='.5';
-      b.style.cursor='default';
+      b.style.pointerEvents='none'; b.style.opacity='.5'; b.style.cursor='default';
     });
-  }
-
-  // Planer darf Dienstplan bearbeiten aber kein Personal anlegen
-  if(currentUserRole === 'planer'){
-    const btnPersonal = document.querySelector('button[onclick="openAddStaff()"]');
-    if(btnPersonal) btnPersonal.style.display='none';
   }
 
   // + Eintrag Button ausblenden für readOnly
   const btnEintrag = document.querySelector('button[onclick="openAddEntry()"]');
-  if(btnEintrag && readOnly.includes(currentUserRole)) btnEintrag.style.display='none';
+  if(btnEintrag) btnEintrag.style.display = readOnly.includes(currentUserRole) ? 'none' : '';
 
   // + Personal Button ausblenden
   const btnPersonal = document.querySelector('button[onclick="openAddStaff()"]');
-  if(btnPersonal && noUsers.includes(currentUserRole)) btnPersonal.style.display='none';
+  if(btnPersonal) btnPersonal.style.display = noUsers.includes(currentUserRole) ? 'none' : '';
 
   // KI-Button ausblenden für readOnly
   const btnKI = document.querySelector('button[onclick="openKIModal()"]');
-  if(btnKI && readOnly.includes(currentUserRole)) btnKI.style.display='none';
+  if(btnKI) btnKI.style.display = readOnly.includes(currentUserRole) ? 'none' : '';
 
-  // Unternehmen-Menü nur für Owner/Master Admin
+  // Unternehmen-Menü: nur Owner/Master Admin – die zwischen Unternehmen wechseln dürfen
   const menuUnternehmen = document.getElementById('menuUnternehmen');
   if(menuUnternehmen){
     menuUnternehmen.style.display = ['owner','master_admin'].includes(currentUserRole) ? '' : 'none';
   }
 
-  // Benutzerverwaltung im Menü ausblenden für nicht-Admins
+  // Standorte-Menü
+  const menuStandorte = document.querySelector('.settings-menu-item[onclick="openStandorteModal()"]');
+  if(menuStandorte){
+    menuStandorte.style.display = ['owner','master_admin','admin','planer'].includes(currentUserRole) ? '' : 'none';
+  }
+
+  // Benutzerverwaltung: Planer hat keinen Zugriff
   const menuUserMgmt = document.querySelector('.settings-menu-item[onclick="openUserManagement()"]');
   if(menuUserMgmt){
     menuUserMgmt.style.display = canManageUsers.includes(currentUserRole) ? '' : 'none';
@@ -3502,10 +3517,15 @@ async function openStandorteModal(){
 
 function renderStandorteList(){
   const list = document.getElementById('standorteList');
-  const canEdit = ['owner','master_admin','admin'].includes(currentUserRole);
+  const canEdit   = ['owner','master_admin','admin'].includes(currentUserRole);
+  const isPlaner  = currentUserRole === 'planer';
+
   list.innerHTML = allStandorte.map(s=>{
-    const gruppen = allGruppen.filter(g=>g.standort_id===s.id);
-    const isActiveS = s.id === currentStandortId;
+    const gruppen    = allGruppen.filter(g=>g.standort_id===s.id);
+    const isActiveS  = s.id === currentStandortId;
+    // Planer sieht nur seinen aktiven Standort
+    if(isPlaner && !isActiveS) return '';
+
     return `
       <div style="border:1.5px solid ${isActiveS?'var(--accent)':'var(--border)'};border-radius:10px;overflow:hidden">
         <div style="padding:10px 14px;background:${isActiveS?'var(--accent-soft)':'var(--surface2)'};display:flex;align-items:center;gap:8px">
@@ -3515,8 +3535,14 @@ function renderStandorteList(){
         <div style="padding:8px 14px;display:flex;gap:6px;flex-wrap:wrap">
           ${gruppen.map(g=>{
             const isActiveG = g.id===currentGruppeId && isActiveS;
+            // Planer: Gruppen-Button immer klickbar (nur im eigenen Standort)
+            // Admin+: alle Standorte und Gruppen klickbar
+            const canSwitch = isPlaner ? isActiveS : true;
             return `<div style="display:flex;align-items:center;gap:4px">
-              <button onclick="switchGruppe('${s.id}','${g.id}')" style="padding:5px 12px;border:1.5px solid ${isActiveG?'var(--accent)':'var(--border)'};border-radius:8px;background:${isActiveG?'var(--accent)':'var(--surface)'};color:${isActiveG?'#fff':'var(--text)'};font-size:12px;font-weight:${isActiveG?600:400};cursor:pointer">${g.name}</button>
+              <button onclick="${canSwitch?`switchGruppe('${s.id}','${g.id}')`:''}"
+                style="padding:5px 12px;border:1.5px solid ${isActiveG?'var(--accent)':'var(--border)'};border-radius:8px;background:${isActiveG?'var(--accent)':'var(--surface)'};color:${isActiveG?'#fff':'var(--text)'};font-size:12px;font-weight:${isActiveG?600:400};cursor:${canSwitch?'pointer':'default'};opacity:${canSwitch?1:0.5}">
+                ${g.name}
+              </button>
               ${canEdit?`<button onclick="renameGruppe('${g.id}','${g.name}')" style="font-size:9px;padding:2px 5px;border:1px solid var(--border);border-radius:5px;background:var(--surface2);color:var(--text3);cursor:pointer">✎</button>`:''}
             </div>`;
           }).join('')}
@@ -3526,6 +3552,11 @@ function renderStandorteList(){
 }
 
 function switchGruppe(standortId, gruppeId){
+  // Planer darf Standort nicht wechseln
+  if(currentUserRole === 'planer' && standortId !== currentStandortId){
+    showToast('⚠️ Als Planer kannst du nur Gruppen im eigenen Standort wechseln');
+    return;
+  }
   currentStandortId = standortId;
   currentGruppeId   = gruppeId;
   updateStandortLabel();
