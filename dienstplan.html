@@ -1481,9 +1481,11 @@ function hasConflict(staffId, dateStr){
   const key = `${staffId}_${dateStr}`;
   const entry = state.allEntries[key];
   if(!entry || !entry.shift) return false;
-  // Konflikt wenn der Eintrag einer ANDEREN Gruppe zugeordnet ist (auch FREI)
+  // Konflikt wenn der Eintrag einer ANDEREN Gruppe zugeordnet ist (auch FREI, auch Wochenende)
   if(entry.gruppe_id && currentGruppeId && entry.gruppe_id !== currentGruppeId) return true;
   if(!entry.gruppe_id && entry.standort_id && currentStandortId && entry.standort_id !== currentStandortId) return true;
+  // Kein gruppe_id gesetzt aber Eintrag existiert → andere Gruppe hat was eingetragen
+  if(!entry.gruppe_id && !entry.standort_id && entry.shift) return true;
   return false;
 }
 
@@ -1679,11 +1681,11 @@ function renderGrid(){
       const tipExtra=holName?' ('+holName+')':'';
       html+=`<div class="${dayCls}">`;
       const conflict = hasConflict(staff.id, ds);
-      const conflictDot = conflict ? `<span class="chip-conflict-dot" title="Bereits in ${getConflictStandort(staff.id, ds)} eingeplant"></span>` : '';
+      const conflictDot = conflict ? `<span class="chip-conflict-dot" title="In ${getConflictStandort(staff.id, ds)} eingetragen"></span>` : '';
       if(shift){
-        html+=`<button class="shift-chip ${shift.cls}" onclick="quickEdit('${staff.id}','${ds}')" title="${shift.label}${entry?.info?' – '+entry.info:''}${tipExtra}${conflict?' ⚡ Konflikt!':''}" style="position:relative">${shift.icon}${conflictDot}</button>`;
+        html+=`<button class="shift-chip ${shift.cls}" onclick="quickEdit('${staff.id}','${ds}')" title="${shift.label}${entry?.info?' – '+entry.info:''}${tipExtra}${conflict?' 🔴 Konflikt mit '+getConflictStandort(staff.id,ds):''}" style="position:relative">${shift.icon}${conflictDot}</button>`;
       } else {
-        html+=`<button class="shift-chip chip-frei" onclick="quickEdit('${staff.id}','${ds}')" title="${holName?holName+' – ':''}Frei / Eintrag ändern${conflict?' ⚡ Bereits woanders eingeplant':''}" style="position:relative">✕${conflictDot}</button>`;
+        html+=`<button class="shift-chip chip-frei" onclick="quickEdit('${staff.id}','${ds}')" title="${holName?holName+' – ':''}Frei / Eintrag ändern${conflict?' 🔴 In '+getConflictStandort(staff.id,ds)+' eingetragen':''}" style="position:relative">✕${conflictDot}</button>`;
       }
       html+='</div>';
     }
