@@ -1320,31 +1320,60 @@ async function syncToSupabase(){
 async function loadFromSupabase(){
   try {
     showToast('⏳ Lade Daten vom Server…');
-    const [staffRes, entriesRes, releasesRes] = await Promise.all([
-      sb.from('staff').select('*'),
-      sb.from('entries').select('*'),
+
+    // Staff nach aktuellem Standort/Gruppe filtern
+    let staffQuery = sb.from('staff').select('*');
+    if(currentGruppeId){
+      staffQuery = staffQuery.eq('gruppe_id', currentGruppeId);
+    } else if(currentStandortId){
+      staffQuery = staffQuery.eq('standort_id', currentStandortId);
+    }
+
+    // Entries nur für aktuelle Staff-IDs laden (nach dem Staff-Load)
+    const [staffRes, releasesRes] = await Promise.all([
+      staffQuery,
       sb.from('releases').select('*'),
     ]);
-    if(staffRes.error || entriesRes.error || releasesRes.error){
+
+    if(staffRes.error || releasesRes.error){
       console.warn('Supabase load error – using local data');
       return;
     }
+
     if(staffRes.data && staffRes.data.length){
       state.staff = staffRes.data.map(s=>({
         id: s.id, name: s.name, role: s.role,
         soll: s.soll, color: s.color,
-        notes: s.notes||'', rules: s.rules||{}
+        notes: s.notes||'', rules: s.rules||{},
+        standort_id: s.standort_id, gruppe_id: s.gruppe_id
       }));
       state.nextId = Math.max(...state.staff.map(s=>s.id)) + 1;
+    } else {
+      state.staff = [];
     }
-    if(entriesRes.data){
+
+    // Entries nur für aktuelle Mitarbeiter laden
+    const staffIds = state.staff.map(s=>s.id);
+    if(staffIds.length){
+      const entriesRes = await sb.from('entries').select('*');
+      if(entriesRes.data){
+        state.entries = {};
+        entriesRes.data.forEach(e=>{
+          const staffId = parseInt(e.key.split('_')[0]);
+          if(staffIds.includes(staffId)){
+            state.entries[e.key] = {shift:e.shift, info:e.info||''};
+          }
+        });
+      }
+    } else {
       state.entries = {};
-      entriesRes.data.forEach(e=>{ state.entries[e.key]={shift:e.shift,info:e.info||''}; });
     }
+
     if(releasesRes.data){
       state.releases = {};
       releasesRes.data.forEach(r=>{ state.releases[r.key]={date:r.date,note:r.note||''}; });
     }
+
     localStorage.setItem('pflegeplan_v3', JSON.stringify(state));
     render();
     showToast('✅ Daten geladen');
@@ -2834,7 +2863,25 @@ async function inviteUser(){
   loadFromSupabase();
 }
 
-const ROLE_LABELS = {
+async function addLoginToStaff(staffId, staffName){
+  const email    = prompt(`E-Mail für ${staffName}:`);
+  if(!email) return;
+  const password = prompt(`Passwort für ${staffName}:`);
+  if(!password) return;
+  const role = prompt('Rolle (mitarbeiter/planer/admin/etc.):', 'mitarbeiter');
+  if(!role) return;
+
+  const { data: { session } } = await sb.auth.getSession();
+  const response = await fetch(`${SUPABASE_URL}/functions/v1/create-user`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session.access_token}` },
+    body: JSON.stringify({ email, password, role, meta: { existingStaffId: staffId } })
+  });
+  const result = await response.json();
+  if(result.error){ showToast('Fehler: ' + result.error); return; }
+  showToast(`✅ Login für ${staffName} angelegt`);
+  loadUserList();
+}
   owner:'Owner', master_admin:'Master Admin', admin:'Admin',
   personal:'Personalabteilung', betriebsrat:'Betriebsrat',
   planer:'Planer', mitarbeiter:'Mitarbeiter'
@@ -2857,37 +2904,30 @@ async function loadUserList(){
   const list = document.getElementById('userList');
   list.innerHTML = '<div style="color:var(--text3);font-size:12px;padding:8px">Lade Benutzer…</div>';
 
-  const [rolesResult, profilesResult] = await Promise.all([
+  const [rolesResult, profilesResult, staffResult] = await Promise.all([
     callManageRoles('getAll'),
-    sb.from('user_profiles').select('user_id, name, vorname, position')
+    sb.from('user_profiles').select('user_id, name, vorname, position'),
+    sb.from('staff').select('id, name, role, standort_id, gruppe_id')
   ]);
 
-  if(rolesResult.error){ 
-    list.innerHTML = `<div style="color:var(--red);font-size:12px;padding:8px">Fehler: ${rolesResult.error}</div>`; 
-    return; 
-  }
-
-  const data = rolesResult.data;
-  const profiles = profilesResult.data || [];
-
-  if(!data || !data.length){ 
-    list.innerHTML = '<div style="color:var(--text3);font-size:12px;padding:8px">Keine Benutzer gefunden</div>'; 
-    return; 
-  }
+  const rolesData  = rolesResult.data || [];
+  const profiles   = profilesResult.data || [];
+  const staffData  = staffResult.data || [];
 
   const canEdit = ['owner','master_admin','admin'].includes(currentUserRole);
 
-  list.innerHTML = data.map(u=>{
+  // Mitarbeiter MIT Auth-Account
+  const authUsers = rolesData.map(u=>{
     const profile = profiles.find(p=>p.user_id===u.user_id);
-    const displayName = profile ? `${profile.vorname||''} ${profile.name||''}`.trim() || '–' : u.user_id.substring(0,12)+'…';
+    const displayName = profile ? `${profile.vorname||''} ${profile.name||''}`.trim()||'–' : u.user_id.substring(0,12)+'…';
     const subLabel = profile?.position ? `${ROLE_LABELS[u.role]||u.role} · ${profile.position}` : ROLE_LABELS[u.role]||u.role;
     const isMe = u.user_id === currentUserId;
     return `
       <div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:var(--surface2);border-radius:8px">
         <div style="width:32px;height:32px;border-radius:50%;background:var(--accent-soft);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:var(--accent);flex-shrink:0">${(displayName[0]||'?').toUpperCase()}</div>
         <div style="flex:1;min-width:0">
-          <div style="font-size:12px;font-weight:500;color:var(--text)">${isMe?'👤 ':''} ${displayName}</div>
-          <div style="font-size:10px;color:var(--text3)">${subLabel}</div>
+          <div style="font-size:12px;font-weight:500;color:var(--text)">${isMe?'👤 ':''}${displayName}</div>
+          <div style="font-size:10px;color:var(--text3)">${subLabel} · 🔑 Login aktiv</div>
         </div>
         ${canEdit ? `
         <select onchange="changeUserRole('${u.user_id}', this.value)" style="font-size:11px;padding:4px 8px;border:1px solid var(--border);border-radius:6px;background:var(--surface);color:var(--text)">
@@ -2895,9 +2935,31 @@ async function loadUserList(){
         </select>
         ${!isMe ? `<button onclick="deleteUser('${u.user_id}')" style="width:26px;height:26px;border:none;background:var(--red-soft);color:var(--red);border-radius:6px;cursor:pointer;font-size:14px;flex-shrink:0">✕</button>` : ''}
         ` : ''}
-      </div>
-    `;
-  }).join('');
+      </div>`;
+  });
+
+  // Mitarbeiter OHNE Auth-Account (staff-only)
+  // Finde Staff-Einträge die keinem Auth-User zugeordnet sind
+  const profileUserStaffNames = profiles.map(p=>`${p.vorname||''} ${p.name||''}`.trim());
+  const staffOnly = staffData.filter(s=> !profileUserStaffNames.includes(s.name));
+
+  const staffOnlyHtml = canEdit ? staffOnly.map(s=>{
+    const standort = allStandorte.find(st=>st.id===s.standort_id);
+    const gruppe   = allGruppen.find(g=>g.id===s.gruppe_id);
+    const location = [standort?.name, gruppe?.name].filter(Boolean).join(' · ');
+    return `
+      <div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:var(--surface2);border-radius:8px;border-left:3px solid var(--orange)">
+        <div style="width:32px;height:32px;border-radius:50%;background:rgba(255,159,10,.15);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:#cc7a00;flex-shrink:0">${(s.name[0]||'?').toUpperCase()}</div>
+        <div style="flex:1;min-width:0">
+          <div style="font-size:12px;font-weight:500;color:var(--text)">${s.name}</div>
+          <div style="font-size:10px;color:var(--text3)">${s.role||'–'}${location?' · '+location:''} · ⏳ Kein Login</div>
+        </div>
+        <button onclick="addLoginToStaff(${s.id},'${s.name}')" style="font-size:11px;padding:4px 8px;border:1px solid var(--accent);border-radius:6px;background:var(--accent-soft);color:var(--accent);cursor:pointer">+ Login</button>
+      </div>`;
+  }) : [];
+
+  const allHtml = [...authUsers, ...staffOnlyHtml];
+  list.innerHTML = allHtml.length ? allHtml.join('') : '<div style="color:var(--text3);font-size:12px;padding:8px">Keine Benutzer gefunden</div>';
 }
 
 async function changeUserRole(userId, newRole){
@@ -3033,6 +3095,7 @@ function switchGruppe(standortId, gruppeId){
   currentGruppeId   = gruppeId;
   updateStandortLabel();
   renderStandorteList();
+  closeModal('standorteModal');
   loadFromSupabase();
   showToast('✅ Standort & Gruppe gewechselt');
 }
