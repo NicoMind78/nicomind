@@ -1120,12 +1120,12 @@
         <!-- Zeile 1: E-Mail, Passwort, Rechte -->
         <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:8px">
           <div>
-            <div style="font-size:10px;color:var(--text3);margin-bottom:3px">E-Mail *</div>
-            <input type="email" id="inviteEmail" placeholder="E-Mail-Adresse" style="width:100%;padding:7px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:12px;background:var(--surface);color:var(--text)">
+            <div style="font-size:10px;color:var(--text3);margin-bottom:3px">E-Mail <span style="color:var(--text3);font-weight:400">(optional)</span></div>
+            <input type="email" id="inviteEmail" placeholder="Später hinzufügbar" style="width:100%;padding:7px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:12px;background:var(--surface);color:var(--text)">
           </div>
           <div>
-            <div style="font-size:10px;color:var(--text3);margin-bottom:3px">Passwort *</div>
-            <input type="password" id="invitePassword" placeholder="Passwort" style="width:100%;padding:7px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:12px;background:var(--surface);color:var(--text)">
+            <div style="font-size:10px;color:var(--text3);margin-bottom:3px">Passwort <span style="color:var(--text3);font-weight:400">(optional)</span></div>
+            <input type="password" id="invitePassword" placeholder="Später hinzufügbar" style="width:100%;padding:7px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:12px;background:var(--surface);color:var(--text)">
           </div>
           <div>
             <div style="font-size:10px;color:var(--text3);margin-bottom:3px">Rechte *</div>
@@ -2801,14 +2801,16 @@ async function inviteUser(){
   const standortIds = [...document.querySelectorAll('.inv-standort-cb:checked')].map(c=>c.value);
   const gruppeIds   = [...document.querySelectorAll('.inv-gruppe-cb:checked')].map(c=>c.value);
 
-  if(!email || !password){ showToast('Bitte E-Mail und Passwort eingeben'); return; }
+  if(!name && !vorname){ showToast('Bitte mindestens Name oder Vorname eingeben'); return; }
+
+  const staffOnly = !email && !password;
 
   const { data: { session } } = await sb.auth.getSession();
   const response = await fetch(`${SUPABASE_URL}/functions/v1/create-user`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session.access_token}` },
     body: JSON.stringify({
-      email, password, role,
+      email: email||null, password: password||null, role,
       meta: { name, vorname, position, handy, kostenstelle, soll, auto1, poolAuto, standortIds, gruppeIds }
     })
   });
@@ -2821,8 +2823,15 @@ async function inviteUser(){
   });
   document.getElementById('inviteAuto1').checked=false;
   document.getElementById('invitePoolAuto').checked=false;
-  showToast(`✅ ${vorname} ${name} als ${ROLE_LABELS[role]} angelegt`);
+
+  if(staffOnly){
+    showToast(`✅ ${vorname} ${name} im Dienstplan angelegt – Login noch nicht aktiv`);
+  } else {
+    showToast(`✅ ${vorname} ${name} als ${ROLE_LABELS[role]} angelegt`);
+  }
   loadUserList();
+  // Dienstplan neu laden damit neuer Mitarbeiter erscheint
+  loadFromSupabase();
 }
 
 const ROLE_LABELS = {
