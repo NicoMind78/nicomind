@@ -1379,7 +1379,9 @@ async function syncToSupabase(){
     const entryRows = Object.entries(state.entries||{}).map(([key,val])=>({
       key,
       shift: val.shift,
-      info: val.info||''
+      info: val.info||'',
+      gruppe_id: val.gruppe_id || currentGruppeId || null,
+      standort_id: val.standort_id || currentStandortId || null,
     }));
     if(entryRows.length){
       await sb.from('entries').upsert(entryRows);
@@ -1440,22 +1442,21 @@ async function loadFromSupabase(){
     const allEntriesRes = await sb.from('entries').select('*');
     state.allEntries = {};
     if(allEntriesRes.data){
-      allEntriesRes.data.forEach(e=>{ state.allEntries[e.key]={shift:e.shift,info:e.info||''}; });
+      allEntriesRes.data.forEach(e=>{ 
+        state.allEntries[e.key]={shift:e.shift, info:e.info||'', gruppe_id:e.gruppe_id, standort_id:e.standort_id}; 
+      });
     }
 
-    // Entries nur für aktuelle Mitarbeiter laden
+    // Aktuelle Entries für diesen Standort/Gruppe
     const staffIds = state.staff.map(s=>s.id);
     if(staffIds.length){
-      const entriesRes = await sb.from('entries').select('*');
-      if(entriesRes.data){
-        state.entries = {};
-        entriesRes.data.forEach(e=>{
-          const staffId = parseInt(e.key.split('_')[0]);
-          if(staffIds.includes(staffId)){
-            state.entries[e.key] = {shift:e.shift, info:e.info||''};
-          }
-        });
-      }
+      state.entries = {};
+      allEntriesRes.data?.forEach(e=>{
+        const staffId = parseInt(e.key.split('_')[0]);
+        if(staffIds.includes(staffId)){
+          state.entries[e.key] = {shift:e.shift, info:e.info||'', gruppe_id:e.gruppe_id, standort_id:e.standort_id};
+        }
+      });
     } else {
       state.entries = {};
     }
@@ -1475,29 +1476,26 @@ async function loadFromSupabase(){
 }
 
 // ─── KONFLIKT-ERKENNUNG ───
-// Prüft ob ein Mitarbeiter an einem Datum in einem ANDEREN Standort/Gruppe eingeplant ist
 function hasConflict(staffId, dateStr){
   if(!state.allEntries) return false;
   const key = `${staffId}_${dateStr}`;
-  // Hat der Mitarbeiter überhaupt einen Eintrag an diesem Tag?
   const entry = state.allEntries[key];
   if(!entry || !entry.shift || entry.shift==='FREI') return false;
-  // Ist der Eintrag für den aktuellen Standort/Gruppe?
-  const currentEntry = state.entries[key];
-  // Wenn der Eintrag in allEntries existiert aber nicht in state.entries (gefilterter Ansicht)
-  // dann ist er in einem anderen Standort
-  if(!currentEntry && entry.shift && entry.shift!=='FREI') return true;
+  // Konflikt wenn der Eintrag einer ANDEREN Gruppe zugeordnet ist
+  if(entry.gruppe_id && currentGruppeId && entry.gruppe_id !== currentGruppeId) return true;
+  if(entry.standort_id && currentStandortId && entry.standort_id !== currentStandortId) return true;
   return false;
 }
 
 function getConflictStandort(staffId, dateStr){
-  // Finde welcher Standort den Konflikt hat
-  const staff = state.staff.find(s=>s.id===staffId);
-  if(!staff) return '–';
-  const standortIds = staff.standort_ids||[];
-  const conflictStandortId = standortIds.find(sid=>sid!==currentStandortId);
-  const s = allStandorte.find(st=>st.id===conflictStandortId);
-  return s?.name || 'anderem Standort';
+  const key = `${staffId}_${dateStr}`;
+  const entry = state.allEntries?.[key];
+  if(!entry) return 'anderem Standort';
+  const gruppe = allGruppen.find(g=>g.id===entry.gruppe_id);
+  const standort = allStandorte.find(s=>s.id===entry.standort_id);
+  if(gruppe && standort) return `${standort.name} – ${gruppe.name}`;
+  if(standort) return standort.name;
+  return 'anderem Standort';
 }
 
 // ─── DATE HELPERS ───
@@ -1863,10 +1861,13 @@ async function saveEntry(){
     delete state.allEntries[key];
   }
 
-  if(!_selectedShift){ delete state.entries[key]; delete state.allEntries?.[key]; }
-  else { 
-    state.entries[key]={shift:_selectedShift,info}; 
-    if(state.allEntries) state.allEntries[key]={shift:_selectedShift,info};
+  if(!_selectedShift){ 
+    delete state.entries[key]; 
+    delete state.allEntries?.[key];
+  } else { 
+    const entryData = {shift:_selectedShift, info, gruppe_id: currentGruppeId, standort_id: currentStandortId};
+    state.entries[key] = entryData; 
+    if(state.allEntries) state.allEntries[key] = entryData;
   }
   saveData(); closeModal('entryModal'); render(); showToast('Dienst gespeichert ✓');
 }
