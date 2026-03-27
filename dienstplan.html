@@ -473,7 +473,8 @@
         <div class="settings-menu-item" onclick="openUserManagement()">👥 Benutzerverwaltung</div>
         <div class="settings-menu-item" id="menuUnternehmen" onclick="openUnternehmenModal()">🏭 Unternehmen</div>
         <div class="settings-menu-item" onclick="openStandorteModal()">🏢 Standorte</div>
-        <div class="settings-menu-item" onclick="showToast('Einstellungen folgt bald')">⚙️ Allgemeine Einstellungen</div>
+        <div class="settings-menu-item" id="menuUnternehmensrahmen" onclick="openUnternehmensrahmenModal()">⚖️ Unternehmensrahmen</div>
+        <div class="settings-menu-item" onclick="openGruppenrahmenModal()">📋 Gruppen-Vorgaben</div>
         <div class="settings-menu-item" onclick="showToast('Datenschutz & TOM folgt bald')">🔒 Datenschutz & TOM</div>
       </div>
     </div>
@@ -1334,11 +1335,220 @@
           <input type="checkbox" id="euPoolAuto" style="width:15px;height:15px;cursor:pointer"> Pool Auto
         </label>
       </div>
+
+      <!-- Ebene 3: Individuelle Planungsregeln -->
+      <div style="background:var(--surface2);border-radius:10px;padding:14px;margin-bottom:10px">
+        <div style="font-size:11px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:12px">🗓️ Individuelle Planungsregeln</div>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
+          <div>
+            <div style="font-size:10px;color:var(--text3);margin-bottom:3px">Max. aufeinanderfolgende Tage</div>
+            <input type="number" id="euMaxTageFolge" value="5" min="1" max="14" style="width:100%;padding:7px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:12px;background:var(--surface);color:var(--text)">
+          </div>
+          <div>
+            <div style="font-size:10px;color:var(--text3);margin-bottom:3px">Max. Wochenenden/Monat</div>
+            <input type="number" id="euMaxWeMonat" value="2" min="0" max="5" style="width:100%;padding:7px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:12px;background:var(--surface);color:var(--text)">
+          </div>
+        </div>
+
+        <div style="margin-bottom:8px">
+          <div style="font-size:10px;color:var(--text3);margin-bottom:6px">Erlaubte Dienste</div>
+          <div style="display:flex;flex-wrap:wrap;gap:6px" id="euDiensteErlaubt">
+            ${['F','S','RU','FS','FB','FZA','URL'].map(d=>`
+              <label style="display:flex;align-items:center;gap:4px;font-size:12px;padding:4px 10px;border:1.5px solid var(--border);border-radius:8px;cursor:pointer;background:var(--surface)">
+                <input type="checkbox" class="eu-dienst-cb" value="${d}" checked style="cursor:pointer"> ${d==='RU'?'RB':d}
+              </label>`).join('')}
+          </div>
+        </div>
+
+        <div style="margin-bottom:8px">
+          <div style="font-size:10px;color:var(--text3);margin-bottom:6px">Bevorzugte Dienste</div>
+          <div style="display:flex;flex-wrap:wrap;gap:6px">
+            ${['F','S','RU','FS'].map(d=>`
+              <label style="display:flex;align-items:center;gap:4px;font-size:12px;padding:4px 10px;border:1.5px solid var(--border);border-radius:8px;cursor:pointer;background:var(--surface)">
+                <input type="checkbox" class="eu-dienst-bev-cb" value="${d}" style="cursor:pointer"> ${d==='RU'?'RB':d}
+              </label>`).join('')}
+          </div>
+        </div>
+
+        <div style="margin-bottom:8px">
+          <div style="font-size:10px;color:var(--text3);margin-bottom:6px">Feste freie Tage</div>
+          <div style="display:flex;gap:6px;flex-wrap:wrap">
+            ${['Mo','Di','Mi','Do','Fr','Sa','So'].map((t,i)=>`
+              <label style="display:flex;align-items:center;gap:4px;font-size:12px;padding:4px 10px;border:1.5px solid var(--border);border-radius:8px;cursor:pointer;background:var(--surface)">
+                <input type="checkbox" class="eu-freitag-cb" value="${i+1}" style="cursor:pointer"> ${t}
+              </label>`).join('')}
+          </div>
+        </div>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
+          <div>
+            <div style="font-size:10px;color:var(--text3);margin-bottom:3px">Teilzeit-Muster</div>
+            <select id="euTeilzeitMuster" style="width:100%;padding:7px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:12px;background:var(--surface);color:var(--text)">
+              <option value="">Kein Muster</option>
+              <option value="mo-fr">Mo–Fr (kein WE)</option>
+              <option value="mo-do">Mo–Do</option>
+              <option value="di-sa">Di–Sa</option>
+              <option value="mi-so">Mi–So</option>
+            </select>
+          </div>
+          <div>
+            <div style="font-size:10px;color:var(--text3);margin-bottom:3px">Nach Rufbereitschaft</div>
+            <select id="euNachRb" style="width:100%;padding:7px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:12px;background:var(--surface);color:var(--text)">
+              <option value="frei">Frei</option>
+              <option value="spaet">Spätdienst möglich</option>
+              <option value="beliebig">Beliebig</option>
+            </select>
+          </div>
+        </div>
+
+        <div style="display:flex;flex-direction:column;gap:8px">
+          <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text);cursor:pointer">
+            <input type="checkbox" id="euRbErlaubt" checked style="width:15px;height:15px;cursor:pointer"> Rufbereitschaft erlaubt
+          </label>
+          <div>
+            <div style="font-size:10px;color:var(--text3);margin-bottom:3px">Qualifikationen</div>
+            <div style="display:flex;flex-wrap:wrap;gap:6px">
+              ${['Fallsteuerung','PDL','Wundversorgung','Palliativpflege','Beatmung'].map(q=>`
+                <label style="display:flex;align-items:center;gap:4px;font-size:12px;padding:4px 10px;border:1.5px solid var(--border);border-radius:8px;cursor:pointer;background:var(--surface)">
+                  <input type="checkbox" class="eu-quali-cb" value="${q}" style="cursor:pointer"> ${q}
+                </label>`).join('')}
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
 
     <div class="modal-actions" style="margin-top:16px;border-top:1px solid var(--border);padding-top:14px;flex-shrink:0">
       <button class="btn btn-secondary" onclick="closeModal('editUserModal')">Abbrechen</button>
       <button class="btn btn-primary" onclick="saveEditUser()">Speichern</button>
+    </div>
+  </div>
+</div>
+
+<!-- Unternehmensrahmen Modal (Ebene 1) -->
+<div class="modal-overlay" id="unternehmensrahmenModal" onclick="if(event.target===this)closeModal('unternehmensrahmenModal')">
+  <div class="modal modal-wide" style="max-height:85vh;display:flex;flex-direction:column">
+    <div class="modal-title">⚖️ Unternehmensrahmen</div>
+    <div class="modal-sub">Gesetzliche & betriebliche Rahmenbedingungen – gelten für alle Mitarbeiter</div>
+    <div style="overflow-y:auto;flex:1;padding-right:4px">
+
+      <div style="background:var(--surface2);border-radius:10px;padding:14px;margin-bottom:12px">
+        <div style="font-size:11px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:12px">⏱️ Arbeitszeitgesetz</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:8px">
+          <div>
+            <div style="font-size:10px;color:var(--text3);margin-bottom:3px">Max. Stunden/Tag</div>
+            <input type="number" id="ur_max_std_tag" value="10" min="6" max="12" step="0.5" style="width:100%;padding:7px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:12px;background:var(--surface);color:var(--text)">
+          </div>
+          <div>
+            <div style="font-size:10px;color:var(--text3);margin-bottom:3px">Min. Ruhezeit (Std.)</div>
+            <input type="number" id="ur_min_ruhe" value="10" min="8" max="12" step="0.5" style="width:100%;padding:7px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:12px;background:var(--surface);color:var(--text)">
+          </div>
+          <div>
+            <div style="font-size:10px;color:var(--text3);margin-bottom:3px">Max. Std./Woche Ø</div>
+            <input type="number" id="ur_max_std_woche" value="56" min="40" max="60" style="width:100%;padding:7px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:12px;background:var(--surface);color:var(--text)">
+          </div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
+          <div>
+            <div style="font-size:10px;color:var(--text3);margin-bottom:3px">Max. aufeinanderfolgende Tage</div>
+            <input type="number" id="ur_max_tage_folge" value="8" min="4" max="14" style="width:100%;padding:7px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:12px;background:var(--surface);color:var(--text)">
+          </div>
+          <div style="display:flex;flex-direction:column;gap:8px;justify-content:center;padding-top:16px">
+            <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text);cursor:pointer">
+              <input type="checkbox" id="ur_nacht_zaehlt" checked style="width:15px;height:15px"> Nachtdienst zählt zur Arbeitszeit
+            </label>
+            <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text);cursor:pointer">
+              <input type="checkbox" id="ur_rb_zaehlt" checked style="width:15px;height:15px"> Rufbereitschaft zählt anteilig
+            </label>
+          </div>
+        </div>
+      </div>
+
+      <div style="background:var(--surface2);border-radius:10px;padding:14px;margin-bottom:12px">
+        <div style="font-size:11px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px">📄 Betriebsvereinbarung / Tarifvertrag</div>
+        <div style="margin-bottom:8px">
+          <div style="font-size:10px;color:var(--text3);margin-bottom:3px">Betriebsvereinbarung (Freitext)</div>
+          <textarea id="ur_betriebsvereinbarung" rows="3" placeholder="z.B. Spätdienst endet spätestens 22:00 Uhr. Keine Doppelbesetzung Rufbereitschaft..." style="width:100%;padding:7px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:12px;background:var(--surface);color:var(--text);resize:vertical"></textarea>
+        </div>
+        <div>
+          <div style="font-size:10px;color:var(--text3);margin-bottom:3px">Tarifvertrag (Freitext)</div>
+          <textarea id="ur_tarifvertrag" rows="3" placeholder="z.B. TVöD Pflege: 30 Urlaubstage, Jahressonderzahlung im November..." style="width:100%;padding:7px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:12px;background:var(--surface);color:var(--text);resize:vertical"></textarea>
+        </div>
+      </div>
+
+      <div style="background:var(--accent-soft);border:1px solid var(--accent);border-radius:8px;padding:10px 12px;font-size:11px;color:var(--accent)">
+        ⚠️ Diese Regeln sind <strong>hart</strong> – der KI-Planer darf sie niemals überschreiten. Änderungen gelten sofort für alle Planungen dieses Unternehmens.
+      </div>
+    </div>
+
+    <div class="modal-actions" style="margin-top:16px;border-top:1px solid var(--border);padding-top:14px;flex-shrink:0">
+      <button class="btn btn-secondary" onclick="closeModal('unternehmensrahmenModal')">Abbrechen</button>
+      <button class="btn btn-primary" onclick="saveUnternehmensrahmen()">Speichern</button>
+    </div>
+  </div>
+</div>
+
+<!-- Gruppenrahmen Modal (Ebene 2) -->
+<div class="modal-overlay" id="gruppenrahmenModal" onclick="if(event.target===this)closeModal('gruppenrahmenModal')">
+  <div class="modal modal-wide" style="max-height:85vh;display:flex;flex-direction:column">
+    <div class="modal-title">📋 Gruppen-Vorgaben</div>
+    <div class="modal-sub" id="gruppenrahmenSub">Vorgaben für aktuelle Gruppe</div>
+    <div style="overflow-y:auto;flex:1;padding-right:4px">
+
+      <div style="background:var(--surface2);border-radius:10px;padding:14px;margin-bottom:12px">
+        <div style="font-size:11px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:12px">👥 Mindestbesetzung pro Dienst</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px">
+          <div>
+            <div style="font-size:10px;color:var(--text3);margin-bottom:3px">Frühdienst (F) min.</div>
+            <input type="number" id="gr_min_f" value="1" min="0" max="10" style="width:100%;padding:7px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:12px;background:var(--surface);color:var(--text)">
+          </div>
+          <div>
+            <div style="font-size:10px;color:var(--text3);margin-bottom:3px">Spätdienst (S) min.</div>
+            <input type="number" id="gr_min_s" value="1" min="0" max="10" style="width:100%;padding:7px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:12px;background:var(--surface);color:var(--text)">
+          </div>
+          <div>
+            <div style="font-size:10px;color:var(--text3);margin-bottom:3px">Rufbereitschaft (RB) min.</div>
+            <input type="number" id="gr_min_rb" value="0" min="0" max="5" style="width:100%;padding:7px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:12px;background:var(--surface);color:var(--text)">
+          </div>
+        </div>
+      </div>
+
+      <div style="background:var(--surface2);border-radius:10px;padding:14px;margin-bottom:12px">
+        <div style="font-size:11px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:12px">📅 Planungsregeln</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
+          <div>
+            <div style="font-size:10px;color:var(--text3);margin-bottom:3px">Max. aufeinanderfolgende Tage</div>
+            <input type="number" id="gr_max_tage_folge" value="8" min="4" max="14" style="width:100%;padding:7px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:12px;background:var(--surface);color:var(--text)">
+          </div>
+          <div>
+            <div style="font-size:10px;color:var(--text3);margin-bottom:3px">Max. Wochenenden/Monat</div>
+            <input type="number" id="gr_max_we_monat" value="2" min="0" max="5" style="width:100%;padding:7px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:12px;background:var(--surface);color:var(--text)">
+          </div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr;gap:8px;margin-bottom:8px">
+          <div>
+            <div style="font-size:10px;color:var(--text3);margin-bottom:3px">Rufbereitschafts-Rhythmus (min. Tage Abstand)</div>
+            <input type="number" id="gr_rb_rhythmus" value="7" min="1" max="30" style="width:100%;padding:7px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:12px;background:var(--surface);color:var(--text)">
+          </div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:8px">
+          <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text);cursor:pointer">
+            <input type="checkbox" id="gr_we_vor_urlaub" checked style="width:15px;height:15px"> Wochenende vor Urlaub frei
+          </label>
+          <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text);cursor:pointer">
+            <input type="checkbox" id="gr_we_nach_urlaub" checked style="width:15px;height:15px"> Wochenende nach Urlaub frei
+          </label>
+          <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text);cursor:pointer">
+            <input type="checkbox" id="gr_feiertag_sonntag" checked style="width:15px;height:15px"> Feiertage zählen wie Sonntage
+          </label>
+        </div>
+      </div>
+    </div>
+
+    <div class="modal-actions" style="margin-top:16px;border-top:1px solid var(--border);padding-top:14px;flex-shrink:0">
+      <button class="btn btn-secondary" onclick="closeModal('gruppenrahmenModal')">Abbrechen</button>
+      <button class="btn btn-primary" onclick="saveGruppenrahmen()">Speichern</button>
     </div>
   </div>
 </div>
@@ -3278,6 +3488,12 @@ async function openEditUser(userId){
   }
   sel.value = pos;
   renderEuCheckboxes(profile?.standort_ids||[], profile?.gruppe_ids||[]);
+
+  // Individuelle Planungsregeln laden
+  const { data: staffData } = await sb.from('staff').select('*')
+    .eq('name', document.getElementById('editUserSub').textContent).single().catch(()=>({data:null}));
+  loadEuRules(staffData);
+
   openModal('editUserModal');
 }
 
@@ -3298,7 +3514,34 @@ async function openEditStaffOnly(staffId){
   const sel = document.getElementById('euPosition');
   sel.value = s.role || '';
   renderEuCheckboxes(s.standort_id?[s.standort_id]:[], s.gruppe_id?[s.gruppe_id]:[]);
+  loadEuRules(s);
   openModal('editUserModal');
+}
+
+function loadEuRules(s){
+  if(!s) return;
+  document.getElementById('euMaxTageFolge').value = s.max_tage_folge || 5;
+  document.getElementById('euMaxWeMonat').value   = s.max_we_monat || 2;
+  document.getElementById('euRbErlaubt').checked  = s.rb_erlaubt !== false;
+  document.getElementById('euNachRb').value        = s.nach_rb || 'frei';
+  document.getElementById('euTeilzeitMuster').value= (s.teilzeit_muster||[])[0] || '';
+
+  const erlaubt = s.dienste_erlaubt || ['F','S','RU','FS','FB','FZA','URL'];
+  document.querySelectorAll('.eu-dienst-cb').forEach(cb=>{
+    cb.checked = erlaubt.includes(cb.value);
+  });
+  const bevorzugt = s.dienste_bevorzugt || [];
+  document.querySelectorAll('.eu-dienst-bev-cb').forEach(cb=>{
+    cb.checked = bevorzugt.includes(cb.value);
+  });
+  const freitage = s.feste_freitage || [];
+  document.querySelectorAll('.eu-freitag-cb').forEach(cb=>{
+    cb.checked = freitage.includes(parseInt(cb.value));
+  });
+  const qualis = s.qualifikationen || [];
+  document.querySelectorAll('.eu-quali-cb').forEach(cb=>{
+    cb.checked = qualis.includes(cb.value);
+  });
 }
 
 function renderEuCheckboxes(selectedStandortIds, selectedGruppeIds){
@@ -3348,17 +3591,30 @@ async function saveEditUser(){
   const gruppeIds   = [...document.querySelectorAll('.eu-gruppe-cb:checked')].map(c=>c.value);
   const fullName    = `${vorname} ${name}`.trim();
 
+  // Individuelle Planungsregeln
+  const staffRules = {
+    max_tage_folge:    parseInt(document.getElementById('euMaxTageFolge').value)||5,
+    max_we_monat:      parseInt(document.getElementById('euMaxWeMonat').value)||2,
+    rb_erlaubt:        document.getElementById('euRbErlaubt').checked,
+    nach_rb:           document.getElementById('euNachRb').value,
+    teilzeit_muster:   document.getElementById('euTeilzeitMuster').value ? [document.getElementById('euTeilzeitMuster').value] : [],
+    dienste_erlaubt:   [...document.querySelectorAll('.eu-dienst-cb:checked')].map(c=>c.value),
+    dienste_bevorzugt: [...document.querySelectorAll('.eu-dienst-bev-cb:checked')].map(c=>c.value),
+    feste_freitage:    [...document.querySelectorAll('.eu-freitag-cb:checked')].map(c=>parseInt(c.value)),
+    qualifikationen:   [...document.querySelectorAll('.eu-quali-cb:checked')].map(c=>c.value),
+  };
+
   if(_editUserId){
     const { error } = await sb.from('user_profiles').upsert({
       user_id: _editUserId, name, vorname, position, handy, kostenstelle,
       soll, auto1, pool_auto: poolAuto, standort_ids: standortIds, gruppe_ids: gruppeIds
     });
     if(error){ showToast('Fehler: ' + error.message); return; }
-    // Staff updaten
-    await sb.from('staff').update({ 
+    await sb.from('staff').update({
       name: fullName, role: position, soll,
       standort_id: standortIds[0]||null, gruppe_id: gruppeIds[0]||null,
-      standort_ids: standortIds, gruppe_ids: gruppeIds
+      standort_ids: standortIds, gruppe_ids: gruppeIds,
+      ...staffRules
     }).eq('name', document.getElementById('editUserSub').textContent);
   }
 
@@ -3366,7 +3622,8 @@ async function saveEditUser(){
     const { error } = await sb.from('staff').update({
       name: fullName, role: position, soll,
       standort_id: standortIds[0]||null, gruppe_id: gruppeIds[0]||null,
-      standort_ids: standortIds, gruppe_ids: gruppeIds
+      standort_ids: standortIds, gruppe_ids: gruppeIds,
+      ...staffRules
     }).eq('id', _editStaffId);
     if(error){ showToast('Fehler: ' + error.message); return; }
   }
@@ -3375,6 +3632,86 @@ async function saveEditUser(){
   closeModal('editUserModal');
   loadUserList();
   loadFromSupabase();
+}
+
+// ─── UNTERNEHMENSRAHMEN (Ebene 1) ───
+async function openUnternehmensrahmenModal(){
+  document.getElementById('settingsMenu').style.display='none';
+  // Bestehende Werte laden
+  const { data } = await sb.from('unternehmensrahmen')
+    .select('*').eq('unternehmen_id', currentUnternehmenId).single();
+  if(data){
+    document.getElementById('ur_max_std_tag').value       = data.max_stunden_tag || 10;
+    document.getElementById('ur_min_ruhe').value          = data.min_ruhezeit_std || 10;
+    document.getElementById('ur_max_std_woche').value     = data.max_stunden_woche || 56;
+    document.getElementById('ur_max_tage_folge').value    = data.max_tage_folge || 8;
+    document.getElementById('ur_nacht_zaehlt').checked    = data.nacht_zaehlt !== false;
+    document.getElementById('ur_rb_zaehlt').checked       = data.rb_zaehlt !== false;
+    document.getElementById('ur_betriebsvereinbarung').value = data.betriebsvereinbarung || '';
+    document.getElementById('ur_tarifvertrag').value      = data.tarifvertrag || '';
+  }
+  openModal('unternehmensrahmenModal');
+}
+
+async function saveUnternehmensrahmen(){
+  const payload = {
+    unternehmen_id:       currentUnternehmenId,
+    max_stunden_tag:      parseFloat(document.getElementById('ur_max_std_tag').value) || 10,
+    min_ruhezeit_std:     parseFloat(document.getElementById('ur_min_ruhe').value) || 10,
+    max_stunden_woche:    parseFloat(document.getElementById('ur_max_std_woche').value) || 56,
+    max_tage_folge:       parseInt(document.getElementById('ur_max_tage_folge').value) || 8,
+    nacht_zaehlt:         document.getElementById('ur_nacht_zaehlt').checked,
+    rb_zaehlt:            document.getElementById('ur_rb_zaehlt').checked,
+    betriebsvereinbarung: document.getElementById('ur_betriebsvereinbarung').value.trim(),
+    tarifvertrag:         document.getElementById('ur_tarifvertrag').value.trim(),
+  };
+  const { error } = await sb.from('unternehmensrahmen').upsert(payload, { onConflict: 'unternehmen_id' });
+  if(error){ showToast('Fehler: ' + error.message); return; }
+  showToast('✅ Unternehmensrahmen gespeichert');
+  closeModal('unternehmensrahmenModal');
+}
+
+// ─── GRUPPENRAHMEN (Ebene 2) ───
+async function openGruppenrahmenModal(){
+  document.getElementById('settingsMenu').style.display='none';
+  const gruppe = allGruppen.find(g=>g.id===currentGruppeId);
+  const standort = allStandorte.find(s=>s.id===currentStandortId);
+  document.getElementById('gruppenrahmenSub').textContent =
+    `${standort?.name||'–'} – ${gruppe?.name||'–'}`;
+
+  const { data } = await sb.from('gruppenrahmen')
+    .select('*').eq('gruppe_id', currentGruppeId).single();
+  if(data){
+    document.getElementById('gr_min_f').value           = data.min_besetzung_f ?? 1;
+    document.getElementById('gr_min_s').value           = data.min_besetzung_s ?? 1;
+    document.getElementById('gr_min_rb').value          = data.min_besetzung_rb ?? 0;
+    document.getElementById('gr_max_tage_folge').value  = data.max_tage_folge ?? 8;
+    document.getElementById('gr_max_we_monat').value    = data.max_we_monat ?? 2;
+    document.getElementById('gr_rb_rhythmus').value     = data.rb_rhythmus_tage ?? 7;
+    document.getElementById('gr_we_vor_urlaub').checked  = data.we_vor_urlaub_frei !== false;
+    document.getElementById('gr_we_nach_urlaub').checked = data.we_nach_urlaub_frei !== false;
+    document.getElementById('gr_feiertag_sonntag').checked = data.feiertag_wie_sonntag !== false;
+  }
+  openModal('gruppenrahmenModal');
+}
+
+async function saveGruppenrahmen(){
+  const payload = {
+    gruppe_id:            currentGruppeId,
+    min_besetzung_f:      parseInt(document.getElementById('gr_min_f').value) || 1,
+    min_besetzung_s:      parseInt(document.getElementById('gr_min_s').value) || 1,
+    min_besetzung_rb:     parseInt(document.getElementById('gr_min_rb').value) || 0,
+    max_tage_folge:       parseInt(document.getElementById('gr_max_tage_folge').value) || 8,
+    max_we_monat:         parseInt(document.getElementById('gr_max_we_monat').value) || 2,
+    rb_rhythmus_tage:     parseInt(document.getElementById('gr_rb_rhythmus').value) || 7,
+    we_vor_urlaub_frei:   document.getElementById('gr_we_vor_urlaub').checked,
+    we_nach_urlaub_frei:  document.getElementById('gr_we_nach_urlaub').checked,
+    feiertag_wie_sonntag: document.getElementById('gr_feiertag_sonntag').checked,
+  };
+  const { error } = await sb.from('gruppenrahmen').upsert(payload, { onConflict: 'gruppe_id' });
+  if(error){ showToast('Fehler: ' + error.message); return; }
+  showToast('✅ Gruppen-Vorgaben gespeichert');
+  closeModal('gruppenrahmenModal');
 }
 
 // ─── UNTERNEHMEN ───
