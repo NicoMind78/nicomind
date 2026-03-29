@@ -668,38 +668,81 @@
 
 <!-- Edit Staff Modal – Stammdaten -->
 <div class="modal-overlay" id="editStaffModal">
-  <div class="modal" style="width:460px">
+  <div class="modal" style="width:520px;max-height:85vh;display:flex;flex-direction:column">
     <div style="display:flex;align-items:center;gap:10px;margin-bottom:4px">
-      <button onclick="closeModal('editStaffModal')" style="width:14px;height:14px;border-radius:50%;background:#ff5f57;border:none;cursor:pointer;flex-shrink:0;transition:filter .14s" onmouseover="this.style.filter='brightness(.8)'" onmouseout="this.style.filter=''"></button>
-      <div class="modal-title" style="margin-bottom:0">👤 Mitarbeiter/in bearbeiten</div>
+      <button onclick="closeModal('editStaffModal')" style="width:14px;height:14px;border-radius:50%;background:#ff5f57;border:none;cursor:pointer;flex-shrink:0"></button>
+      <div class="modal-title" style="margin-bottom:0">📋 Planungsregeln</div>
     </div>
     <div class="modal-sub" id="editStaffSub"></div>
-    <div class="form-group">
-      <label class="form-label">Vorname &amp; Nachname</label>
-      <input type="text" class="form-input" id="editNameInput" placeholder="z.B. Maria Müller">
+
+    <div style="overflow-y:auto;flex:1;padding-right:4px;margin-top:12px">
+      <div style="background:var(--surface2);border-radius:10px;padding:14px;margin-bottom:10px">
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px">
+          <div>
+            <div style="font-size:10px;color:var(--text3);margin-bottom:3px">Max. aufeinanderfolgende Tage</div>
+            <input type="number" id="esMaxTageFolge" value="5" min="1" max="14" style="width:100%;padding:7px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:12px;background:var(--surface);color:var(--text)">
+          </div>
+          <div>
+            <div style="font-size:10px;color:var(--text3);margin-bottom:3px">Max. Wochenenden/Monat</div>
+            <input type="number" id="esMaxWeMonat" value="2" min="0" max="5" style="width:100%;padding:7px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:12px;background:var(--surface);color:var(--text)">
+          </div>
+        </div>
+
+        <div style="margin-bottom:10px">
+          <div style="font-size:10px;color:var(--text3);margin-bottom:6px">Erlaubte Dienste</div>
+          <div id="esDiensteErlaubtBox" style="display:flex;flex-wrap:wrap;gap:6px"></div>
+        </div>
+
+        <div style="margin-bottom:10px">
+          <div style="font-size:10px;color:var(--text3);margin-bottom:6px">Bevorzugte Dienste</div>
+          <div id="esDiensteBevorzugtBox" style="display:flex;flex-wrap:wrap;gap:6px"></div>
+        </div>
+
+        <div style="margin-bottom:10px">
+          <div style="font-size:10px;color:var(--text3);margin-bottom:6px">Feste freie Tage</div>
+          <div id="esFreitagBox" style="display:flex;gap:6px;flex-wrap:wrap"></div>
+        </div>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px">
+          <div>
+            <div style="font-size:10px;color:var(--text3);margin-bottom:3px">Teilzeit-Muster</div>
+            <select id="esTeilzeitMuster" style="width:100%;padding:7px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:12px;background:var(--surface);color:var(--text)">
+              <option value="">Kein Muster</option>
+              <option value="mo-fr">Mo–Fr (kein WE)</option>
+              <option value="mo-do">Mo–Do</option>
+              <option value="di-sa">Di–Sa</option>
+              <option value="mi-so">Mi–So</option>
+            </select>
+          </div>
+          <div>
+            <div style="font-size:10px;color:var(--text3);margin-bottom:3px">Nach Rufbereitschaft</div>
+            <select id="esNachRb" style="width:100%;padding:7px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:12px;background:var(--surface);color:var(--text)">
+              <option value="frei">Frei</option>
+              <option value="spaet">Spätdienst möglich</option>
+              <option value="beliebig">Beliebig</option>
+            </select>
+          </div>
+        </div>
+
+        <div style="display:flex;flex-direction:column;gap:8px">
+          <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text);cursor:pointer">
+            <input type="checkbox" id="esRbErlaubt" checked style="width:15px;height:15px;cursor:pointer"> Rufbereitschaft erlaubt
+          </label>
+          <div>
+            <div style="font-size:10px;color:var(--text3);margin-bottom:6px">Qualifikationen</div>
+            <div id="esQualiBox" style="display:flex;flex-wrap:wrap;gap:6px"></div>
+          </div>
+          <div>
+            <div style="font-size:10px;color:var(--text3);margin-bottom:3px">Notizen (intern, nicht für KI)</div>
+            <textarea id="esNotizen" rows="2" placeholder="z.B. chronische Erkrankung beachten…" style="width:100%;padding:7px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:12px;background:var(--surface);color:var(--text);resize:vertical"></textarea>
+          </div>
+        </div>
+      </div>
     </div>
-    <div class="form-group">
-      <label class="form-label">Funktion / Berufsbeschreibung</label>
-      <select class="form-select" id="editRoleSelect">
-        <option>Pflegefachkraft</option>
-        <option>Pflegehilfskraft</option>
-        <option>Ärztin/Arzt</option>
-        <option>Fallsteuerung</option>
-        <option>PDL</option>
-        <option>Hauswirtschaft</option>
-      </select>
-    </div>
-    <div class="form-group">
-      <label class="form-label">Wochensoll-Stunden</label>
-      <input type="number" class="form-input" id="editSollInput" min="1" max="60" step="0.5">
-    </div>
-    <div class="form-group">
-      <label class="form-label">📌 Notizen (nur für Menschen, nicht für KI)</label>
-      <textarea class="form-textarea" id="editNotesInput" placeholder="z.B. chronische Erkrankung beachten, Ansprechpartner für Tour 3…" style="min-height:70px"></textarea>
-    </div>
-    <div class="modal-actions">
+
+    <div class="modal-actions" style="border-top:1px solid var(--border);padding-top:14px;flex-shrink:0">
       <button class="btn btn-secondary" onclick="closeModal('editStaffModal')">Abbrechen</button>
-      <button class="btn btn-secondary" onclick="openPlanRules()">📋 Planungsregeln</button>
       <button class="btn btn-primary" onclick="saveEditStaff()">Speichern</button>
     </div>
   </div>
@@ -2316,27 +2359,78 @@ function populateRuleShiftSelects(){
 let _editStaffSollId=null;
 
 function openEditStaff(staffId){
-  _editStaffSollId=staffId;
-  const staff=state.staff.find(s=>s.id==staffId);
-  document.getElementById('editStaffSub').textContent=`${staff.name} · ${staff.role}`;
-  document.getElementById('editNameInput').value=staff.name;
-  document.getElementById('editRoleSelect').value=staff.role;
-  document.getElementById('editSollInput').value=staff.soll;
-  document.getElementById('editNotesInput').value=staff.notes||'';
+  _editStaffSollId = staffId;
+  const staff = state.staff.find(s=>s.id==staffId);
+  document.getElementById('editStaffSub').textContent = `${staff.name} · ${staff.role}`;
+
+  // Planungsregeln laden
+  document.getElementById('esMaxTageFolge').value  = staff.max_tage_folge || 5;
+  document.getElementById('esMaxWeMonat').value    = staff.max_we_monat || 2;
+  document.getElementById('esRbErlaubt').checked   = staff.rb_erlaubt !== false;
+  document.getElementById('esNachRb').value         = staff.nach_rb || 'frei';
+  document.getElementById('esTeilzeitMuster').value = (staff.teilzeit_muster||[])[0] || '';
+  document.getElementById('esNotizen').value        = staff.notes || '';
+
+  const erlaubt   = staff.dienste_erlaubt   || ['F','S','RU','FS','FB','FZA','URL'];
+  const bevorzugt = staff.dienste_bevorzugt || [];
+  const freitage  = staff.feste_freitage    || [];
+  const qualis    = staff.qualifikationen   || [];
+
+  document.getElementById('esDiensteErlaubtBox').innerHTML =
+    ['F','S','RU','FS','FB','FZA','URL'].map(d=>`
+      <label style="display:flex;align-items:center;gap:4px;font-size:12px;padding:4px 10px;border:1.5px solid var(--border);border-radius:8px;cursor:pointer;background:var(--surface)">
+        <input type="checkbox" class="es-dienst-cb" value="${d}" ${erlaubt.includes(d)?'checked':''} style="cursor:pointer"> ${d==='RU'?'RB':d}
+      </label>`).join('');
+
+  document.getElementById('esDiensteBevorzugtBox').innerHTML =
+    ['F','S','RU','FS'].map(d=>`
+      <label style="display:flex;align-items:center;gap:4px;font-size:12px;padding:4px 10px;border:1.5px solid var(--border);border-radius:8px;cursor:pointer;background:var(--surface)">
+        <input type="checkbox" class="es-dienst-bev-cb" value="${d}" ${bevorzugt.includes(d)?'checked':''} style="cursor:pointer"> ${d==='RU'?'RB':d}
+      </label>`).join('');
+
+  document.getElementById('esFreitagBox').innerHTML =
+    ['Mo','Di','Mi','Do','Fr','Sa','So'].map((t,i)=>`
+      <label style="display:flex;align-items:center;gap:4px;font-size:12px;padding:4px 10px;border:1.5px solid var(--border);border-radius:8px;cursor:pointer;background:var(--surface)">
+        <input type="checkbox" class="es-freitag-cb" value="${i+1}" ${freitage.includes(i+1)?'checked':''} style="cursor:pointer"> ${t}
+      </label>`).join('');
+
+  document.getElementById('esQualiBox').innerHTML =
+    ['Fallsteuerung','PDL','Wundversorgung','Palliativpflege','Beatmung'].map(q=>`
+      <label style="display:flex;align-items:center;gap:4px;font-size:12px;padding:4px 10px;border:1.5px solid var(--border);border-radius:8px;cursor:pointer;background:var(--surface)">
+        <input type="checkbox" class="es-quali-cb" value="${q}" ${qualis.includes(q)?'checked':''} style="cursor:pointer"> ${q}
+      </label>`).join('');
+
   openModal('editStaffModal');
 }
 
-function saveEditStaff(){
-  const staff=state.staff.find(s=>s.id==_editStaffSollId);
-  const name=document.getElementById('editNameInput').value.trim();
-  const role=document.getElementById('editRoleSelect').value;
-  const val=parseFloat(document.getElementById('editSollInput').value);
-  const notes=document.getElementById('editNotesInput').value.trim();
-  if(!name){ showToast('Bitte Namen eingeben'); return; }
-  if(isNaN(val)||val<=0){ showToast('Ungültige Stundenanzahl'); return; }
-  staff.name=name; staff.role=role; staff.soll=val; staff.notes=notes;
-  saveData(); closeModal('editStaffModal'); render();
-  showToast(`${name} aktualisiert ✓`);
+async function saveEditStaff(){
+  const staff = state.staff.find(s=>s.id==_editStaffSollId);
+  if(!staff) return;
+
+  const updates = {
+    max_tage_folge:    parseInt(document.getElementById('esMaxTageFolge').value)||5,
+    max_we_monat:      parseInt(document.getElementById('esMaxWeMonat').value)||2,
+    rb_erlaubt:        document.getElementById('esRbErlaubt').checked,
+    nach_rb:           document.getElementById('esNachRb').value,
+    teilzeit_muster:   document.getElementById('esTeilzeitMuster').value ? [document.getElementById('esTeilzeitMuster').value] : [],
+    notes:             document.getElementById('esNotizen').value.trim(),
+    dienste_erlaubt:   [...document.querySelectorAll('.es-dienst-cb:checked')].map(c=>c.value),
+    dienste_bevorzugt: [...document.querySelectorAll('.es-dienst-bev-cb:checked')].map(c=>c.value),
+    feste_freitage:    [...document.querySelectorAll('.es-freitag-cb:checked')].map(c=>parseInt(c.value)),
+    qualifikationen:   [...document.querySelectorAll('.es-quali-cb:checked')].map(c=>c.value),
+  };
+
+  // Lokal updaten
+  Object.assign(staff, updates);
+  state.staff = state.staff.map(s=>s.id==_editStaffSollId ? {...s,...updates} : s);
+
+  // Supabase updaten
+  await sb.from('staff').update(updates).eq('id', _editStaffSollId);
+
+  saveData();
+  closeModal('editStaffModal');
+  render();
+  showToast(`${staff.name} – Planungsregeln gespeichert ✓`);
 }
 
 function openPlanRules(){
