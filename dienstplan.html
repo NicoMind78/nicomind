@@ -2346,7 +2346,6 @@ function openEditStaff(staffId){
   document.getElementById('esMaxWeMonat').value    = staff.max_we_monat || 2;
   document.getElementById('esRbErlaubt').checked   = staff.rb_erlaubt !== false;
   document.getElementById('esNachRb').value         = staff.nach_rb || 'frei';
-  document.getElementById('esTeilzeitMuster').value = (staff.teilzeit_muster||[])[0] || '';
   document.getElementById('esNotizen').value        = staff.notes || '';
 
   const erlaubt  = staff.dienste_erlaubt  || ['F','S','RU','FS'];
