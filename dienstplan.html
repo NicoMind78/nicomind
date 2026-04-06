@@ -1098,14 +1098,36 @@
 </div>
 
 <!-- Wish Modal -->
-<div class="modal-overlay" id="wishModal">
-  <div class="modal">
+<div class="modal-overlay" id="wishModal" onclick="if(event.target===this)closeModal('wishModal')">
+  <div class="modal" style="width:420px">
     <div class="modal-title" id="wishModalTitle">💬 Dienstwunsch</div>
     <div class="modal-sub" id="wishModalSub"></div>
-    <div class="form-group">
-      <label class="form-label">Wunsch / Notiz für diesen Tag</label>
-      <input type="text" class="form-input" id="wishInput" placeholder="z.B. Frühdienst bevorzugt, kein Spätdienst, frei ab 14 Uhr…" maxlength="80">
+
+    <div style="display:flex;flex-direction:column;gap:8px;margin:14px 0">
+      <button id="wbtn_muss_frei"    onclick="selectWishPrio('muss_frei')"    style="display:flex;align-items:center;gap:10px;padding:10px 14px;border:2px solid var(--border);border-radius:10px;background:var(--surface);cursor:pointer;text-align:left;width:100%">
+        <span style="font-size:20px">🔴</span>
+        <div><div style="font-size:13px;font-weight:600;color:var(--text)">Muss-frei</div><div style="font-size:11px;color:var(--text3)">Urlaub, AU, FZA – KI plant nie drüber</div></div>
+      </button>
+      <button id="wbtn_soll_frei"    onclick="selectWishPrio('soll_frei')"    style="display:flex;align-items:center;gap:10px;padding:10px 14px;border:2px solid var(--border);border-radius:10px;background:var(--surface);cursor:pointer;text-align:left;width:100%">
+        <span style="font-size:20px">🟠</span>
+        <div><div style="font-size:13px;font-weight:600;color:var(--text)">Soll-frei</div><div style="font-size:11px;color:var(--text3)">Wichtiger Termin – KI vermeidet</div></div>
+      </button>
+      <button id="wbtn_wunsch_frei"  onclick="selectWishPrio('wunsch_frei')"  style="display:flex;align-items:center;gap:10px;padding:10px 14px;border:2px solid var(--border);border-radius:10px;background:var(--surface);cursor:pointer;text-align:left;width:100%">
+        <span style="font-size:20px">🟡</span>
+        <div><div style="font-size:13px;font-weight:600;color:var(--text)">Wunsch-frei</div><div style="font-size:11px;color:var(--text3)">Wenn möglich frei – KI berücksichtigt</div></div>
+      </button>
+      <button id="wbtn_wunsch_dienst" onclick="selectWishPrio('wunsch_dienst')" style="display:flex;align-items:center;gap:10px;padding:10px 14px;border:2px solid var(--border);border-radius:10px;background:var(--surface);cursor:pointer;text-align:left;width:100%">
+        <span style="font-size:20px">🟢</span>
+        <div><div style="font-size:13px;font-weight:600;color:var(--text)">Wunsch-Dienst</div><div style="font-size:11px;color:var(--text3)">Ich möchte arbeiten – KI bevorzugt</div></div>
+      </button>
     </div>
+
+    <div style="margin-bottom:12px">
+      <div style="font-size:10px;color:var(--text3);margin-bottom:4px">Notiz (optional)</div>
+      <input type="text" id="wishNotiz" placeholder="z.B. Arzttermin, Urlaub gebucht…" maxlength="80"
+        style="width:100%;padding:8px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:12px;background:var(--surface);color:var(--text)">
+    </div>
+
     <div class="modal-actions">
       <button class="btn btn-secondary" onclick="closeModal('wishModal')">Abbrechen</button>
       <button class="btn btn-danger btn-sm" onclick="saveWish(true)">Löschen</button>
@@ -1719,6 +1741,16 @@ async function loadFromSupabase(){
       releasesRes.data.forEach(r=>{ state.releases[r.key]={date:r.date,note:r.note||''}; });
     }
 
+    // Wünsche laden
+    const staffIds = state.staff.map(s=>s.id);
+    if(staffIds.length){
+      const wuenscheRes = await sb.from('wuensche').select('*').in('staff_id', staffIds);
+      state.wishes = {};
+      (wuenscheRes.data||[]).forEach(w=>{
+        state.wishes[`w_${w.staff_id}_${w.datum}`] = {prioritaet: w.prioritaet, notiz: w.notiz||''};
+      });
+    }
+
     localStorage.setItem('pflegeplan_v3', JSON.stringify(state));
     render();
     showToast('✅ Daten geladen');
@@ -1966,7 +1998,10 @@ function renderGrid(){
         const wish=state.wishes&&state.wishes[wkey];
         whtml+=`<div class="${wcls}">`;
         if(wish){
-          whtml+=`<button class="wish-chip" onclick="openWish('${staff.id}','${ds}')" title="${wish}">💬</button>`;
+          const prioEmoji = {muss_frei:'🔴',soll_frei:'🟠',wunsch_frei:'🟡',wunsch_dienst:'🟢'}[wish.prioritaet]||'💬';
+          const prioTitle = {muss_frei:'Muss-frei',soll_frei:'Soll-frei',wunsch_frei:'Wunsch-frei',wunsch_dienst:'Wunsch-Dienst'}[wish.prioritaet]||'Wunsch';
+          const notiz = wish.notiz ? ` – ${wish.notiz}` : '';
+          whtml+=`<button class="wish-chip" onclick="openWish('${staff.id}','${ds}')" title="${prioTitle}${notiz}">${prioEmoji}</button>`;
         } else {
           whtml+=`<button class="wish-chip wish-empty" onclick="openWish('${staff.id}','${ds}')" title="Wunsch eintragen">+</button>`;
         }
@@ -3129,24 +3164,53 @@ function toggleWuensche(){
   saveData(); render();
 }
 
-let _wishStaffId=null, _wishDate=null;
+let _wishStaffId=null, _wishDate=null, _wishPrio=null;
+
+function selectWishPrio(prio){
+  _wishPrio = prio;
+  ['muss_frei','soll_frei','wunsch_frei','wunsch_dienst'].forEach(p=>{
+    const btn=document.getElementById('wbtn_'+p);
+    if(btn){ btn.style.borderColor='var(--border)'; btn.style.background='var(--surface)'; }
+  });
+  const colors={muss_frei:'#ff3b30',soll_frei:'#ff9f0a',wunsch_frei:'#ffd60a',wunsch_dienst:'#28cd41'};
+  const btn=document.getElementById('wbtn_'+prio);
+  if(btn){ btn.style.borderColor=colors[prio]; btn.style.background=colors[prio]+'22'; }
+}
+
 function openWish(staffId, dateStr){
-  _wishStaffId=staffId; _wishDate=dateStr;
+  _wishStaffId=staffId; _wishDate=dateStr; _wishPrio=null;
   const staff=state.staff.find(s=>s.id==staffId);
-  const wkey=`w_${staffId}_${dateStr}`;
-  const existing=(state.wishes&&state.wishes[wkey])||'';
   document.getElementById('wishModalTitle').textContent='💬 Dienstwunsch – '+staff.name;
   document.getElementById('wishModalSub').textContent=new Date(dateStr+'T12:00:00').toLocaleDateString('de-DE',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
-  document.getElementById('wishInput').value=existing;
+  // Bestehenden Wunsch laden
+  const wkey=`w_${staffId}_${dateStr}`;
+  const existing=state.wishes&&state.wishes[wkey];
+  document.getElementById('wishNotiz').value=existing?.notiz||'';
+  ['muss_frei','soll_frei','wunsch_frei','wunsch_dienst'].forEach(p=>{
+    const btn=document.getElementById('wbtn_'+p);
+    if(btn){ btn.style.borderColor='var(--border)'; btn.style.background='var(--surface)'; }
+  });
+  if(existing?.prioritaet) selectWishPrio(existing.prioritaet);
   openModal('wishModal');
 }
-function saveWish(del){
+
+async function saveWish(del){
   if(!state.wishes) state.wishes={};
   const wkey=`w_${_wishStaffId}_${_wishDate}`;
-  if(del || !document.getElementById('wishInput').value.trim()){
+  if(del || !_wishPrio){
     delete state.wishes[wkey];
+    await sb.from('wuensche').delete()
+      .eq('staff_id', parseInt(_wishStaffId)).eq('datum', _wishDate);
   } else {
-    state.wishes[wkey]=document.getElementById('wishInput').value.trim();
+    const notiz=document.getElementById('wishNotiz').value.trim();
+    state.wishes[wkey]={prioritaet:_wishPrio, notiz};
+    await sb.from('wuensche').upsert({
+      staff_id:   parseInt(_wishStaffId),
+      datum:      _wishDate,
+      prioritaet: _wishPrio,
+      notiz:      notiz,
+      genehmigt:  _wishPrio==='muss_frei'
+    },{onConflict:'staff_id,datum'});
   }
   saveData(); closeModal('wishModal'); render();
   showToast(del?'Wunsch gelöscht':'Wunsch gespeichert ✓');
