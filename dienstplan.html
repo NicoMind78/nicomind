@@ -1742,7 +1742,6 @@ async function loadFromSupabase(){
     }
 
     // Wünsche laden
-    const staffIds = state.staff.map(s=>s.id);
     if(staffIds.length){
       const wuenscheRes = await sb.from('wuensche').select('*').in('staff_id', staffIds);
       state.wishes = {};
