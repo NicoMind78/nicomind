@@ -683,11 +683,6 @@
           <div id="esDiensteErlaubtBox" style="display:flex;flex-wrap:wrap;gap:6px"></div>
         </div>
 
-        <div style="margin-bottom:10px">
-          <div style="font-size:10px;color:var(--text3);margin-bottom:6px">Feste freie Tage</div>
-          <div id="esFreitagBox" style="display:flex;gap:6px;flex-wrap:wrap"></div>
-        </div>
-
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px">
           <div>
             <div style="font-size:10px;color:var(--text3);margin-bottom:3px">Max. aufeinanderfolgende Tage</div>
@@ -2358,18 +2353,11 @@ function openEditStaff(staffId){
   const erlaubt  = staff.dienste_erlaubt  || ['F','S','RU','FS'];
   const rbErlaubt = staff.rb_erlaubt !== false;
   const diensteListe = rbErlaubt ? ['F','S','RU','FS'] : ['F','S','FS'];
-  const freitage = staff.feste_freitage   || [];
 
   document.getElementById('esDiensteErlaubtBox').innerHTML =
     diensteListe.map(d=>`
       <label style="display:flex;align-items:center;gap:4px;font-size:12px;padding:4px 10px;border:1.5px solid var(--border);border-radius:8px;cursor:pointer;background:var(--surface)">
         <input type="checkbox" class="es-dienst-cb" value="${d}" ${erlaubt.includes(d)?'checked':''} style="cursor:pointer"> ${d==='RU'?'RB':d}
-      </label>`).join('');
-
-  document.getElementById('esFreitagBox').innerHTML =
-    ['Mo','Di','Mi','Do','Fr','Sa','So'].map((t,i)=>`
-      <label style="display:flex;align-items:center;gap:4px;font-size:12px;padding:4px 10px;border:1.5px solid var(--border);border-radius:8px;cursor:pointer;background:var(--surface)">
-        <input type="checkbox" class="es-freitag-cb" value="${i+1}" ${freitage.includes(i+1)?'checked':''} style="cursor:pointer"> ${t}
       </label>`).join('');
 
   openModal('editStaffModal');
@@ -2385,7 +2373,6 @@ async function saveEditStaff(){
     nach_rb:         document.getElementById('esNachRb').value,
     notes:           document.getElementById('esNotizen').value.trim(),
     dienste_erlaubt: [...document.querySelectorAll('.es-dienst-cb:checked')].map(c=>c.value),
-    feste_freitage:  [...document.querySelectorAll('.es-freitag-cb:checked')].map(c=>parseInt(c.value)),
   };
 
   // Lokal updaten
