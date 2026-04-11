@@ -455,7 +455,7 @@
 <!-- UNIFIED HEADER -->
 <header class="app-header">
   <div class="app-header-left" style="position:relative">
-    <div class="logo" onclick="toggleSettingsMenu()" style="cursor:pointer" title="Einstellungen">
+    <div class="logo" onclick="openUserManagement()" style="cursor:pointer" title="Benutzerverwaltung">
       <div class="logo-icon"><img src="data:image/png;base64,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" style="width:100%;height:100%;object-fit:cover;display:block"></div>
       <div>
         <div class="logo-text" style="font-size:11px;font-weight:600;letter-spacing:-.2px">Nicos Dienstplan</div>
@@ -487,14 +487,13 @@
     </div>
     <div id="unternehmenLabel" style="font-size:10px;color:var(--text3);white-space:nowrap;margin-right:2px;padding:2px 8px;border:1px solid var(--border);border-radius:20px">–</div>
     <div id="standortLabel" style="font-size:11px;color:var(--text3);white-space:nowrap;margin-right:4px">–</div>
-    <button onclick="openAddStaff()" title="Personal hinzufügen" style="position:relative;width:32px;height:32px;border-radius:50%;border:1.5px solid var(--border);background:var(--surface2);cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--text2);transition:all .15s;flex-shrink:0" onmouseover="this.style.background='var(--accent-soft)';this.style.borderColor='var(--accent)';this.style.color='var(--accent)'" onmouseout="this.style.background='var(--surface2)';this.style.borderColor='var(--border)';this.style.color='var(--text2)'">
+    <button onclick="openUserManagement()" title="Benutzerverwaltung" style="position:relative;width:32px;height:32px;border-radius:50%;border:1.5px solid var(--border);background:var(--surface2);cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--text2);transition:all .15s;flex-shrink:0" onmouseover="this.style.background='var(--accent-soft)';this.style.borderColor='var(--accent)';this.style.color='var(--accent)'" onmouseout="this.style.background='var(--surface2)';this.style.borderColor='var(--border)';this.style.color='var(--text2)'">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
-        <circle cx="12" cy="7" r="4"/>
+        <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+        <circle cx="9" cy="7" r="4"/>
+        <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+        <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
       </svg>
-      <div style="position:absolute;top:-3px;right:-3px;width:13px;height:13px;border-radius:50%;background:var(--accent);display:flex;align-items:center;justify-content:center;border:1.5px solid white">
-        <svg width="7" height="7" viewBox="0 0 10 10" fill="white"><line x1="5" y1="1" x2="5" y2="9" stroke="white" stroke-width="2" stroke-linecap="round"/><line x1="1" y1="5" x2="9" y2="5" stroke="white" stroke-width="2" stroke-linecap="round"/></svg>
-      </div>
     </button>
     <button id="btnWuensche" onclick="toggleWuensche()" title="Wünsche" style="width:32px;height:32px;border-radius:50%;border:1.5px solid var(--border);background:var(--surface2);cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--text2);transition:all .15s;flex-shrink:0"
       onmouseover="this.style.background='var(--red-soft)';this.style.borderColor='var(--red)';this.style.color='var(--red)'"
@@ -712,307 +711,6 @@
   </div>
 </div>
 
-<!-- Planungsregeln Modal -->
-<div class="modal-overlay" id="planRulesModal">
-  <div class="modal" style="width:580px;max-height:90vh;display:flex;flex-direction:column">
-    <div style="display:flex;align-items:center;gap:10px;margin-bottom:4px">
-      <button onclick="closeModal('planRulesModal')" style="width:14px;height:14px;border-radius:50%;background:#ff5f57;border:none;cursor:pointer;flex-shrink:0;transition:filter .14s" onmouseover="this.style.filter='brightness(.8)'" onmouseout="this.style.filter=''"></button>
-      <div class="modal-title" style="margin-bottom:0">📋 Planungsregeln</div>
-    </div>
-    <div class="modal-sub" id="planRulesSub"></div>
-
-    <!-- Sub-Tabs -->
-    <div style="display:flex;gap:0;border-bottom:1px solid var(--border);flex-shrink:0;overflow-x:auto">
-      <button class="plan-tab active" id="ptab_vertrag"        onclick="switchPlanTab('vertrag')">📄 Vertrag</button>
-      <button class="plan-tab"        id="ptab_dienste"         onclick="switchPlanTab('dienste')">🔧 Dienste</button>
-      <button class="plan-tab"        id="ptab_rufbereitschaft" onclick="switchPlanTab('rufbereitschaft')">📲 Rufbereitschaft</button>
-      <button class="plan-tab"        id="ptab_wochenende"      onclick="switchPlanTab('wochenende')">📅 Wochenende</button>
-      <button class="plan-tab"        id="ptab_wechsel"         onclick="switchPlanTab('wechsel')">🔄 Kurzer Wechsel</button>
-      <button class="plan-tab"        id="ptab_frueh"           onclick="switchPlanTab('frueh')">🌅 Frühdienst</button>
-      <button class="plan-tab"        id="ptab_spaet"           onclick="switchPlanTab('spaet')">🌆 Spätdienst</button>
-      <button class="plan-tab"        id="ptab_frei"            onclick="switchPlanTab('frei')">✕ Frei</button>
-      <button class="plan-tab"        id="ptab_fza"             onclick="switchPlanTab('fza')">⚖️ FZA</button>
-    </div>
-
-    <div style="flex:1;overflow-y:auto;padding:18px 4px 8px">
-
-      <!-- ── TAB 1: VERTRAGSARBEITSZEIT ── -->
-      <div id="ptab_vertrag_content">
-        <div class="pr-info">📄 Definiert an welchen Wochentagen diese Person grundsätzlich arbeitet. Der KI-Modus plant sie an allen anderen Tagen <strong>nicht</strong> ein.</div>
-        <div class="form-group">
-          <label class="form-label">Vertragsarbeitszeit</label>
-          <select class="form-select" id="pr_vertrag_preset" onchange="applyVertragPreset()">
-            <option value="">– Vorlage wählen –</option>
-            <option value="moSo">Montag – Sonntag (Vollzeit alle Tage)</option>
-            <option value="moFr">Montag – Freitag</option>
-            <option value="moMi">Montag, Mittwoch</option>
-            <option value="custom">Individuell (unten wählen)</option>
-          </select>
-        </div>
-        <div class="form-group" style="margin-top:10px">
-          <label class="form-label">Arbeitstage (individuell)</label>
-          <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:6px" id="pr_vertrag_days">
-            <label class="day-check"><input type="checkbox" id="vd_1" value="1" onchange="updateWeTab()"><span>Mo</span></label>
-            <label class="day-check"><input type="checkbox" id="vd_2" value="2" onchange="updateWeTab()"><span>Di</span></label>
-            <label class="day-check"><input type="checkbox" id="vd_3" value="3" onchange="updateWeTab()"><span>Mi</span></label>
-            <label class="day-check"><input type="checkbox" id="vd_4" value="4" onchange="updateWeTab()"><span>Do</span></label>
-            <label class="day-check"><input type="checkbox" id="vd_5" value="5" onchange="updateWeTab()"><span>Fr</span></label>
-            <label class="day-check"><input type="checkbox" id="vd_6" value="6" onchange="updateWeTab()"><span>Sa</span></label>
-            <label class="day-check"><input type="checkbox" id="vd_0" value="0" onchange="updateWeTab()"><span>So</span></label>
-          </div>
-        </div>
-      </div>
-
-      <!-- ── TAB 1b: DIENSTE ── -->
-      <div id="ptab_dienste_content" style="display:none">
-        <div class="pr-info">🔧 Welche Dienstarten sollen für diese Person vom KI-Modus berücksichtigt werden? Nicht angehakte Dienste werden nie eingeplant.</div>
-        <div style="display:flex;flex-direction:column;gap:10px;margin-top:4px">
-          <label class="radio-row" style="cursor:default">
-            <input type="checkbox" id="pr_dienst_F"  onchange="updateDiensteTabs()" style="accent-color:var(--accent);width:16px;height:16px">
-            <div><strong>🌅 Frühdienst</strong><div class="rule-desc">Frühschicht wird eingeplant</div></div>
-          </label>
-          <label class="radio-row" style="cursor:default">
-            <input type="checkbox" id="pr_dienst_S"  onchange="updateDiensteTabs()" style="accent-color:var(--accent);width:16px;height:16px">
-            <div><strong>🌆 Spätdienst</strong><div class="rule-desc">Spätschicht wird eingeplant</div></div>
-          </label>
-          <label class="radio-row" style="cursor:default">
-            <input type="checkbox" id="pr_dienst_RU" onchange="updateDiensteTabs()" style="accent-color:var(--accent);width:16px;height:16px">
-            <div><strong>📲 Rufbereitschaft</strong><div class="rule-desc">Rufbereitschaft wird eingeplant</div></div>
-          </label>
-          <label class="radio-row" style="cursor:default">
-            <input type="checkbox" id="pr_dienst_FS" onchange="updateDiensteTabs()" style="accent-color:var(--accent);width:16px;height:16px">
-            <div><strong>📋 Fallsteuerung</strong><div class="rule-desc">Fallsteuerungsdienst wird eingeplant</div></div>
-          </label>
-        </div>
-      </div>
-
-      <!-- ── TAB 2: RUFBEREITSCHAFT ── -->
-      <div id="ptab_rufbereitschaft_content" style="display:none">
-        <div class="pr-info">📲 Einstellungen zur Rufbereitschaft. Die Wichtigkeit bestimmt wie stark der KI-Modus diese Präferenz gewichtet.</div>
-
-        <!-- Keine RU Toggle -->
-        <div class="rule-row" style="background:var(--red-soft);border-radius:var(--radius-sm);border:1px solid rgba(255,59,48,.18);margin-bottom:12px">
-          <div class="rule-toggle" onclick="toggleKeinRU()"><div class="rule-toggle-track" id="tog_keinRU"></div></div>
-          <div class="rule-body"><div class="rule-label" style="color:var(--red)">Keine Rufbereitschaft!</div><div class="rule-desc">Diese Person wird nie für RU eingeplant – alle weiteren RU-Einstellungen entfallen</div></div>
-        </div>
-
-        <div id="ru_details_block">
-          <div class="pr-section-title">Folge-Regel nach RU</div>
-          <div class="rule-row">
-            <div class="rule-toggle" onclick="toggleRule('afterRuFrei',['afterRuSpaet'])"><div class="rule-toggle-track" id="tog_afterRuFrei"></div></div>
-            <div class="rule-body"><div class="rule-label">Nach Rufbereitschaft → Frei</div><div class="rule-desc">Tag nach RU automatisch freihalten</div></div>
-          </div>
-          <div class="rule-row">
-            <div class="rule-toggle" onclick="toggleRule('afterRuSpaet',['afterRuFrei'])"><div class="rule-toggle-track" id="tog_afterRuSpaet"></div></div>
-            <div class="rule-body"><div class="rule-label">Nach Rufbereitschaft → Spätdienst</div><div class="rule-desc">Tag nach RU als sanften Spätdienst planen</div></div>
-          </div>
-
-          <div class="pr-section-title" style="margin-top:14px">Rufbereitschaft gewünscht?</div>
-          <div class="pr-scale-row">
-            <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--text3);margin-bottom:4px"><span>eher nicht</span><span>neutral</span><span>sehr gerne</span></div>
-            <div class="pr-scale" id="pr_ruWunsch_scale">
-              <button class="pr-scale-btn" onclick="setPrScale('ruWunsch',1)">1</button>
-              <button class="pr-scale-btn" onclick="setPrScale('ruWunsch',2)">2</button>
-              <button class="pr-scale-btn" onclick="setPrScale('ruWunsch',3)">3</button>
-              <button class="pr-scale-btn" onclick="setPrScale('ruWunsch',4)">4</button>
-              <button class="pr-scale-btn" onclick="setPrScale('ruWunsch',5)">5</button>
-            </div>
-            <input type="hidden" id="pr_ruWunsch" value="3">
-          </div>
-
-          <div class="pr-section-title" style="margin-top:14px">Wichtigkeit dieser Präferenz</div>
-          <div class="pr-scale-row">
-            <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--text3);margin-bottom:4px"><span>unwichtig</span><span>mittel</span><span>sehr wichtig</span></div>
-            <div class="pr-scale" id="pr_ruWichtig_scale">
-              <button class="pr-scale-btn" onclick="setPrScale('ruWichtig',1)">1</button>
-              <button class="pr-scale-btn" onclick="setPrScale('ruWichtig',2)">2</button>
-              <button class="pr-scale-btn" onclick="setPrScale('ruWichtig',3)">3</button>
-              <button class="pr-scale-btn" onclick="setPrScale('ruWichtig',4)">4</button>
-              <button class="pr-scale-btn" onclick="setPrScale('ruWichtig',5)">5</button>
-            </div>
-            <input type="hidden" id="pr_ruWichtig" value="3">
-          </div>
-
-          <div class="pr-section-title" style="margin-top:14px">Anzahl Rufbereitschaften / Monat</div>
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:8px">
-            <div><label class="form-label">Mindestens</label><input type="number" class="form-input" id="pr_ruMin" value="0" min="0" max="20"></div>
-            <div><label class="form-label">Höchstens</label><input type="number" class="form-input" id="pr_ruMax" value="4" min="0" max="20"></div>
-          </div>
-          <div class="rule-row" style="margin-top:12px">
-            <div class="rule-toggle" onclick="toggleRule('noConsecRu')"><div class="rule-toggle-track" id="tog_noConsecRu"></div></div>
-            <div class="rule-body"><div class="rule-label">Keine zwei RU-Dienste hintereinander</div></div>
-          </div>
-        </div>
-      </div>
-
-      <!-- ── TAB 3: WOCHENENDE ── -->
-      <div id="ptab_wochenende_content" style="display:none">
-        <div class="pr-info">📅 Wie soll mit Wochenenden umgegangen werden?</div>
-        <div class="form-group">
-          <label class="form-label">Wochenend-Regelung</label>
-          <div style="display:flex;flex-direction:column;gap:8px;margin-top:8px" id="pr_we_options">
-            <label class="radio-row"><input type="radio" name="pr_we" id="pr_we_none"     value="none"     checked><div><strong>Keine Regelung</strong><div class="rule-desc">KI entscheidet frei</div></div></label>
-            <label class="radio-row"><input type="radio" name="pr_we" id="pr_we_immerFrei" value="immerFrei"><div><strong>Immer frei</strong><div class="rule-desc">Sa und So werden nie als Arbeitsdienst eingeplant</div></div></label>
-            <label class="radio-row"><input type="radio" name="pr_we" id="pr_we_alle2"    value="alle2"><div><strong>Regelmäßig alle 2 Wochenenden</strong><div class="rule-desc">Jedes zweite Wochenende ist frei, das andere wird eingeplant</div></div></label>
-            <label class="radio-row"><input type="radio" name="pr_we" id="pr_we_ganz"     value="ganz"><div><strong>Ganzes Wochenende am Stück</strong><div class="rule-desc">Wenn ein Wochenende eingeplant wird, immer beide Tage (Sa+So)</div></div></label>
-            <label class="radio-row"><input type="radio" name="pr_we" id="pr_we_geteilt"  value="geteilt"><div><strong>Geteiltes Wochenende</strong><div class="rule-desc">Sa oder So kann einzeln eingeplant werden</div></div></label>
-            <label class="radio-row"><input type="radio" name="pr_we" id="pr_we_ja"       value="ja"><div><strong>Arbeit am Wochenende bevorzugt</strong><div class="rule-desc">Diese Person möchte gerne am Wochenende arbeiten</div></div></label>
-          </div>
-        </div>
-      </div>
-
-      <!-- ── TAB 4: KURZER WECHSEL ── -->
-      <div id="ptab_wechsel_content" style="display:none">
-        <div class="pr-info">🔄 Kurzer Wechsel = Spätdienst direkt gefolgt von Frühdienst am nächsten Tag. Gesundheitlich belastend – hier kannst du festlegen wie wichtig die Vermeidung ist.</div>
-        <div class="pr-section-title">Kurzen Wechsel (Spät → Früh) vermeiden</div>
-        <div class="rule-row">
-          <div class="rule-toggle" onclick="toggleRule('noFruehAfterSpaet')"><div class="rule-toggle-track" id="tog_noFruehAfterSpaet"></div></div>
-          <div class="rule-body"><div class="rule-label">Kein Frühdienst nach Spätdienst (hart)</div><div class="rule-desc">Wird vom KI-Modus absolut eingehalten</div></div>
-        </div>
-        <div class="pr-section-title" style="margin-top:14px">Wichtigkeit (wenn nicht hart geblockt)</div>
-        <div class="pr-scale-row">
-          <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--text3);margin-bottom:4px"><span>unwichtig</span><span>mittel</span><span>sehr wichtig</span></div>
-          <div class="pr-scale" id="pr_wechselWichtig_scale">
-            <button class="pr-scale-btn" onclick="setPrScale('wechselWichtig',1)">1</button>
-            <button class="pr-scale-btn" onclick="setPrScale('wechselWichtig',2)">2</button>
-            <button class="pr-scale-btn" onclick="setPrScale('wechselWichtig',3)">3</button>
-            <button class="pr-scale-btn" onclick="setPrScale('wechselWichtig',4)">4</button>
-            <button class="pr-scale-btn" onclick="setPrScale('wechselWichtig',5)">5</button>
-          </div>
-          <input type="hidden" id="pr_wechselWichtig" value="3">
-        </div>
-      </div>
-
-      <!-- ── TAB 5: FRÜHDIENST ── -->
-      <div id="ptab_frueh_content" style="display:none">
-        <div class="pr-info">🌅 Wie gerne und wie oft soll diese Person Frühdienste haben?</div>
-        <div class="pr-section-title">Frühdienst gewünscht?</div>
-        <div class="pr-scale-row">
-          <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--text3);margin-bottom:4px"><span>eher nicht</span><span>neutral</span><span>sehr gerne</span></div>
-          <div class="pr-scale" id="pr_fruehWunsch_scale">
-            <button class="pr-scale-btn" onclick="setPrScale('fruehWunsch',1)">1</button>
-            <button class="pr-scale-btn" onclick="setPrScale('fruehWunsch',2)">2</button>
-            <button class="pr-scale-btn" onclick="setPrScale('fruehWunsch',3)">3</button>
-            <button class="pr-scale-btn" onclick="setPrScale('fruehWunsch',4)">4</button>
-            <button class="pr-scale-btn" onclick="setPrScale('fruehWunsch',5)">5</button>
-          </div>
-          <input type="hidden" id="pr_fruehWunsch" value="3">
-        </div>
-        <div class="pr-section-title" style="margin-top:14px">Wichtigkeit dieser Präferenz</div>
-        <div class="pr-scale-row">
-          <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--text3);margin-bottom:4px"><span>unwichtig</span><span>mittel</span><span>sehr wichtig</span></div>
-          <div class="pr-scale" id="pr_fruehWichtig_scale">
-            <button class="pr-scale-btn" onclick="setPrScale('fruehWichtig',1)">1</button>
-            <button class="pr-scale-btn" onclick="setPrScale('fruehWichtig',2)">2</button>
-            <button class="pr-scale-btn" onclick="setPrScale('fruehWichtig',3)">3</button>
-            <button class="pr-scale-btn" onclick="setPrScale('fruehWichtig',4)">4</button>
-            <button class="pr-scale-btn" onclick="setPrScale('fruehWichtig',5)">5</button>
-          </div>
-          <input type="hidden" id="pr_fruehWichtig" value="3">
-        </div>
-        <div class="pr-section-title" style="margin-top:14px">Max. Frühdienste pro Woche</div>
-        <div class="rule-row">
-          <div class="rule-toggle" onclick="toggleRule('maxFruehWeek')"><div class="rule-toggle-track" id="tog_maxFruehWeek"></div></div>
-          <div class="rule-body">
-            <div class="rule-label">Begrenzung aktiv</div>
-            <div style="display:flex;align-items:center;gap:8px;margin-top:8px">
-              <input type="number" class="form-input rule-number" id="rule_maxFruehWeek_val" value="3" min="1" max="7" style="display:none;width:80px">
-              <span id="rule_maxFruehWeek_label" style="display:none;font-size:11.5px;color:var(--text2)">Frühdienste / Woche</span>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- ── TAB 6: SPÄTDIENST ── -->
-      <div id="ptab_spaet_content" style="display:none">
-        <div class="pr-info">🌆 Wie gerne und wie oft soll diese Person Spätdienste haben?</div>
-        <div class="pr-section-title">Spätdienst gewünscht?</div>
-        <div class="pr-scale-row">
-          <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--text3);margin-bottom:4px"><span>eher nicht</span><span>neutral</span><span>sehr gerne</span></div>
-          <div class="pr-scale" id="pr_spaetWunsch_scale">
-            <button class="pr-scale-btn" onclick="setPrScale('spaetWunsch',1)">1</button>
-            <button class="pr-scale-btn" onclick="setPrScale('spaetWunsch',2)">2</button>
-            <button class="pr-scale-btn" onclick="setPrScale('spaetWunsch',3)">3</button>
-            <button class="pr-scale-btn" onclick="setPrScale('spaetWunsch',4)">4</button>
-            <button class="pr-scale-btn" onclick="setPrScale('spaetWunsch',5)">5</button>
-          </div>
-          <input type="hidden" id="pr_spaetWunsch" value="3">
-        </div>
-        <div class="pr-section-title" style="margin-top:14px">Wichtigkeit dieser Präferenz</div>
-        <div class="pr-scale-row">
-          <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--text3);margin-bottom:4px"><span>unwichtig</span><span>mittel</span><span>sehr wichtig</span></div>
-          <div class="pr-scale" id="pr_spaetWichtig_scale">
-            <button class="pr-scale-btn" onclick="setPrScale('spaetWichtig',1)">1</button>
-            <button class="pr-scale-btn" onclick="setPrScale('spaetWichtig',2)">2</button>
-            <button class="pr-scale-btn" onclick="setPrScale('spaetWichtig',3)">3</button>
-            <button class="pr-scale-btn" onclick="setPrScale('spaetWichtig',4)">4</button>
-            <button class="pr-scale-btn" onclick="setPrScale('spaetWichtig',5)">5</button>
-          </div>
-          <input type="hidden" id="pr_spaetWichtig" value="3">
-        </div>
-        <div class="pr-section-title" style="margin-top:14px">Max. Spätdienste pro Woche</div>
-        <div class="rule-row">
-          <div class="rule-toggle" onclick="toggleRule('maxSpaetWeek')"><div class="rule-toggle-track" id="tog_maxSpaetWeek"></div></div>
-          <div class="rule-body">
-            <div class="rule-label">Begrenzung aktiv</div>
-            <div style="display:flex;align-items:center;gap:8px;margin-top:8px">
-              <input type="number" class="form-input rule-number" id="rule_maxSpaetWeek_val" value="2" min="1" max="7" style="display:none;width:80px">
-              <span id="rule_maxSpaetWeek_label" style="display:none;font-size:11.5px;color:var(--text2)">Spätdienste / Woche</span>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- ── TAB 7: FREI ── -->
-      <div id="ptab_frei_content" style="display:none">
-        <div class="pr-info">✕ Einstellungen zu Freitagen – insbesondere ob zusammenhängende freie Tage gewünscht sind.</div>
-        <div class="pr-section-title">Zusammenhängende Freitage bevorzugen</div>
-        <div class="pr-scale-row">
-          <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--text3);margin-bottom:4px"><span>unwichtig</span><span>mittel</span><span>sehr wichtig</span></div>
-          <div class="pr-scale" id="pr_freiBlock_scale">
-            <button class="pr-scale-btn" onclick="setPrScale('freiBlock',1)">1</button>
-            <button class="pr-scale-btn" onclick="setPrScale('freiBlock',2)">2</button>
-            <button class="pr-scale-btn" onclick="setPrScale('freiBlock',3)">3</button>
-            <button class="pr-scale-btn" onclick="setPrScale('freiBlock',4)">4</button>
-            <button class="pr-scale-btn" onclick="setPrScale('freiBlock',5)">5</button>
-          </div>
-          <input type="hidden" id="pr_freiBlock" value="3">
-        </div>
-        <div class="pr-section-title" style="margin-top:14px">Mindestens X freie Tage pro Woche</div>
-        <div class="rule-row">
-          <div class="rule-toggle" onclick="toggleRule('minFreiWeek')"><div class="rule-toggle-track" id="tog_minFreiWeek"></div></div>
-          <div class="rule-body">
-            <div class="rule-label">Begrenzung aktiv</div>
-            <div style="display:flex;align-items:center;gap:8px;margin-top:8px">
-              <input type="number" class="form-input rule-number" id="rule_minFreiWeek_val" value="2" min="1" max="7" style="display:none;width:80px">
-              <span id="rule_minFreiWeek_label" style="display:none;font-size:11.5px;color:var(--text2)">freie Tage / Woche</span>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- ── TAB 8: FZA ── -->
-      <div id="ptab_fza_content" style="display:none">
-        <div class="pr-info">⚖️ FZA = Freizeitausgleich. Diese Regeln sind <strong>harte Ausschlussregeln</strong> – der KI-Modus hält sie absolut ein.</div>
-        <div class="pr-section-title">FZA-Genehmigung</div>
-        <div style="display:flex;flex-direction:column;gap:8px;margin-top:10px">
-          <label class="radio-row"><input type="radio" name="pr_fza" id="pr_fza_ok"          value="ok"          checked><div><strong>FZA genehmigt</strong><div class="rule-desc">FZA kann jederzeit vom KI-Modus geplant werden</div></div></label>
-          <label class="radio-row"><input type="radio" name="pr_fza" id="pr_fza_nichtVorUrl"  value="nichtVorUrl"><div><strong>Nicht vor Urlaub</strong><div class="rule-desc">FZA wird nicht direkt vor einem Urlaubsblock eingeplant</div></div></label>
-          <label class="radio-row"><input type="radio" name="pr_fza" id="pr_fza_nichtNachUrl" value="nichtNachUrl"><div><strong>Nicht nach Urlaub</strong><div class="rule-desc">FZA wird nicht direkt nach einem Urlaubsblock eingeplant</div></div></label>
-          <label class="radio-row"><input type="radio" name="pr_fza" id="pr_fza_nichtUmUrl"   value="nichtUmUrl"><div><strong>Weder vor noch nach Urlaub</strong><div class="rule-desc">FZA wird weder direkt vor noch nach Urlaub eingeplant</div></div></label>
-          <label class="radio-row"><input type="radio" name="pr_fza" id="pr_fza_nein"         value="nein"><div><strong>FZA nicht genehmigt</strong><div class="rule-desc">KI-Modus plant niemals FZA für diese Person</div></div></label>
-        </div>
-      </div>
-
-    </div><!-- end scroll -->
-
-    <div class="modal-actions" style="border-top:1px solid var(--border);padding-top:14px;margin-top:4px;flex-shrink:0">
-      <button class="btn btn-secondary" onclick="closeModal('planRulesModal')">Abbrechen</button>
-      <button class="btn btn-primary" onclick="savePlanRules()">✓ Regeln speichern</button>
-    </div>
-  </div>
-</div>
-
 <!-- KI Config Modal -->
 <div class="modal-overlay" id="kiModal">
   <div class="modal" style="width:500px;max-height:88vh;overflow-y:auto">
@@ -1090,22 +788,26 @@
     <div class="modal-sub" id="wishModalSub"></div>
 
     <div style="display:flex;flex-direction:column;gap:8px;margin:14px 0">
-      <button id="wbtn_muss_frei"    onclick="selectWishPrio('muss_frei')"    style="display:flex;align-items:center;gap:10px;padding:10px 14px;border:2px solid var(--border);border-radius:10px;background:var(--surface);cursor:pointer;text-align:left;width:100%">
+      <button id="wbtn_soll_frei" onclick="selectWishPrio('soll_frei')" style="display:flex;align-items:center;gap:10px;padding:10px 14px;border:2px solid var(--border);border-radius:10px;background:var(--surface);cursor:pointer;text-align:left;width:100%">
         <span style="font-size:20px">🔴</span>
-        <div><div style="font-size:13px;font-weight:600;color:var(--text)">Muss-frei</div><div style="font-size:11px;color:var(--text3)">Urlaub, AU, FZA – KI plant nie drüber</div></div>
+        <div><div style="font-size:13px;font-weight:600;color:var(--text)">Soll-Frei</div><div style="font-size:11px;color:var(--text3)">Urlaub, Krank, FZA – KI plant niemals drüber</div></div>
       </button>
-      <button id="wbtn_soll_frei"    onclick="selectWishPrio('soll_frei')"    style="display:flex;align-items:center;gap:10px;padding:10px 14px;border:2px solid var(--border);border-radius:10px;background:var(--surface);cursor:pointer;text-align:left;width:100%">
+      <button id="wbtn_wichtig" onclick="selectWishPrio('wichtig')" style="display:flex;align-items:center;gap:10px;padding:10px 14px;border:2px solid var(--border);border-radius:10px;background:var(--surface);cursor:pointer;text-align:left;width:100%">
         <span style="font-size:20px">🟠</span>
-        <div><div style="font-size:13px;font-weight:600;color:var(--text)">Soll-frei</div><div style="font-size:11px;color:var(--text3)">Wichtiger Termin – KI vermeidet</div></div>
-      </button>
-      <button id="wbtn_wunsch_frei"  onclick="selectWishPrio('wunsch_frei')"  style="display:flex;align-items:center;gap:10px;padding:10px 14px;border:2px solid var(--border);border-radius:10px;background:var(--surface);cursor:pointer;text-align:left;width:100%">
-        <span style="font-size:20px">🟡</span>
-        <div><div style="font-size:13px;font-weight:600;color:var(--text)">Wunsch-frei</div><div style="font-size:11px;color:var(--text3)">Wenn möglich frei – KI berücksichtigt</div></div>
+        <div><div style="font-size:13px;font-weight:600;color:var(--text)">Wichtiger Termin</div><div style="font-size:11px;color:var(--text3)">KI vermeidet – Priorität 70/100</div></div>
       </button>
       <button id="wbtn_wunsch_dienst" onclick="selectWishPrio('wunsch_dienst')" style="display:flex;align-items:center;gap:10px;padding:10px 14px;border:2px solid var(--border);border-radius:10px;background:var(--surface);cursor:pointer;text-align:left;width:100%">
         <span style="font-size:20px">🟢</span>
-        <div><div style="font-size:13px;font-weight:600;color:var(--text)">Wunsch-Dienst</div><div style="font-size:11px;color:var(--text3)">Ich möchte arbeiten – KI bevorzugt</div></div>
+        <div><div style="font-size:13px;font-weight:600;color:var(--text)">Wunsch Dienst / Frei</div><div style="font-size:11px;color:var(--text3)">KI bevorzugt – bestimmten Dienst oder frei wählen</div></div>
       </button>
+    </div>
+
+    <!-- Dienst-Auswahl (nur bei Grün sichtbar) -->
+    <div id="wishDienstBox" style="display:none;margin-bottom:10px">
+      <div style="font-size:10px;color:var(--text3);margin-bottom:4px">Welchen Dienst / Frei?</div>
+      <select id="wishDienstWahl" style="width:100%;padding:8px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:12px;background:var(--surface);color:var(--text)">
+        <option value="frei">✕ Frei</option>
+      </select>
     </div>
 
     <div style="margin-bottom:12px">
@@ -1456,6 +1158,13 @@
         </div>
       </div>
 
+      <div style="background:var(--surface2);border-radius:10px;padding:14px;margin-bottom:12px">
+        <div style="font-size:11px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px">📅 Urlaubsregelung</div>
+        <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text);cursor:pointer">
+          <input type="checkbox" id="ur_we_urlaub" checked style="width:15px;height:15px"> Wochenende vor &amp; nach Urlaub frei (gilt für alle Mitarbeiter)
+        </label>
+      </div>
+
       <div style="background:var(--accent-soft);border:1px solid var(--accent);border-radius:8px;padding:10px 12px;font-size:11px;color:var(--accent)">
         ⚠️ Diese Regeln sind <strong>hart</strong> – der KI-Planer darf sie niemals überschreiten.
       </div>
@@ -1502,23 +1211,17 @@
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
           <div><div style="font-size:10px;color:var(--text3);margin-bottom:3px">Max. aufeinanderfolgende Tage</div>
             <input type="number" id="gr_max_tage_folge" value="8" min="4" max="14" style="width:100%;padding:7px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:12px;background:var(--surface);color:var(--text)"></div>
-          <div><div style="font-size:10px;color:var(--text3);margin-bottom:3px">Max. Wochenenden/Monat</div>
-            <input type="number" id="gr_max_we_monat" value="2" min="0" max="5" style="width:100%;padding:7px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:12px;background:var(--surface);color:var(--text)"></div>
+          <div><div style="font-size:10px;color:var(--text3);margin-bottom:3px">RB-Rhythmus (min. Tage Abstand)</div>
+            <input type="number" id="gr_rb_rhythmus" value="7" min="1" max="30" style="width:100%;padding:7px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:12px;background:var(--surface);color:var(--text)"></div>
         </div>
-        <div style="margin-bottom:8px">
-          <div style="font-size:10px;color:var(--text3);margin-bottom:3px">Rufbereitschafts-Rhythmus (min. Tage Abstand)</div>
-          <input type="number" id="gr_rb_rhythmus" value="7" min="1" max="30" style="width:100%;padding:7px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:12px;background:var(--surface);color:var(--text)">
-        </div>
-        <div style="display:flex;flex-direction:column;gap:8px">
-          <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text);cursor:pointer">
-            <input type="checkbox" id="gr_we_urlaub" checked style="width:15px;height:15px"> Wochenende vor &amp; nach Urlaub frei
-          </label>
-          <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text);cursor:pointer">
-            <input type="checkbox" id="gr_feiertag_sonntag" checked style="width:15px;height:15px">
-            Feiertage wie Sonntage planen
-            <span style="font-size:9px;color:var(--text3);margin-left:4px">(= Ruhetag, zählt als WE-Dienst wenn gearbeitet)</span>
-          </label>
-        </div>
+        <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text);cursor:pointer">
+          <input type="checkbox" id="gr_feiertag_sonntag" checked style="width:15px;height:15px">
+          Feiertage wie Sonntage planen
+          <span style="font-size:9px;color:var(--text3);margin-left:4px">(= Ruhetag, zählt als WE-Dienst wenn gearbeitet)</span>
+        </label>
+      </div>
+      <div style="background:var(--accent-soft);border:1px solid var(--accent);border-radius:8px;padding:10px 12px;font-size:11px;color:var(--accent);margin-bottom:12px">
+        ⚠️ Diese Regeln sind <strong>hart</strong> – der KI-Planer darf sie niemals überschreiten.
       </div>
 
       <!-- Dienste definieren -->
@@ -1959,10 +1662,11 @@ function renderGrid(){
         const wish=state.wishes&&state.wishes[wkey];
         whtml+=`<div class="${wcls}">`;
         if(wish){
-          const prioEmoji = {muss_frei:'🔴',soll_frei:'🟠',wunsch_frei:'🟡',wunsch_dienst:'🟢'}[wish.prioritaet]||'💬';
-          const prioTitle = {muss_frei:'Muss-frei',soll_frei:'Soll-frei',wunsch_frei:'Wunsch-frei',wunsch_dienst:'Wunsch-Dienst'}[wish.prioritaet]||'Wunsch';
+          const prioEmoji  = {soll_frei:'🔴', wichtig:'🟠', wunsch_dienst:'🟢'}[wish.prioritaet]||'💬';
+          const prioTitle  = {soll_frei:'Soll-Frei', wichtig:'Wichtiger Termin', wunsch_dienst:'Wunsch'}[wish.prioritaet]||'Wunsch';
+          const dienstInfo = wish.dienst && wish.dienst!=='frei' ? ` → ${wish.dienst}` : '';
           const notiz = wish.notiz ? ` – ${wish.notiz}` : '';
-          whtml+=`<button class="wish-chip" onclick="openWish('${staff.id}','${ds}')" title="${prioTitle}${notiz}">${prioEmoji}</button>`;
+          whtml+=`<button class="wish-chip" onclick="openWish('${staff.id}','${ds}')" title="${prioTitle}${dienstInfo}${notiz}">${prioEmoji}</button>`;
         } else {
           whtml+=`<button class="wish-chip wish-empty" onclick="openWish('${staff.id}','${ds}')" title="Wunsch eintragen">+</button>`;
         }
@@ -2238,111 +1942,17 @@ const PLAN_TABS = ['vertrag','dienste','rufbereitschaft','wochenende','wechsel',
 const SCALE_KEYS = ['ruWunsch','ruWichtig','wechselWichtig','fruehWunsch','fruehWichtig','spaetWunsch','spaetWichtig','freiBlock'];
 const TOGGLE_RULES = ['afterRuFrei','afterRuSpaet','noConsecRu','noFruehAfterSpaet','maxFruehWeek','maxSpaetWeek','minFreiWeek'];
 
-function switchPlanTab(tab){
-  const btn=document.getElementById('ptab_'+tab);
-  if(btn&&btn.classList.contains('disabled')) return;
-  PLAN_TABS.forEach(t=>{
-    const c=document.getElementById('ptab_'+t+'_content');
-    const b=document.getElementById('ptab_'+t);
-    if(c) c.style.display = t===tab ? '' : 'none';
-    if(b) b.classList.toggle('active', t===tab);
-  });
-}
-
-function setPrScale(key, val){
-  document.getElementById('pr_'+key).value = val;
-  document.querySelectorAll(`#pr_${key}_scale .pr-scale-btn`).forEach((btn,i)=>{
-    btn.classList.toggle('active', i+1<=val);
-  });
-}
-
-function updateDiensteTabs(){
-  const F  = document.getElementById('pr_dienst_F')?.checked;
-  const S  = document.getElementById('pr_dienst_S')?.checked;
-  const RU = document.getElementById('pr_dienst_RU')?.checked;
-  const FS = document.getElementById('pr_dienst_FS')?.checked;
-  const keinRU = document.getElementById('tog_keinRU')?.classList.contains('on');
-
-  // Frühdienst-Reiter ausgrauen
-  document.getElementById('ptab_frueh')?.classList.toggle('disabled', !F);
-  // Spätdienst-Reiter ausgrauen
-  document.getElementById('ptab_spaet')?.classList.toggle('disabled', !S);
-  // Rufbereitschaft-Reiter ausgrauen wenn nicht ausgewählt ODER keinRU aktiv
-  document.getElementById('ptab_rufbereitschaft')?.classList.toggle('disabled', !RU || !!keinRU);
-  // Kurzer Wechsel ausgrauen wenn weder F noch S aktiv (nur FS oder nichts)
-  const wechselMöglich = F || S;
-  document.getElementById('ptab_wechsel')?.classList.toggle('disabled', !wechselMöglich);
-}
-
-function toggleKeinRU(){
-  const track=document.getElementById('tog_keinRU');
-  const isOn=track.classList.toggle('on');
-  document.getElementById('ru_details_block').style.display=isOn?'none':'';
-  const cb=document.getElementById('pr_dienst_RU');
-  if(cb) cb.checked=!isOn;
-  updateDiensteTabs();
-}
-
-function updateWeTab(){
-  // If Sa(6) and So(0) are both unchecked → disable Wochenende tab
-  const sa=document.getElementById('vd_6');
-  const so=document.getElementById('vd_0');
-  const tab=document.getElementById('ptab_wochenende');
-  const noWE = tab && sa && so && !sa.checked && !so.checked;
-  if(tab) tab.classList.toggle('disabled', !!noWE);
-}
-
-function applyVertragPreset(){
-  const preset=document.getElementById('pr_vertrag_preset').value;
-  const map={moSo:[1,2,3,4,5,6,0],moFr:[1,2,3,4,5],moMi:[1,3],custom:[]};
-  const days=map[preset]||[];
-  [0,1,2,3,4,5,6].forEach(d=>{
-    const el=document.getElementById('vd_'+d);
-    if(el){ el.checked=days.includes(d); }
-  });
-  updateWeTab();
-}
-
-
-
-function toggleRule(key, mutuallyExclusive=[]){
-  const track=document.getElementById('tog_'+key);
-  if(!track) return;
-  const isOn=track.classList.toggle('on');
-  mutuallyExclusive.forEach(other=>{
-    const ot=document.getElementById('tog_'+other);
-    if(ot){ ot.classList.remove('on'); showRuleDeps(other,false); }
-  });
-  showRuleDeps(key,isOn);
-}
-
-function showRuleDeps(key,isOn){
-  ['_shift','_val','_grid','_label'].forEach(suffix=>{
-    const el=document.getElementById('rule_'+key+suffix);
-    if(el) el.style.display=isOn?'':'none';
-  });
-}
-
-function populateRuleShiftSelects(){
-  const opts='<option value="">– kein –</option>'+
-    SHIFTS.map(s=>`<option value="${s.id}">${s.icon} ${s.label}</option>`).join('');
-  ['rule_moFr_shift','rule_preferShift_val','ds_0','ds_1','ds_2','ds_3','ds_4','ds_5','ds_6']
-    .forEach(id=>{ const el=document.getElementById(id); if(el) el.innerHTML=opts; });
-}
-
-let _editStaffSollId=null;
+let _editStaffSollId = null;
 
 function openEditStaff(staffId){
   _editStaffSollId = staffId;
   const staff = state.staff.find(s=>s.id==staffId);
   document.getElementById('editStaffSub').textContent = `${staff.name} · ${staff.role}`;
-
-  // Planungsregeln laden
   document.getElementById('esMaxWeMonat').value    = staff.max_we_monat || 2;
   document.getElementById('esNachRb').value         = staff.nach_rb || 'frei';
   document.getElementById('esNotizen').value        = staff.notes || '';
 
-  const erlaubt  = staff.dienste_erlaubt  || ['F','S','RU','FS'];
+  const erlaubt   = staff.dienste_erlaubt || ['F','S','RU','FS'];
   const rbErlaubt = staff.rb_erlaubt !== false;
   const diensteListe = rbErlaubt ? ['F','S','RU','FS'] : ['F','S','FS'];
 
@@ -2358,139 +1968,17 @@ function openEditStaff(staffId){
 async function saveEditStaff(){
   const staff = state.staff.find(s=>s.id==_editStaffSollId);
   if(!staff) return;
-
   const updates = {
     max_we_monat:    parseInt(document.getElementById('esMaxWeMonat').value)||2,
     nach_rb:         document.getElementById('esNachRb').value,
     notes:           document.getElementById('esNotizen').value.trim(),
     dienste_erlaubt: [...document.querySelectorAll('.es-dienst-cb:checked')].map(c=>c.value),
   };
-
-  // Lokal updaten
   Object.assign(staff, updates);
   state.staff = state.staff.map(s=>s.id==_editStaffSollId ? {...s,...updates} : s);
-
-  // Supabase updaten
   await sb.from('staff').update(updates).eq('id', _editStaffSollId);
-
-  saveData();
-  closeModal('editStaffModal');
-  render();
+  saveData(); closeModal('editStaffModal'); render();
   showToast(`${staff.name} – Planungsregeln gespeichert ✓`);
-}
-
-function openPlanRules(){
-  const staff=state.staff.find(s=>s.id==_editStaffSollId);
-  document.getElementById('planRulesSub').textContent=`${staff.name} · ${staff.role}`;
-  switchPlanTab('vertrag');
-  const r=staff.rules||{};
-
-  // Vertragsarbeitstage
-  const vdays=r.vertragDays||[1,2,3,4,5];
-  [0,1,2,3,4,5,6].forEach(d=>{
-    const el=document.getElementById('vd_'+d);
-    if(el) el.checked=vdays.includes(d);
-  });
-  updateWeTab();
-
-  // Dienste checkboxes
-  const dienste=r.pr_dienste||{F:true,S:true,RU:true,FS:true};
-  ['F','S','RU','FS'].forEach(id=>{
-    const cb=document.getElementById('pr_dienst_'+id);
-    if(cb) cb.checked=dienste[id]!==false;
-  });
-
-  // Keine RU toggle
-  const keinRU=!!r.pr_keinRU;
-  const keinTrack=document.getElementById('tog_keinRU');
-  if(keinTrack) keinTrack.classList.toggle('on',keinRU);
-  const block=document.getElementById('ru_details_block');
-  if(block) block.style.display=keinRU?'none':'';
-
-  // Toggle rules
-  TOGGLE_RULES.forEach(key=>{
-    const track=document.getElementById('tog_'+key);
-    if(!track) return;
-    const on=!!r[key];
-    track.classList.toggle('on',on);
-    showRuleDeps(key,on);
-    const num=document.getElementById('rule_'+key+'_val');
-    if(num&&r[key+'_val']) num.value=r[key+'_val'];
-  });
-
-  // Scales
-  SCALE_KEYS.forEach(key=>{
-    setPrScale(key, r['pr_'+key]||3);
-  });
-
-  // RU min/max
-  const ruMinEl=document.getElementById('pr_ruMin');
-  const ruMaxEl=document.getElementById('pr_ruMax');
-  if(ruMinEl) ruMinEl.value=r.pr_ruMin??0;
-  if(ruMaxEl) ruMaxEl.value=r.pr_ruMax??4;
-
-  // Wochenende radio
-  const we=r.pr_we||'none';
-  const weEl=document.getElementById('pr_we_'+we);
-  if(weEl) weEl.checked=true;
-
-  // FZA radio
-  const fza=r.pr_fza||'ok';
-  const fzaEl=document.getElementById('pr_fza_'+fza);
-  if(fzaEl) fzaEl.checked=true;
-
-  updateDiensteTabs();
-  openModal('planRulesModal');
-}
-
-function savePlanRules(){
-  const staff=state.staff.find(s=>s.id==_editStaffSollId);
-  if(!staff.rules) staff.rules={};
-  const r=staff.rules;
-
-  // Vertragsarbeitstage
-  r.vertragDays=[0,1,2,3,4,5,6].filter(d=>document.getElementById('vd_'+d)?.checked);
-
-  // Dienste
-  r.pr_dienste={};
-  ['F','S','RU','FS'].forEach(id=>{
-    const cb=document.getElementById('pr_dienst_'+id);
-    r.pr_dienste[id]=cb?cb.checked:true;
-  });
-
-  // Keine RU
-  const keinTrack=document.getElementById('tog_keinRU');
-  r.pr_keinRU=keinTrack?keinTrack.classList.contains('on'):false;
-
-  // Toggle rules
-  TOGGLE_RULES.forEach(key=>{
-    const track=document.getElementById('tog_'+key);
-    if(!track) return;
-    r[key]=track.classList.contains('on');
-    const num=document.getElementById('rule_'+key+'_val');
-    if(num) r[key+'_val']=num.value;
-  });
-
-  // Scales
-  SCALE_KEYS.forEach(key=>{
-    r['pr_'+key]=parseInt(document.getElementById('pr_'+key)?.value)||3;
-  });
-
-  // RU min/max
-  r.pr_ruMin=parseInt(document.getElementById('pr_ruMin')?.value)||0;
-  r.pr_ruMax=parseInt(document.getElementById('pr_ruMax')?.value)||4;
-
-  // Wochenende
-  const weEl=document.querySelector('input[name="pr_we"]:checked');
-  r.pr_we=weEl?weEl.value:'none';
-
-  // FZA
-  const fzaEl=document.querySelector('input[name="pr_fza"]:checked');
-  r.pr_fza=fzaEl?fzaEl.value:'ok';
-
-  saveData();
-  // Stay in planRulesModal – do NOT close
-  showToast('Planungsregeln gespeichert ✓');
 }
 
 // ─── STAFF POPUP ───
@@ -3119,13 +2607,16 @@ let _wishStaffId=null, _wishDate=null, _wishPrio=null;
 
 function selectWishPrio(prio){
   _wishPrio = prio;
-  ['muss_frei','soll_frei','wunsch_frei','wunsch_dienst'].forEach(p=>{
+  ['soll_frei','wichtig','wunsch_dienst'].forEach(p=>{
     const btn=document.getElementById('wbtn_'+p);
     if(btn){ btn.style.borderColor='var(--border)'; btn.style.background='var(--surface)'; }
   });
-  const colors={muss_frei:'#ff3b30',soll_frei:'#ff9f0a',wunsch_frei:'#ffd60a',wunsch_dienst:'#28cd41'};
+  const colors={soll_frei:'#ff3b30', wichtig:'#ff9f0a', wunsch_dienst:'#28cd41'};
   const btn=document.getElementById('wbtn_'+prio);
   if(btn){ btn.style.borderColor=colors[prio]; btn.style.background=colors[prio]+'22'; }
+  // Dienst-Auswahl nur bei grün zeigen
+  const dienstBox = document.getElementById('wishDienstBox');
+  if(dienstBox) dienstBox.style.display = prio==='wunsch_dienst' ? '' : 'none';
 }
 
 function openWish(staffId, dateStr){
@@ -3133,15 +2624,37 @@ function openWish(staffId, dateStr){
   const staff=state.staff.find(s=>s.id==staffId);
   document.getElementById('wishModalTitle').textContent='💬 Dienstwunsch – '+staff.name;
   document.getElementById('wishModalSub').textContent=new Date(dateStr+'T12:00:00').toLocaleDateString('de-DE',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
+
+  // Dienst-Dropdown mit aktuellen Gruppe-Diensten befüllen
+  const sel = document.getElementById('wishDienstWahl');
+  sel.innerHTML = '<option value="frei">✕ Frei</option>';
+  const gruppenDienste = _gruppenDienste.length ? _gruppenDienste : SHIFTS.filter(s=>!['FREI','URL','FB','FZA','AU'].includes(s.id));
+  gruppenDienste.forEach(d=>{
+    const kuerzel = d.kuerzel || d.id;
+    const label = d.label || d.label;
+    const opt = document.createElement('option');
+    opt.value = kuerzel;
+    opt.textContent = `${kuerzel} – ${label}`;
+    sel.appendChild(opt);
+  });
+
+  // Dienst-Box ausblenden
+  document.getElementById('wishDienstBox').style.display = 'none';
+
   // Bestehenden Wunsch laden
   const wkey=`w_${staffId}_${dateStr}`;
   const existing=state.wishes&&state.wishes[wkey];
   document.getElementById('wishNotiz').value=existing?.notiz||'';
-  ['muss_frei','soll_frei','wunsch_frei','wunsch_dienst'].forEach(p=>{
+  ['soll_frei','wichtig','wunsch_dienst'].forEach(p=>{
     const btn=document.getElementById('wbtn_'+p);
     if(btn){ btn.style.borderColor='var(--border)'; btn.style.background='var(--surface)'; }
   });
-  if(existing?.prioritaet) selectWishPrio(existing.prioritaet);
+  if(existing?.prioritaet){
+    selectWishPrio(existing.prioritaet);
+    if(existing.prioritaet==='wunsch_dienst' && existing.dienst){
+      document.getElementById('wishDienstWahl').value = existing.dienst;
+    }
+  }
   openModal('wishModal');
 }
 
@@ -3153,14 +2666,15 @@ async function saveWish(del){
     await sb.from('wuensche').delete()
       .eq('staff_id', parseInt(_wishStaffId)).eq('datum', _wishDate);
   } else {
-    const notiz=document.getElementById('wishNotiz').value.trim();
-    state.wishes[wkey]={prioritaet:_wishPrio, notiz};
+    const notiz = document.getElementById('wishNotiz').value.trim();
+    const dienst = _wishPrio==='wunsch_dienst' ? document.getElementById('wishDienstWahl').value : null;
+    state.wishes[wkey]={prioritaet:_wishPrio, notiz, dienst};
     await sb.from('wuensche').upsert({
       staff_id:   parseInt(_wishStaffId),
       datum:      _wishDate,
       prioritaet: _wishPrio,
       notiz:      notiz,
-      genehmigt:  _wishPrio==='muss_frei'
+      genehmigt:  _wishPrio==='soll_frei'
     },{onConflict:'staff_id,datum'});
   }
   saveData(); closeModal('wishModal'); render();
@@ -3700,6 +3214,7 @@ async function openUnternehmensrahmenModal(){
     document.getElementById('ur_max_std_tag').value       = data.max_stunden_tag || 10;
     document.getElementById('ur_max_std_woche').value     = data.max_stunden_woche || 56;
     document.getElementById('ur_max_tage_folge').value    = data.max_tage_folge || 8;
+    document.getElementById('ur_we_urlaub').checked       = data.we_vor_urlaub_frei !== false;
     document.getElementById('ur_betriebsvereinbarung').value = data.betriebsvereinbarung || '';
     document.getElementById('ur_tarifvertrag').value      = data.tarifvertrag || '';
   }
@@ -3712,6 +3227,8 @@ async function saveUnternehmensrahmen(){
     max_stunden_tag:      parseFloat(document.getElementById('ur_max_std_tag').value) || 10,
     max_stunden_woche:    parseFloat(document.getElementById('ur_max_std_woche').value) || 56,
     max_tage_folge:       parseInt(document.getElementById('ur_max_tage_folge').value) || 8,
+    we_vor_urlaub_frei:   document.getElementById('ur_we_urlaub').checked,
+    we_nach_urlaub_frei:  document.getElementById('ur_we_urlaub').checked,
     betriebsvereinbarung: document.getElementById('ur_betriebsvereinbarung').value.trim(),
     tarifvertrag:         document.getElementById('ur_tarifvertrag').value.trim(),
   };
@@ -3741,9 +3258,7 @@ async function openGruppenrahmenModal(){
     document.getElementById('gr_max_s').value           = data.max_besetzung_s ?? 5;
     document.getElementById('gr_max_rb').value          = data.max_besetzung_rb ?? 2;
     document.getElementById('gr_max_tage_folge').value  = data.max_tage_folge ?? 8;
-    document.getElementById('gr_max_we_monat').value    = data.max_we_monat ?? 2;
     document.getElementById('gr_rb_rhythmus').value     = data.rb_rhythmus_tage ?? 7;
-    document.getElementById('gr_we_urlaub').checked     = data.we_vor_urlaub_frei !== false;
     document.getElementById('gr_feiertag_sonntag').checked = data.feiertag_wie_sonntag !== false;
   }
 
@@ -3834,10 +3349,7 @@ async function saveGruppenrahmen(){
     max_besetzung_s:      parseInt(document.getElementById('gr_max_s').value) || 5,
     max_besetzung_rb:     parseInt(document.getElementById('gr_max_rb').value) || 2,
     max_tage_folge:       parseInt(document.getElementById('gr_max_tage_folge').value) || 8,
-    max_we_monat:         parseInt(document.getElementById('gr_max_we_monat').value) || 2,
     rb_rhythmus_tage:     parseInt(document.getElementById('gr_rb_rhythmus').value) || 7,
-    we_vor_urlaub_frei:   document.getElementById('gr_we_urlaub').checked,
-    we_nach_urlaub_frei:  document.getElementById('gr_we_urlaub').checked,
     feiertag_wie_sonntag: document.getElementById('gr_feiertag_sonntag').checked,
   };
   const { error } = await sb.from('gruppenrahmen').upsert(payload, { onConflict: 'gruppe_id' });
@@ -3988,6 +3500,14 @@ async function loadStandorteData(){
     if(grp) currentGruppeId = grp.id;
   }
   updateStandortLabel();
+  // Dienste der aktuellen Gruppe in SHIFTS synchronisieren
+  if(currentGruppeId){
+    const { data: gd } = await sb.from('gruppe_dienste').select('*').eq('gruppe_id', currentGruppeId);
+    if(gd && gd.length){
+      _gruppenDienste = gd;
+      syncShiftsFromGruppe();
+    }
+  }
 }
 
 function updateStandortLabel(){
