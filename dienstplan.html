@@ -1952,17 +1952,34 @@ function openEditStaff(staffId){
   document.getElementById('esNachRb').value         = staff.nach_rb || 'frei';
   document.getElementById('esNotizen').value        = staff.notes || '';
 
-  const erlaubt   = staff.dienste_erlaubt || ['F','S','RU','FS'];
-  const rbErlaubt = staff.rb_erlaubt !== false;
-  const diensteListe = rbErlaubt ? ['F','S','RU','FS'] : ['F','S','FS'];
+  // Gruppe-Dienste laden falls noch nicht geschehen, dann Formular aufbauen
+  const buildDienste = () => {
+    const erlaubt   = staff.dienste_erlaubt || [];
+    const rbErlaubt = staff.rb_erlaubt !== false;
 
-  document.getElementById('esDiensteErlaubtBox').innerHTML =
-    diensteListe.map(d=>`
-      <label style="display:flex;align-items:center;gap:4px;font-size:12px;padding:4px 10px;border:1.5px solid var(--border);border-radius:8px;cursor:pointer;background:var(--surface)">
-        <input type="checkbox" class="es-dienst-cb" value="${d}" ${erlaubt.includes(d)?'checked':''} style="cursor:pointer"> ${d==='RU'?'RB':d}
-      </label>`).join('');
+    const verfuegbareDienste = _gruppenDienste.length
+      ? _gruppenDienste.filter(d => rbErlaubt || d.kuerzel !== 'RB')
+      : (rbErlaubt ? ['F','S','RU','FS'] : ['F','S','FS']).map(k=>({kuerzel:k, label:SHIFTS.find(s=>s.id===k||s.id===(k==='RB'?'RU':k))?.label||k}));
 
-  openModal('editStaffModal');
+    document.getElementById('esDiensteErlaubtBox').innerHTML =
+      verfuegbareDienste.map(d=>{
+        const kuerzel = d.kuerzel || d;
+        const label   = d.label   || kuerzel;
+        const checked = erlaubt.length ? erlaubt.includes(kuerzel) : true;
+        return `<label style="display:flex;align-items:center;gap:4px;font-size:12px;padding:4px 10px;border:1.5px solid var(--border);border-radius:8px;cursor:pointer;background:var(--surface)">
+          <input type="checkbox" class="es-dienst-cb" value="${kuerzel}" ${checked?'checked':''} style="cursor:pointer"> ${kuerzel} <span style="font-size:10px;color:var(--text3);margin-left:2px">${label}</span>
+        </label>`;
+      }).join('');
+
+    openModal('editStaffModal');
+  };
+
+  if(_gruppenDienste.length){
+    buildDienste();
+  } else {
+    sb.from('gruppe_dienste').select('*').eq('gruppe_id', currentGruppeId)
+      .then(({data})=>{ if(data) _gruppenDienste=data; buildDienste(); });
+  }
 }
 
 async function saveEditStaff(){
