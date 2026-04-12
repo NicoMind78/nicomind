@@ -429,6 +429,7 @@
   .ki-rules-box { background: var(--surface2); border-radius: var(--radius-sm); padding: 10px 12px; margin-bottom: 14px; }
 
   .shift-chip { position: relative; }
+  .chip-custom { background: rgba(90,200,250,0.15); color: #005a7a; font-size: 11px; font-weight: 700; }
   .chip-conflict-dot {
     position: absolute; top: -3px; right: -3px;
     width: 8px; height: 8px; border-radius: 50%;
@@ -1626,13 +1627,20 @@ function renderGrid(){
       const key=`${staff.id}_${ds}`;
       const entry=state.entries[key];
       const shift=entry?SHIFT_MAP[entry.shift]:null;
-      ist+=shift?shift.hours:0;
+      // Stunden aus Gruppenvorgaben wenn verfügbar
+      const gruppenDienst = entry ? _gruppenDienste.find(gd=>gd.kuerzel===entry.shift) : null;
+      ist += gruppenDienst ? (gruppenDienst.stunden||0) : (shift?shift.hours:0);
       const tipExtra=holName?' ('+holName+')':'';
       html+=`<div class="${dayCls}">`;
       const conflict = hasConflict(staff.id, ds);
       const conflictDot = conflict ? `<span class="chip-conflict-dot" title="In ${getConflictStandort(staff.id, ds)} eingetragen"></span>` : '';
       if(shift){
-        html+=`<button class="shift-chip ${shift.cls}" onclick="quickEdit('${staff.id}','${ds}')" title="${shift.label}${entry?.info?' – '+entry.info:''}${tipExtra}${conflict?' 🔴 Konflikt mit '+getConflictStandort(staff.id,ds):''}" style="position:relative">${shift.icon}${conflictDot}</button>`;
+        // Check if it's a custom Gruppen-Dienst
+        const gruppenDienst = _gruppenDienste.find(gd=>gd.kuerzel===shift.id);
+        const chipCls = gruppenDienst ? getChipClass(shift.id) : shift.cls;
+        const chipIcon = gruppenDienst ? gruppenDienst.kuerzel : shift.icon;
+        const chipLabel = gruppenDienst ? gruppenDienst.label : shift.label;
+        html+=`<button class="shift-chip ${chipCls}" onclick="quickEdit('${staff.id}','${ds}')" title="${chipLabel}${entry?.info?' – '+entry.info:''}${tipExtra}${conflict?' 🔴 Konflikt mit '+getConflictStandort(staff.id,ds):''}" style="position:relative">${chipIcon}${conflictDot}</button>`;
       } else {
         html+=`<button class="shift-chip chip-frei" onclick="quickEdit('${staff.id}','${ds}')" title="${holName?holName+' – ':''}Frei / Eintrag ändern${conflict?' 🔴 In '+getConflictStandort(staff.id,ds)+' eingetragen':''}" style="position:relative">✕${conflictDot}</button>`;
       }
@@ -1790,11 +1798,47 @@ function populateDaySelect(selDate){
 
 let _selectedShift=null;
 function renderShiftPicker(cur){
-  _selectedShift=cur||null;
-  document.getElementById('shiftPicker').innerHTML=
-    SHIFTS.map(s=>`<button class="shift-chip ${s.cls}" style="${_selectedShift===s.id?'outline:2px solid var(--accent);outline-offset:2px;':''}" onclick="selectShift('${s.id}')">${s.icon} ${s.label}</button>`).join('')+
+  _selectedShift = cur || null;
+
+  // Statische Dienste (immer verfügbar, nicht planbar durch KI)
+  const fixedShifts = [
+    { id:'FREI', label:'Frei',        icon:'✕',  cls:'chip-frei'   },
+    { id:'URL',  label:'Urlaub',      icon:'U',   cls:'chip-urlaub' },
+    { id:'FB',   label:'Fortbildung', icon:'📚',  cls:'chip-fb'     },
+    { id:'FZA',  label:'FZA',         icon:'FZA', cls:'chip-fza'    },
+    { id:'AU',   label:'Krank/AU',    icon:'🤒',  cls:'chip-au'     },
+  ];
+
+  // Planbare Dienste aus Gruppenvorgaben (oder SHIFTS als Fallback)
+  const gruppenShifts = _gruppenDienste.length
+    ? _gruppenDienste.map(d=>({
+        id:    d.kuerzel,
+        label: d.label,
+        icon:  d.kuerzel,
+        cls:   getChipClass(d.kuerzel),
+        hours: d.stunden || 0,
+      }))
+    : SHIFTS.filter(s=>!['FREI','URL','FB','FZA','AU'].includes(s.id));
+
+  const allPicker = [...gruppenShifts, ...fixedShifts];
+
+  document.getElementById('shiftPicker').innerHTML =
+    allPicker.map(s=>`
+      <button class="shift-chip ${s.cls}"
+        style="${_selectedShift===s.id?'outline:2px solid var(--accent);outline-offset:2px;':''}"
+        onclick="selectShift('${s.id}')">${s.icon} ${s.label}</button>`).join('') +
     `<button class="shift-chip chip-empty" onclick="selectShift('')">✕ Löschen</button>`;
 }
+
+function getChipClass(kuerzel){
+  const map = {
+    'F':'chip-frueh','S':'chip-spaet','RU':'chip-ru','RB':'chip-ru',
+    'FS':'chip-fs','FREI':'chip-frei','URL':'chip-urlaub',
+    'FB':'chip-fb','FZA':'chip-fza','AU':'chip-au'
+  };
+  return map[kuerzel] || 'chip-custom';
+}
+
 function selectShift(id){ _selectedShift=id; renderShiftPicker(id); }
 
 async function saveEntry(){
