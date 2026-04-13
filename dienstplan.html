@@ -1634,12 +1634,12 @@ function renderGrid(){
       html+=`<div class="${dayCls}">`;
       const conflict = hasConflict(staff.id, ds);
       const conflictDot = conflict ? `<span class="chip-conflict-dot" title="In ${getConflictStandort(staff.id, ds)} eingetragen"></span>` : '';
-      if(shift){
-        // Check if it's a custom Gruppen-Dienst
-        const gruppenDienst = _gruppenDienste.find(gd=>gd.kuerzel===shift.id);
-        const chipCls = gruppenDienst ? getChipClass(shift.id) : shift.cls;
-        const chipIcon = gruppenDienst ? gruppenDienst.kuerzel : shift.icon;
-        const chipLabel = gruppenDienst ? gruppenDienst.label : shift.label;
+      // Suche zuerst in Gruppendiensten, dann in SHIFT_MAP
+      const gruppenDienstChip = entry ? _gruppenDienste.find(gd=>gd.kuerzel===entry.shift) : null;
+      if(shift || gruppenDienstChip){
+        const chipCls   = gruppenDienstChip ? getChipClass(gruppenDienstChip.kuerzel) : shift.cls;
+        const chipIcon  = gruppenDienstChip ? gruppenDienstChip.kuerzel : shift.icon;
+        const chipLabel = gruppenDienstChip ? gruppenDienstChip.label   : shift.label;
         html+=`<button class="shift-chip ${chipCls}" onclick="quickEdit('${staff.id}','${ds}')" title="${chipLabel}${entry?.info?' – '+entry.info:''}${tipExtra}${conflict?' 🔴 Konflikt mit '+getConflictStandort(staff.id,ds):''}" style="position:relative">${chipIcon}${conflictDot}</button>`;
       } else {
         html+=`<button class="shift-chip chip-frei" onclick="quickEdit('${staff.id}','${ds}')" title="${holName?holName+' – ':''}Frei / Eintrag ändern${conflict?' 🔴 In '+getConflictStandort(staff.id,ds)+' eingetragen':''}" style="position:relative">✕${conflictDot}</button>`;
