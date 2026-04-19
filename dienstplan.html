@@ -889,6 +889,9 @@
       <div style="font-size:11px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">Alle Unternehmen</div>
       <div id="unternehmenList" style="display:flex;flex-direction:column;gap:8px"></div>
     </div>
+    <div class="modal-actions" style="margin-top:16px;border-top:1px solid var(--border);padding-top:14px;flex-shrink:0">
+      <button class="btn btn-secondary" onclick="closeModal('unternehmenModal')">Schließen</button>
+    </div>
   </div>
 </div>
 
@@ -903,6 +906,9 @@
     <div id="standorteList" style="display:flex;flex-direction:column;gap:12px;overflow-y:auto;flex:1"></div>
     <div style="margin-top:12px;border-top:1px solid var(--border);padding-top:12px;flex-shrink:0">
       <button onclick="addStandort()" style="width:100%;padding:8px;border:1.5px dashed var(--border);border-radius:8px;background:var(--surface);color:var(--text2);cursor:pointer;font-size:12px">+ Neuer Standort</button>
+    </div>
+    <div class="modal-actions" style="margin-top:10px;flex-shrink:0">
+      <button class="btn btn-secondary" onclick="closeModal('standorteModal')">Schließen</button>
     </div>
   </div>
 </div>
