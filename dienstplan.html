@@ -735,52 +735,28 @@
 
 <!-- KI Config Modal -->
 <div class="modal-overlay" id="kiModal">
-  <div class="modal" style="width:500px;max-height:88vh;overflow-y:auto">
-    <div class="modal-title">🤖 KI-Modus – Dienstplan generieren</div>
+  <div class="modal" style="width:460px">
+    <div class="modal-title">🤖 KI-Planung – Dienstplan generieren</div>
     <div class="modal-sub">Regelbasierter Vorschlag für <span id="kiMonthLabel"></span></div>
-    <div class="ki-rules-box">
-      <div style="font-size:11px;font-weight:600;color:var(--text2);margin-bottom:6px;text-transform:uppercase;letter-spacing:.5px;">Regeln des Algorithmus</div>
-      <div class="ki-rule">✅ Planungsregeln & Wünsche jedes Mitarbeiters werden eingehalten</div>
-      <div class="ki-rule">⚖️ Frühdienste werden gleichmäßig über Wochentage & Personal verteilt</div>
-      <div class="ki-rule">📊 Stundenkonto: max. 8h unter / 15h über Monatssoll</div>
-      <div class="ki-rule">🚫 AU / Urlaub / FZA / Fortbildung werden nicht überschrieben</div>
+
+    <div class="ki-rules-box" style="margin:14px 0">
+      <div style="font-size:11px;font-weight:600;color:var(--text2);margin-bottom:8px;text-transform:uppercase;letter-spacing:.5px">Der Algorithmus arbeitet in dieser Reihenfolge</div>
+      <div class="ki-rule">⚖️ <strong>Schritt 1:</strong> Harte Regeln (Unternehmensrahmen, ArbZG, Pausen)</div>
+      <div class="ki-rule">👥 <strong>Schritt 2:</strong> Mindestbesetzung sichern (Gruppenrahmen)</div>
+      <div class="ki-rule">👤 <strong>Schritt 3:</strong> Individuelle Regeln (erlaubte Dienste, RB, Tag nach RB)</div>
+      <div class="ki-rule">🎯 <strong>Schritt 4:</strong> Wünsche & Fairness (Stunden-proportional)</div>
     </div>
 
-    <!-- Frühdienst -->
-    <div style="background:var(--yellow-soft);border-radius:var(--radius-sm);padding:10px 12px;margin-bottom:10px">
-      <div style="font-size:11px;font-weight:600;color:#7a5e00;margin-bottom:8px;text-transform:uppercase;letter-spacing:.5px">🌅 Frühdienst</div>
-      <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:8px;align-items:end">
-        <div><label class="form-label" style="font-size:10.5px">Mo–Fr Min</label><input type="number" class="form-input" id="kiMinFruehWd" value="2" min="0" max="20"></div>
-        <div><label class="form-label" style="font-size:10.5px">Mo–Fr Max</label><input type="number" class="form-input" id="kiMaxFruehWd" value="5" min="0" max="20"></div>
-        <div><label class="form-label" style="font-size:10.5px">Sa–So Min</label><input type="number" class="form-input" id="kiMinFruehWe" value="1" min="0" max="20"></div>
-        <div><label class="form-label" style="font-size:10.5px">Sa–So Max</label><input type="number" class="form-input" id="kiMaxFruehWe" value="3" min="0" max="20"></div>
-      </div>
+    <div style="background:var(--surface2);border-radius:10px;padding:12px;margin-bottom:14px;font-size:11px;color:var(--text2)">
+      <div style="font-weight:600;margin-bottom:6px">Regeln aus Gruppenrahmen werden automatisch übernommen:</div>
+      <div id="kiRulesPreview" style="display:flex;flex-direction:column;gap:3px;color:var(--text3)">Lädt…</div>
     </div>
 
-    <!-- Spätdienst -->
-    <div style="background:var(--orange-soft);border-radius:var(--radius-sm);padding:10px 12px;margin-bottom:10px">
-      <div style="font-size:11px;font-weight:600;color:#7a3e00;margin-bottom:8px;text-transform:uppercase;letter-spacing:.5px">🌆 Spätdienst</div>
-      <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:8px;align-items:end">
-        <div><label class="form-label" style="font-size:10.5px">Mo–Fr Min</label><input type="number" class="form-input" id="kiMinSpaetWd" value="1" min="0" max="20"></div>
-        <div><label class="form-label" style="font-size:10.5px">Mo–Fr Max</label><input type="number" class="form-input" id="kiMaxSpaetWd" value="3" min="0" max="20"></div>
-        <div><label class="form-label" style="font-size:10.5px">Sa–So Min</label><input type="number" class="form-input" id="kiMinSpaetWe" value="0" min="0" max="20"></div>
-        <div><label class="form-label" style="font-size:10.5px">Sa–So Max</label><input type="number" class="form-input" id="kiMaxSpaetWe" value="2" min="0" max="20"></div>
-      </div>
+    <div style="background:rgba(255,59,48,.08);border:1px solid rgba(255,59,48,.2);border-radius:8px;padding:10px 12px;font-size:11px;color:var(--red)">
+      🔴 <strong>Soll-Frei</strong> Wünsche werden niemals überschrieben · 🟠 Wichtige Termine werden vermieden
     </div>
 
-    <!-- Rufbereitschaft & Fallsteuerung -->
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px">
-      <div class="form-group" style="margin:0">
-        <label class="form-label">📲 Rufbereitschaft / Tag</label>
-        <input type="number" class="form-input" id="kiMinRU" value="1" min="0" max="5">
-      </div>
-      <div class="form-group" style="margin:0">
-        <label class="form-label">📋 Fallsteuerung / Tag</label>
-        <input type="number" class="form-input" id="kiMinFS" value="0" min="0" max="10">
-      </div>
-    </div>
-
-    <div class="modal-actions">
+    <div class="modal-actions" style="margin-top:16px">
       <button class="btn btn-secondary" onclick="closeModal('kiModal')">Abbrechen</button>
       <button class="btn btn-primary" onclick="runKIPlanner()">🚀 Vorschlag generieren</button>
     </div>
@@ -2188,407 +2164,332 @@ function renderMonthSlider(){
 
 let _kiProposal = []; // [{staffId, dateStr, shift, status:'pending'|'accepted'|'rejected'}]
 
-function openKIModal(){
+async function openKIModal(){
   document.getElementById('kiMonthLabel').textContent = `${MONTH_NAMES[currentMonth]} ${currentYear}`;
+
+  // Regeln aus Gruppenrahmen laden und anzeigen
+  const {data: gr} = await sb.from('gruppenrahmen')
+    .select('*').eq('gruppe_id', currentGruppeId).single();
+  const {data: ur} = await sb.from('unternehmensrahmen')
+    .select('*').eq('unternehmen_id', currentUnternehmenId).single();
+
+  const preview = document.getElementById('kiRulesPreview');
+  if(gr && ur){
+    preview.innerHTML = `
+      <div>• Frühdienst: min. ${gr.min_besetzung_f??1} / max. ${gr.max_besetzung_f??5} pro Tag</div>
+      <div>• Spätdienst: min. ${gr.min_besetzung_s??1} / max. ${gr.max_besetzung_s??5} pro Tag</div>
+      <div>• Rufbereitschaft: min. ${gr.min_besetzung_rb??0} / max. ${gr.max_besetzung_rb??2} pro Tag</div>
+      <div>• Max. aufeinanderfolgende Tage: ${gr.max_tage_folge??8}</div>
+      <div>• Max. Wochenenden/Monat: ${gr.max_we_monat??2} (stunden-proportional)</div>
+      <div>• RB-Rhythmus: min. ${gr.rb_rhythmus_tage??7} Tage Abstand</div>
+      <div>• Max. Stunden/Tag: ${ur.max_stunden_tag??10}h · Max. Stunden/Woche: ${ur.max_stunden_woche??56}h</div>
+    `;
+  } else {
+    preview.textContent = 'Keine Gruppenrahmen-Daten gefunden – bitte zuerst Gruppen-Vorgaben konfigurieren.';
+  }
+
   openModal('kiModal');
 }
 
-function runKIPlanner(){
-  const minFruehWd = parseInt(document.getElementById('kiMinFruehWd').value)||2;
-  const maxFruehWd = parseInt(document.getElementById('kiMaxFruehWd').value)||5;
-  const minFruehWe = parseInt(document.getElementById('kiMinFruehWe').value)||1;
-  const maxFruehWe = parseInt(document.getElementById('kiMaxFruehWe').value)||3;
-  const minSpaetWd = parseInt(document.getElementById('kiMinSpaetWd').value)||1;
-  const maxSpaetWd = parseInt(document.getElementById('kiMaxSpaetWd').value)||3;
-  const minSpaetWe = parseInt(document.getElementById('kiMinSpaetWe').value)||0;
-  const maxSpaetWe = parseInt(document.getElementById('kiMaxSpaetWe').value)||2;
-  const minRU  = parseInt(document.getElementById('kiMinRU').value)||1;
-  const minFS  = parseInt(document.getElementById('kiMinFS').value)||0;
-
-  // Helper for getters
-  const minF = (isWE) => isWE ? minFruehWe : minFruehWd;
-  const maxF = (isWE) => isWE ? maxFruehWe : maxFruehWd;
-  const minS = (isWE) => isWE ? minSpaetWe : minSpaetWd;
-  const maxS = (isWE) => isWE ? maxSpaetWe : maxSpaetWd;
-
+async function runKIPlanner(){
   const days = daysInMonth(currentYear, currentMonth);
-  const hols = holidaysForYear(currentYear);
+  const hols = new Set(holidaysForYear(currentYear).map(h=>h.date||h));
 
-  // Wochenende = Samstag (6) und Sonntag (0) – fest definiert
-  const WEEKEND_DAYS = new Set([0, 6]); // 0=Sonntag, 6=Samstag/Sonnabend
-  const isWeekend = dow => WEEKEND_DAYS.has(dow);
+  // ─── Daten laden ───────────────────────────────────────────────────────────
+  // Unternehmensrahmen
+  const {data: ur} = await sb.from('unternehmensrahmen')
+    .select('*').eq('unternehmen_id', currentUnternehmenId).single();
+  const maxStdTag    = ur?.max_stunden_tag  || 10;
+  const maxStdWoche  = ur?.max_stunden_woche || 56;
+  const maxTageFolge = ur?.max_tage_folge   || 8;   // aus Unternehmensrahmen als globale Grenze
+  const weUrlaub     = ur?.we_vor_urlaub_frei !== false;
 
-  // Alle Diensteinträge des aktuellen Monats löschen (Wünsche w_ bleiben erhalten)
-  for(let d=1; d<=days; d++){
-    const ds = fmtDate(new Date(currentYear, currentMonth, d));
-    state.staff.forEach(s=>{ delete state.entries[`${s.id}_${ds}`]; });
-  }
+  // Gruppenrahmen
+  const {data: gr} = await sb.from('gruppenrahmen')
+    .select('*').eq('gruppe_id', currentGruppeId).single();
+  const minF        = gr?.min_besetzung_f   ?? 1;
+  const maxF        = gr?.max_besetzung_f   ?? 5;
+  const minS        = gr?.min_besetzung_s   ?? 1;
+  const maxS        = gr?.max_besetzung_s   ?? 5;
+  const minRB       = gr?.min_besetzung_rb  ?? 0;
+  const maxRB       = gr?.max_besetzung_rb  ?? 2;
+  const grMaxTage   = gr?.max_tage_folge    || 8;
+  const grMaxWe     = gr?.max_we_monat      || 2;
+  const rbRhythmus  = gr?.rb_rhythmus_tage  || 7;
+  const feiertagWieSo = gr?.feiertag_wie_sonntag !== false;
 
-  // Blocked shifts per person (AU, URL, FB, FZA) – do not overwrite
-  const BLOCKED = new Set(['AU','URL','FB','FZA']);
+  // Gruppendienste (planbare)
+  const gDienste = _gruppenDienste.length ? _gruppenDienste :
+    [{kuerzel:'F',stunden:7.75},{kuerzel:'S',stunden:7.75},{kuerzel:'RB',stunden:0},{kuerzel:'FS',stunden:7.75}];
+  const PLANBAR = gDienste.map(d=>d.kuerzel);
+  const getStunden = k => {
+    const gd = _gruppenDienste.find(d=>d.kuerzel===k);
+    if(gd) return parseFloat(gd.stunden)||0;
+    return SHIFT_MAP[k]?.hours || SHIFT_MAP[k==='RB'?'RU':k]?.hours || 0;
+  };
 
-  // Parse wishes: day-specific wishes from wish row
-  // wishes stored as state.wishes[`w_${staffId}_${dateStr}`]
-  // notes: staff.notes (free text) – we look for keywords
+  // Wünsche aus state.wishes (schon geladen)
+  const getWish = (staffId, dateStr) => state.wishes?.[`w_${staffId}_${dateStr}`] || null;
 
-  function getWish(staffId, dateStr){ return state.wishes&&state.wishes[`w_${staffId}_${dateStr}`]||''; }
-  function match(text, patterns){ const t=text.toLowerCase(); return patterns.some(p=>t.includes(p.toLowerCase())); }
+  // Hilfsfunktion: Datum-String
+  const ds = (d) => fmtDate(new Date(currentYear, currentMonth, d));
+  const dow = (d) => new Date(currentYear, currentMonth, d).getDay(); // 0=So,6=Sa
+  const isWE = (d) => { const w=dow(d); return w===0||w===6; };
+  const isHol = (d) => hols.has(ds(d));
+  const isFreiTag = (d) => feiertagWieSo ? (isWE(d)||isHol(d)) : isWE(d);
 
-  // Returns null if hard-blocked, else numeric score
-  function scoreAssignment(staff, dateStr, shiftId, assignedCount, curDayProposal){
-    const curProp = curDayProposal||[];
-    const dow = new Date(dateStr+'T12:00:00').getDay();
-    const isWE = isWeekend(dow);
-    const wish = getWish(staff.id, dateStr);
-    const r = staff.rules||{};
+  // ─── Mitarbeiter vorbereiten ──────────────────────────────────────────────
+  // Nur Mitarbeiter der aktuellen Gruppe
+  const staff = state.staff.filter(s =>
+    (s.gruppe_ids||[s.gruppe_id]).map(String).includes(String(currentGruppeId))
+  );
 
-    // ── DIENSTE-ERLAUBNIS ──
-    if(r.pr_dienste && r.pr_dienste[shiftId]===false) return null;
-    if(r.pr_keinRU && shiftId==='RU') return null;
-    if(r.vertragDays && r.vertragDays.length>0 && shiftId!=='FREI'){
-      if(!r.vertragDays.includes(dow)) return null;
-    }
+  // Monatssoll berechnen
+  const monatssoll = {};
+  staff.forEach(s => monatssoll[s.id] = calcMonthSoll(s.soll, currentYear, currentMonth));
 
-    // ── STUNDENKONTO: max 15h über Monatssoll ──
-    const monthSoll = calcMonthSoll(staff.soll, currentYear, currentMonth);
-    const shiftHrs  = SHIFT_MAP[shiftId]?.hours||0;
-    if(staffHours[staff.id] + shiftHrs > monthSoll + 15) return null;
-
-    // ── MAX per day: F and S global cap ──
-    const todayF = curProp.filter(p=>p.shift==='F').length;
-    const todayS = curProp.filter(p=>p.shift==='S').length;
-    if(shiftId==='F' && todayF >= maxF(isWE)) return null;
-    if(shiftId==='S' && todayS >= maxS(isWE)) return null;
-
-    // ── WOCHENENDE-REGELUNG ──
-    if(isWE && shiftId!=='FREI'){
-      if(r.pr_we==='immerFrei') return null;
-    }
-
-    // ── FZA-AUSSCHLUSS ──
-    if(shiftId==='FZA'){
-      if(r.pr_fza==='nein') return null;
-      if(r.pr_fza==='nichtVorUrl'||r.pr_fza==='nichtUmUrl'){
-        // Check if next day is URL
-        const nextDs=fmtDate(new Date(new Date(dateStr+'T12:00:00').getTime()+86400000));
-        const nextE=state.entries[`${staff.id}_${nextDs}`];
-        if(nextE&&nextE.shift==='URL') return null;
-      }
-      if(r.pr_fza==='nichtNachUrl'||r.pr_fza==='nichtUmUrl'){
-        const prevDs=fmtDate(new Date(new Date(dateStr+'T12:00:00').getTime()-86400000));
-        const prevE=state.entries[`${staff.id}_${prevDs}`];
-        if(prevE&&prevE.shift==='URL') return null;
-      }
-    }
-
-    // ── KURZER WECHSEL: Kein Früh nach Spät ──
-    if(r.noFruehAfterSpaet && shiftId==='F'){
-      const prevDs=fmtDate(new Date(new Date(dateStr+'T12:00:00').getTime()-86400000));
-      const prev=state.entries[`${staff.id}_${prevDs}`];
-      if(prev&&prev.shift==='S') return null;
-    }
-
-    // ── RU: Max pro Monat ──
-    if(shiftId==='RU' && r.pr_ruMax!==undefined){
-      const countRU=Object.keys(state.entries).filter(k=>
-        k.startsWith(staff.id+'_')&&state.entries[k]?.shift==='RU'
-      ).length;
-      if(countRU>=r.pr_ruMax) return null;
-    }
-
-    // ── KEINE zwei RU hintereinander ──
-    if(r.noConsecRu && shiftId==='RU'){
-      const prevDs=fmtDate(new Date(new Date(dateStr+'T12:00:00').getTime()-86400000));
-      const prev=state.entries[`${staff.id}_${prevDs}`];
-      if(prev&&prev.shift==='RU') return null;
-    }
-
-    // ── HARD BLOCKS from day wish ──
-    const w=wish.toLowerCase();
-    if(w&&match(wish,['kein früh','nicht früh'])&&shiftId==='F') return null;
-    if(w&&match(wish,['kein spät','nicht spät'])&&shiftId==='S') return null;
-    if(w&&match(wish,['frei','urlaub','krank'])&&shiftId!=='FREI') return null;
-
-    // ── SCORE ──
-    let score = 100;
-
-    // ── Fair distribution of Frühdienste across staff ──
-    // Prefer staff who have fewer F-shifts so far
-    if(shiftId==='F') score -= (staffShiftByType[staff.id]?.F||0) * 12;
-    if(shiftId==='S') score -= (staffShiftByType[staff.id]?.S||0) * 8;
-    if(shiftId==='RU') score -= (staffShiftByType[staff.id]?.RU||0) * 8;
-
-    // ── Stundenkonto: prefer underplanned staff ──
-    const monthSoll2 = calcMonthSoll(staff.soll, currentYear, currentMonth);
-    const diff = staffHours[staff.id] - monthSoll2;
-    if(diff > 8)  score -= (diff - 8)  * 5;  // reduce score if already 8h over
-    if(diff < -8) score += (-diff - 8) * 3;  // boost score if 8h+ under planned
-
-    // Scale-basierte Gewichtung (Wichtigkeit × Wunsch-Richtung)
-    const fruehWunsch=(r.pr_fruehWunsch||3)-3; // -2..+2
-    const spaetWunsch=(r.pr_spaetWunsch||3)-3;
-    const ruWunsch   =(r.pr_ruWunsch   ||3)-3;
-    const fruehWichtig=(r.pr_fruehWichtig||3);
-    const spaetWichtig=(r.pr_spaetWichtig||3);
-    const ruWichtig   =(r.pr_ruWichtig  ||3);
-    const wechselW    =(r.pr_wechselWichtig||3);
-
-    if(shiftId==='F') score += fruehWunsch * fruehWichtig * 6;
-    if(shiftId==='S') score += spaetWunsch * spaetWichtig * 6;
-    if(shiftId==='RU') score += ruWunsch * ruWichtig * 6;
-
-    // Kurzer Wechsel soft-penalty
-    if(shiftId==='F' && wechselW>1){
-      const prevDs=fmtDate(new Date(new Date(dateStr+'T12:00:00').getTime()-86400000));
-      const prev=state.entries[`${staff.id}_${prevDs}`];
-      if(prev&&prev.shift==='S') score -= wechselW * 15;
-    }
-
-    // Wochenende-Präferenz
-    if(isWE){
-      if(r.pr_we==='ja') score += 20;
-      else if(r.pr_we==='alle2'||r.pr_we==='ganz') score -= 10;
-    }
-
-    // Day-wish boosts
-    if(w&&match(wish,['früh','frühschicht'])&&shiftId==='F') score+=70;
-    if(w&&match(wish,['spät','spätschicht'])&&shiftId==='S') score+=70;
-    if(w&&match(wish,['ruf','rufbereitschaft'])&&shiftId==='RU') score+=70;
-
-    // Fairness
-    score -= assignedCount * 4;
-    score += Math.random() * 6;
-    return score;
-  }
-
-  // Build proposal
-  const proposal = [];
-  // Track per-staff counts: total shifts, per-shift-type count, and accrued hours
-  const staffShiftCount = {};   // total assigned this month
-  const staffShiftByType = {};  // {F:0, S:0, RU:0, FS:0, ...}
-  const staffHours = {};        // accrued hours so far this month
-  state.staff.forEach(s=>{
-    staffShiftCount[s.id]=0;
-    staffShiftByType[s.id]={F:0,S:0,RU:0,FS:0};
-    staffHours[s.id]=0;
+  // Tracking-Strukturen
+  const istStunden   = {};  // geplante Stunden
+  const folgeTage    = {};  // aufeinanderfolgende Arbeitstage
+  const weCount      = {};  // WE-Wochenenden (Sa+So beide gearbeitet)
+  const rbDaten      = {};  // letzte RB-Datum pro MA
+  const rbCount      = {};  // RB-Anzahl im Monat
+  const lastSaSa     = {};  // Tracking ob Sa schon eingeplant für WE-Check
+  staff.forEach(s => {
+    istStunden[s.id]  = 0;
+    folgeTage[s.id]   = 0;
+    weCount[s.id]     = 0;
+    rbDaten[s.id]     = null;
+    rbCount[s.id]     = 0;
+    lastSaSa[s.id]    = false;
   });
 
+  const proposal = [];
+
+  // ─── Schritt 1: Soll-Frei Wünsche vormerken (HART) ───────────────────────
+  const SOLL_FREI = {}; // staffId → Set<dateStr>
+  staff.forEach(s => { SOLL_FREI[s.id] = new Set(); });
+  staff.forEach(s => {
+    for(let d=1; d<=days; d++){
+      const w = getWish(s.id, ds(d));
+      if(w?.prioritaet === 'soll_frei') SOLL_FREI[s.id].add(ds(d));
+    }
+  });
+
+  // WE vor/nach Urlaub frei (wenn Unternehmensrahmen aktiv)
+  if(weUrlaub){
+    staff.forEach(s => {
+      for(let d=1; d<=days; d++){
+        const w = getWish(s.id, ds(d));
+        if(w?.prioritaet === 'soll_frei'){
+          // Prüfe ob das ein Urlaubsblock ist – dann WE davor/danach auch frei
+          // Wochenende vor Urlaub
+          if(d>1 && isWE(d-1)) SOLL_FREI[s.id].add(ds(d-1));
+          if(d>2 && isWE(d-2)) SOLL_FREI[s.id].add(ds(d-2));
+          // Wochenende nach Urlaub
+          if(d<days && isWE(d+1)) SOLL_FREI[s.id].add(ds(d+1));
+          if(d<days-1 && isWE(d+2)) SOLL_FREI[s.id].add(ds(d+2));
+        }
+      }
+    });
+  }
+
+  // ─── Feste freie Tage lt. Vertrag ────────────────────────────────────────
+  const istFesterFreitag = (s, d) => {
+    const freitage = s.feste_freitage || [];
+    return freitage.includes(dow(d));
+  };
+
+  // ─── Score-Funktion für Dienstzuweisung ──────────────────────────────────
+  const score = (s, d, schicht, dayProposal) => {
+    const dateStr = ds(d);
+    const w = getWish(s.id, dateStr);
+
+    // HART: Soll-Frei → niemals planen
+    if(SOLL_FREI[s.id].has(dateStr)) return null;
+
+    // HART: Fester freier Tag (außer Wunsch/Feiertag-Ausnahme)
+    if(istFesterFreitag(s, d) && !w) return null;
+
+    // HART: Dienst nicht erlaubt für diesen MA
+    const erlaubt = s.dienste_erlaubt || PLANBAR;
+    const kuerzel = schicht;
+    if(!erlaubt.includes(kuerzel) && kuerzel!=='FREI') return null;
+
+    // HART: RB nicht erlaubt
+    if(kuerzel==='RB' && s.rb_erlaubt===false) return null;
+
+    // HART: Max aufeinanderfolgende Tage
+    if(kuerzel!=='FREI' && folgeTage[s.id] >= Math.min(maxTageFolge, grMaxTage)) return null;
+
+    // HART: Max Stunden/Tag (aus Unternehmensrahmen)
+    const std = getStunden(kuerzel);
+    if(std > maxStdTag && kuerzel!=='FREI') return null;
+
+    // HART: Max Stunden/Woche (grobe Prüfung: bereits ≥ wöchentliche Grenze?)
+    const wocheStart = d - dow(d) + (dow(d)===0 ? -6 : 1);
+    let wochenStd = 0;
+    for(let wd=wocheStart; wd<d; wd++){
+      if(wd<1) continue;
+      const p = proposal.find(x=>x.staffId==s.id && x.dateStr===ds(wd));
+      wochenStd += p ? getStunden(p.shift) : 0;
+    }
+    if(wochenStd + std > maxStdWoche) return null;
+
+    // HART: RB-Rhythmus (min. Abstand zwischen zwei RBs)
+    if(kuerzel==='RB'){
+      if(rbDaten[s.id]){
+        const lastRB = new Date(rbDaten[s.id]+'T12:00:00');
+        const today  = new Date(currentYear, currentMonth, d);
+        const diff   = Math.round((today-lastRB)/86400000);
+        if(diff < rbRhythmus) return null;
+      }
+    }
+
+    // HART: Max WE/Monat
+    if(isFreiTag(d) && kuerzel!=='FREI' && weCount[s.id] >= grMaxWe) return null;
+
+    // HART: Tag nach RB
+    if(d>1){
+      const vorher = proposal.find(x=>x.staffId==s.id && x.dateStr===ds(d-1));
+      if(vorher?.shift==='RB'){
+        const nachRb = s.nach_rb || 'frei';
+        if(nachRb==='frei' && kuerzel!=='FREI') return null;
+        if(nachRb==='spaet' && kuerzel==='F') return null;
+      }
+    }
+
+    // Gleichzeitig schon für diesen Tag eingeplant?
+    if(dayProposal.some(x=>x.staffId==s.id)) return null;
+
+    // ─── Score berechnen ──────────────────────────────────────────────────
+    let sc = 100;
+
+    // Wunsch-Prioritäten
+    if(w){
+      if(w.prioritaet==='wichtig' && kuerzel!=='FREI') sc -= 70; // Wichtiger Termin: vermeiden
+      if(w.prioritaet==='wunsch_dienst'){
+        if(w.dienst==='frei' && kuerzel==='FREI') sc += 80;
+        else if(w.dienst===kuerzel) sc += 80;
+        else if(w.dienst && w.dienst!=='frei' && kuerzel==='FREI') sc -= 30;
+      }
+    }
+
+    // Fairness: Stunden-proportional – wer am weitesten unter Soll ist, bekommt Vorrang
+    const soll = monatssoll[s.id] || 1;
+    const restTage = days - d + 1;
+    const istQuote = istStunden[s.id] / soll;
+    const sollQuote = (d-1) / days;
+    const rueckstand = sollQuote - istQuote; // positiv = im Rückstand
+    sc += rueckstand * 40;
+
+    // WE-Fairness: proportional zum Soll (Vollzeit arbeitet mehr WE)
+    if(isFreiTag(d) && kuerzel!=='FREI'){
+      const sollWe = Math.round(grMaxWe * (s.soll / 38.5));
+      const weRueckstand = sollWe - weCount[s.id];
+      sc += weRueckstand * 15;
+    }
+
+    // Etwas Zufall für gleiche Scores
+    sc += Math.random() * 4;
+
+    return sc;
+  };
+
+  // ─── Hauptschleife: Tag für Tag planen ──────────────────────────────────
   for(let d=1; d<=days; d++){
-    const dt = new Date(currentYear, currentMonth, d);
-    const ds = fmtDate(dt);
-    const dow = dt.getDay();
-    const isWE = isWeekend(dow);
-    const isHol = !!hols[ds];
+    const dateStr = ds(d);
+    const isFrei  = isFreiTag(d);
+    const dayProposal = [];
 
-    // Shuffle staff for fairness
-    const shuffled = [...state.staff].sort(()=>Math.random()-.5);
+    // Tageszähler: min/max Besetzung pro Dienst
+    const tagesCount = { F:0, S:0, RB:0, FS:0 };
 
-    // Slots to fill per day (respect Min; Max enforced in scoring)
-    const slots = [
-      ...Array(minF(isWE)).fill('F'),
-      ...Array(minS(isWE)).fill('S'),
-      ...Array(minRU).fill('RU'),
-      ...Array(minFS).fill('FS'),
-    ];
-    const daySlots = slots; // no longer reduce on weekends – min values already handle that
+    // Dienste die heute zu besetzen sind (in Reihenfolge: RB, F, S, FS, weitere)
+    const planSchichten = PLANBAR.filter(k=>k!=='FREI');
 
-    // Track which staff are already assigned this day
-    const assignedToday = new Set();
-    const dayProposal = []; // sammelt alle Einträge für diesen Tag
+    // ── Schritt 2: Besetzung sichern ───────────────────────────────────────
+    // Für jeden Dienst zuerst Mindestbesetzung sichern
+    const shuffled = [...staff].sort(()=>Math.random()-.5);
 
-    // ── PHASE 1: Harte Tageswünsche – exakter Dienst in Wunschzeile ──
-    // Steht in der Wunschzeile ein konkreter Dienst-ID (z.B. "FZA", "F", "URL"),
-    // wird dieser als feste Vorgabe eingetragen – vor allen anderen Überlegungen.
-    const SHIFT_IDS = new Set(SHIFTS.map(s=>s.id));
-    // Ausnahmen: diese Dienste in der Wunschzeile überschreiben auch Regeln aus Hinweisen
-    const WISH_EXCEPTIONS = new Set(['FZA','AU','URL','FREI']);
+    for(const schicht of planSchichten){
+      const minBes = schicht==='F'?minF : schicht==='S'?minS : schicht==='RB'?minRB : 0;
+      const maxBes = schicht==='F'?maxF : schicht==='S'?maxS : schicht==='RB'?maxRB : 99;
 
-    for(const staff of state.staff){
-      const wish = getWish(staff.id, ds);
-      const notes = (staff.notes || ''); // ← hier definiert, für Phase 1a + 1b
-
-      // ── PHASE 1a: Wunschzeile – exakter Dienst hat absolute Priorität ──
-      if(wish){
-        const wishUpper = wish.toUpperCase().trim();
-        let pinnedShift = null;
-        // Längere IDs zuerst prüfen (FS vor F, RU vor R, FZA vor F)
-        const sortedIds = [...SHIFT_IDS].sort((a,b)=>b.length-a.length);
-        for(const sid of sortedIds){
-          const re = new RegExp('(^|[^A-ZÄÖÜa-zäöü])' + sid + '($|[^A-ZÄÖÜa-zäöü])');
-          if(re.test(wishUpper)){ pinnedShift = sid; break; }
+      // Mindestbesetzung
+      while(tagesCount[schicht] < minBes){
+        let best=null, bestSc=-Infinity;
+        for(const s of shuffled){
+          const sc2 = score(s, d, schicht, dayProposal);
+          if(sc2===null) continue;
+          if(sc2>bestSc){ bestSc=sc2; best=s; }
         }
-        if(pinnedShift){
-          dayProposal.push({staffId:staff.id, dateStr:ds, shift:pinnedShift});
-          assignedToday.add(staff.id);
-          const hrs=SHIFT_MAP[pinnedShift]?.hours||0;
-          if(hrs>0){ staffShiftCount[staff.id]++; staffHours[staff.id]+=hrs; }
-          if(staffShiftByType[staff.id]) staffShiftByType[staff.id][pinnedShift]=(staffShiftByType[staff.id][pinnedShift]||0)+1;
-          continue;
-        }
-      }
-
-      // ── PHASE 1b: Strukturierte Planungsregeln ──
-      if(!assignedToday.has(staff.id)){
-        const r = staff.rules||{};
-
-        // Wochenende immer Frei (from pr_we)
-        if(r.pr_we==='immerFrei' && isWE && shiftId!=='FREI'){
-          // handled in score
-        }
-
-        // Mo–Fr fester Dienst (legacy moFr rule still supported)
-        if(r.moFr && r.moFr_shift && !isWE && !isHol && dow>=1 && dow<=5){
-          const wishUp=(wish||'').toUpperCase();
-          const wishOverrides=[...WISH_EXCEPTIONS].some(ex=>new RegExp('(^|\\W)'+ex+'(\\W|$)').test(wishUp));
-          if(!wishOverrides){
-            dayProposal.push({staffId:staff.id,dateStr:ds,shift:r.moFr_shift});
-            assignedToday.add(staff.id);
-            const hrs=SHIFT_MAP[r.moFr_shift]?.hours||0;
-            if(hrs>0){ staffShiftCount[staff.id]++; staffHours[staff.id]+=hrs; }
-            if(staffShiftByType[staff.id]) staffShiftByType[staff.id][r.moFr_shift]=(staffShiftByType[staff.id][r.moFr_shift]||0)+1;
-          }
-        }
-
-        // Einzelne Wochentage → fester Dienst (legacy dayShift rule)
-        if(r.dayShift && !assignedToday.has(staff.id)){
-          const dayRule = r['ds_'+dow];
-          if(dayRule){
-            const wishUp=(wish||'').toUpperCase();
-            const wishOverrides=[...WISH_EXCEPTIONS].some(ex=>new RegExp('(^|\\W)'+ex+'(\\W|$)').test(wishUp));
-            if(!wishOverrides){
-              dayProposal.push({staffId:staff.id,dateStr:ds,shift:dayRule});
-              assignedToday.add(staff.id);
-              const hrs=SHIFT_MAP[dayRule]?.hours||0;
-              if(hrs>0){ staffShiftCount[staff.id]++; staffHours[staff.id]+=hrs; }
-              if(staffShiftByType[staff.id]) staffShiftByType[staff.id][dayRule]=(staffShiftByType[staff.id][dayRule]||0)+1;
-            }
-          }
-        }
-
-        // Nach Rufbereitschaft → Frei
-        if(r.afterRuFrei && !assignedToday.has(staff.id) && d>1){
-          const prevDs=fmtDate(new Date(currentYear,currentMonth,d-1));
-          const prevEntry=state.entries[`${staff.id}_${prevDs}`];
-          if(prevEntry&&prevEntry.shift==='RU'){
-            dayProposal.push({staffId:staff.id,dateStr:ds,shift:'FREI'});
-            assignedToday.add(staff.id);
-          }
-        }
-
-        // Nach Rufbereitschaft → Spät
-        if(r.afterRuSpaet && !assignedToday.has(staff.id) && d>1){
-          const prevDs=fmtDate(new Date(currentYear,currentMonth,d-1));
-          const prevEntry=state.entries[`${staff.id}_${prevDs}`];
-          if(prevEntry&&prevEntry.shift==='RU'){
-            dayProposal.push({staffId:staff.id,dateStr:ds,shift:'S'});
-            assignedToday.add(staff.id);
-            staffShiftCount[staff.id]++;
-            staffHours[staff.id]+=(SHIFT_MAP['S']?.hours||0);
-            if(staffShiftByType[staff.id]) staffShiftByType[staff.id]['S']=(staffShiftByType[staff.id]['S']||0)+1;
-          }
-        }
-
-        // Nach AU/Urlaub → Frei
-        if(r.afterAuFrei && !assignedToday.has(staff.id) && d>1){
-          const prevDs=fmtDate(new Date(currentYear,currentMonth,d-1));
-          const prevEntry=state.entries[`${staff.id}_${prevDs}`];
-          if(prevEntry&&(prevEntry.shift==='AU'||prevEntry.shift==='URL')){
-            dayProposal.push({staffId:staff.id,dateStr:ds,shift:'FREI'});
-            assignedToday.add(staff.id);
-          }
-        }
-
-        // Tag vor Urlaub → Frei
-        if(r.beforeUrlFrei && !assignedToday.has(staff.id) && d<days){
-          const nextDs=fmtDate(new Date(currentYear,currentMonth,d+1));
-          const nextEntry=state.entries[`${staff.id}_${nextDs}`];
-          if(nextEntry&&nextEntry.shift==='URL'){
-            dayProposal.push({staffId:staff.id,dateStr:ds,shift:'FREI'});
-            assignedToday.add(staff.id);
-          }
-        }
-
-        // Tag nach Urlaub → Frei
-        if(r.afterUrlFrei && !assignedToday.has(staff.id) && d>1){
-          const prevDs=fmtDate(new Date(currentYear,currentMonth,d-1));
-          const prevEntry=state.entries[`${staff.id}_${prevDs}`];
-          if(prevEntry&&prevEntry.shift==='URL'){
-            dayProposal.push({staffId:staff.id,dateStr:ds,shift:'FREI'});
-            assignedToday.add(staff.id);
-          }
-        }
+        if(!best) break; // Nicht genug Mitarbeiter verfügbar
+        dayProposal.push({staffId:best.id, dateStr, shift:schicht});
+        tagesCount[schicht]++;
+        istStunden[best.id] += getStunden(schicht);
+        if(schicht==='RB'){ rbDaten[best.id]=dateStr; rbCount[best.id]++; }
+        folgeTage[best.id]++;
       }
     }
 
-    // ── PHASE 2: Slots füllen für nicht bereits verplante Mitarbeiter ──
+    // ── Schritt 3: Individuelle Regeln – restliche Mitarbeiter einplanen ──
+    for(const s of shuffled){
+      if(dayProposal.some(x=>x.staffId==s.id)) continue;
 
-    // ── PHASE 2: Slots füllen für nicht bereits verplante Mitarbeiter ──
-    for(const targetShift of daySlots){
-      let bestStaff = null, bestScore = -Infinity;
-      for(const staff of shuffled){
-        if(assignedToday.has(staff.id)) continue;
-        const key = `${staff.id}_${ds}`;
-        const existing = state.entries[key];
-        if(existing && BLOCKED.has(existing.shift)) continue;
-        const sc = scoreAssignment(staff, ds, targetShift, staffShiftCount[staff.id], dayProposal);
-        if(sc === null) continue;
-        if(sc > bestScore){ bestScore=sc; bestStaff=staff; }
+      // Soll-Frei → explizit als FREI markieren
+      if(SOLL_FREI[s.id].has(dateStr)){
+        dayProposal.push({staffId:s.id, dateStr, shift:'FREI'});
+        folgeTage[s.id] = 0;
+        continue;
       }
-      if(bestStaff){
-        dayProposal.push({staffId:bestStaff.id, dateStr:ds, shift:targetShift});
-        assignedToday.add(bestStaff.id);
-        const hrs=SHIFT_MAP[targetShift]?.hours||0;
-        if(hrs>0){ staffShiftCount[bestStaff.id]++; staffHours[bestStaff.id]+=hrs; }
-        if(staffShiftByType[bestStaff.id]) staffShiftByType[bestStaff.id][targetShift]=(staffShiftByType[bestStaff.id][targetShift]||0)+1;
+
+      // Fester freier Tag
+      if(istFesterFreitag(s, d)){
+        dayProposal.push({staffId:s.id, dateStr, shift:'FREI'});
+        folgeTage[s.id] = 0;
+        continue;
+      }
+
+      // Wunsch Dienst/Frei (Grün)
+      const w = getWish(s.id, dateStr);
+      if(w?.prioritaet==='wunsch_dienst' && w?.dienst==='frei'){
+        dayProposal.push({staffId:s.id, dateStr, shift:'FREI'});
+        folgeTage[s.id] = 0;
+        continue;
+      }
+
+      // Versuche einen passenden Dienst zu finden (Stunden-Fairness)
+      let bestSchicht=null, bestSc=-Infinity;
+      for(const schicht of planSchichten){
+        const maxBes = schicht==='F'?maxF : schicht==='S'?maxS : schicht==='RB'?maxRB : 99;
+        if((tagesCount[schicht]||0) >= maxBes) continue;
+        const sc2 = score(s, d, schicht, dayProposal);
+        if(sc2===null) continue;
+        if(sc2>bestSc){ bestSc=sc2; bestSchicht=schicht; }
+      }
+
+      if(bestSchicht){
+        dayProposal.push({staffId:s.id, dateStr, shift:bestSchicht});
+        tagesCount[bestSchicht]=(tagesCount[bestSchicht]||0)+1;
+        istStunden[s.id] += getStunden(bestSchicht);
+        if(bestSchicht==='RB'){ rbDaten[s.id]=dateStr; rbCount[s.id]++; }
+        folgeTage[s.id]++;
+        // WE-Tracking: Sa+So beide gearbeitet = 1 WE
+        if(dow(d)===6) lastSaSa[s.id]=true;
+        if(dow(d)===0 && lastSaSa[s.id]){ weCount[s.id]++; lastSaSa[s.id]=false; }
+      } else {
+        // Kein Dienst möglich → FREI
+        dayProposal.push({staffId:s.id, dateStr, shift:'FREI'});
+        folgeTage[s.id] = 0;
+        if(dow(d)!==6) lastSaSa[s.id]=false;
       }
     }
 
-    // ── PHASE 3: Extra-Runde für stark unterplante Mitarbeiter ──
-    // Wenn ein Mitarbeiter auf Kurs ist, mehr als 8h unter dem Monatssoll zu landen,
-    // bekommt er einen zusätzlichen Dienst (F bevorzugt), sofern der Max-Cap nicht erreicht ist.
-    if(!isWE && !isHol){
-      const remainingDays = days - d + 1; // Tage noch im Monat inkl. heute
-      for(const staff of shuffled){
-        if(assignedToday.has(staff.id)) continue;
-        const key=`${staff.id}_${ds}`;
-        const existing=state.entries[key];
-        if(existing && BLOCKED.has(existing.shift)) continue;
-        const monthSoll = calcMonthSoll(staff.soll, currentYear, currentMonth);
-        const hoursLeft = monthSoll - staffHours[staff.id];
-        // Projected shortfall: if no more shifts planned, will they be >8h under?
-        const projectedShortfall = hoursLeft - (remainingDays - 1) * (staff.soll / 5);
-        if(projectedShortfall > 8){
-          // Try to assign an extra F or S shift
-          for(const extraShift of ['F','S','FS']){
-            const sc = scoreAssignment(staff, ds, extraShift, staffShiftCount[staff.id], dayProposal);
-            if(sc !== null){
-              dayProposal.push({staffId:staff.id, dateStr:ds, shift:extraShift});
-              assignedToday.add(staff.id);
-              const hrs=SHIFT_MAP[extraShift]?.hours||0;
-              if(hrs>0){ staffShiftCount[staff.id]++; staffHours[staff.id]+=hrs; }
-              if(staffShiftByType[staff.id]) staffShiftByType[staff.id][extraShift]=(staffShiftByType[staff.id][extraShift]||0)+1;
-              break;
-            }
-          }
-        }
-      }
-    }
-
-    // Remaining staff: assign FREI (workdays only) – FREI does NOT block work shifts
-    // We use a separate set so FREI assignment doesn't interfere with work slot filling
-    if(!isWE && !isHol){
-      for(const staff of shuffled){
-        if(assignedToday.has(staff.id)) continue;
-        const key=`${staff.id}_${ds}`;
-        const existing=state.entries[key];
-        if(existing && (BLOCKED.has(existing.shift)||existing.shift)) continue;
-        // Only assign FREI if person is on contract for this day
-        const r=staff.rules||{};
-        if(r.vertragDays && r.vertragDays.length>0 && !r.vertragDays.includes(dow)) continue;
-        dayProposal.push({staffId:staff.id, dateStr:ds, shift:'FREI'});
-        // Note: do NOT add to assignedToday here – FREI is just a label, not a lock
-      }
-    }
+    // Folgetage zurücksetzen für FREI-Tage
+    dayProposal.forEach(p=>{
+      if(p.shift==='FREI') folgeTage[p.staffId]=0;
+    });
 
     proposal.push(...dayProposal);
   }
