@@ -2552,8 +2552,11 @@ function showKIPreview(){
   _kiProposal.forEach(p=>{ counts[p.shift]=(counts[p.shift]||0)+1; });
   document.getElementById('kiSummary').innerHTML =
     Object.entries(counts).map(([sh,n])=>{
-      const s=SHIFT_MAP[sh]; if(!s) return '';
-      return `<span class="ki-badge ki-badge-green">${s.icon} ${s.label}: ${n}</span>`;
+      const s = SHIFT_MAP[sh] || SHIFT_MAP[sh==='RB'?'RU':sh];
+      const gd = _gruppenDienste.find(d=>d.kuerzel===sh);
+      const icon  = gd ? gd.kuerzel : (s?.icon  || sh);
+      const label = gd ? gd.label   : (s?.label || sh);
+      return `<span class="ki-badge ki-badge-green">${icon} ${label}: ${n}</span>`;
     }).join('') +
     `<span style="margin-left:auto;font-size:11px;color:var(--text3)">${pending} ausstehend</span>`;
 
@@ -2576,18 +2579,23 @@ function showKIPreview(){
       </div>
       <div class="ki-entries">`;
     entries.sort((a,b)=>a.dateStr.localeCompare(b.dateStr)).forEach((p,i)=>{
-      const shift = SHIFT_MAP[p.shift];
+      // Erst in SHIFT_MAP suchen, dann in _gruppenDienste
+      const shift = SHIFT_MAP[p.shift] || SHIFT_MAP[p.shift==='RB'?'RU':p.shift];
+      const gruppenD = _gruppenDienste.find(gd=>gd.kuerzel===p.shift);
+      const shiftIcon  = gruppenD ? gruppenD.kuerzel : (shift?.icon  || p.shift);
+      const shiftLabel = gruppenD ? gruppenD.label   : (shift?.label || p.shift);
+      if(!shift && !gruppenD) return; // Unbekannter Dienst überspringen
       const dt = new Date(p.dateStr+'T12:00:00');
       const dayLabel = DAY_SHORT[dt.getDay()]+' '+dt.getDate();
       const wish = state.wishes&&state.wishes[`w_${p.staffId}_${p.dateStr}`];
       const staffObj = state.staff.find(s=>s.id==p.staffId);
       const hasNotes = staffObj&&staffObj.notes&&staffObj.notes.trim();
-      const wishTip = wish ? ` title="💬 Tageswunsch: ${wish}"` : (hasNotes ? ` title="📌 Allg. Hinweise beachtet"` : '');
+      const wishTip = wish ? ` title="💬 Tageswunsch: ${wish.prioritaet}"` : (hasNotes ? ` title="📌 Allg. Hinweise beachtet"` : '');
       const globalIdx = _kiProposal.indexOf(p);
       html += `<div class="ki-entry${p.status==='accepted'?' accepted':p.status==='rejected'?' rejected':''}" id="kie_${globalIdx}"${wishTip}>
         <span class="ki-entry-date">${dayLabel}</span>
-        <span class="ki-entry-shift">${shift.icon}</span>
-        <span class="ki-entry-label">${shift.label}</span>
+        <span class="ki-entry-shift">${shiftIcon}</span>
+        <span class="ki-entry-label">${shiftLabel}</span>
         ${wish?'<span title="Tageswunsch berücksichtigt" style="font-size:10px">💬</span>':hasNotes?'<span title="Allg. Hinweise berücksichtigt" style="font-size:10px">📌</span>':''}
         <div class="ki-entry-btns">
           <button class="ki-btn ki-btn-ok"  onclick="kiToggle(${globalIdx},'accepted')">✓</button>
