@@ -710,7 +710,7 @@
         </div>
 
         <div style="display:flex;flex-direction:column;gap:8px">
-          <div>
+          <div id="esNachRbBox">
             <div style="font-size:10px;color:var(--text3);margin-bottom:3px">Tag nach RB?</div>
             <select id="esNachRb" style="width:100%;padding:7px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:12px;background:var(--surface);color:var(--text)">
               <option value="frei">Frei</option>
@@ -2011,17 +2011,20 @@ function openEditStaff(staffId){
     const erlaubt   = staff.dienste_erlaubt || [];
     const rbErlaubt = staff.rb_erlaubt !== false;
 
+    // Immer alle Dienste anzeigen, RB ausgegraut wenn nicht erlaubt
     const verfuegbareDienste = _gruppenDienste.length
-      ? _gruppenDienste.filter(d => rbErlaubt || d.kuerzel !== 'RB')
-      : (rbErlaubt ? ['F','S','RU','FS'] : ['F','S','FS']).map(k=>({kuerzel:k, label:SHIFTS.find(s=>s.id===k||s.id===(k==='RB'?'RU':k))?.label||k}));
+      ? _gruppenDienste
+      : ['F','S','RB','FS'].map(k=>({kuerzel:k, label:SHIFTS.find(s=>s.id===k||s.id===(k==='RB'?'RU':k))?.label||k}));
 
     document.getElementById('esDiensteErlaubtBox').innerHTML =
       verfuegbareDienste.map(d=>{
-        const kuerzel = d.kuerzel || d;
-        const label   = d.label   || kuerzel;
-        const checked = erlaubt.length ? erlaubt.includes(kuerzel) : true;
-        return `<label style="display:flex;align-items:center;gap:4px;font-size:12px;padding:4px 10px;border:1.5px solid var(--border);border-radius:8px;cursor:pointer;background:var(--surface)">
-          <input type="checkbox" class="es-dienst-cb" value="${kuerzel}" ${checked?'checked':''} style="cursor:pointer"> ${kuerzel} <span style="font-size:10px;color:var(--text3);margin-left:2px">${label}</span>
+        const kuerzel  = d.kuerzel || d;
+        const label    = d.label   || kuerzel;
+        const isRb     = kuerzel === 'RB';
+        const disabled = isRb && !rbErlaubt;
+        const checked  = !disabled && (erlaubt.length ? erlaubt.includes(kuerzel) : true);
+        return `<label style="display:flex;align-items:center;gap:4px;font-size:12px;padding:4px 10px;border:1.5px solid ${disabled?'var(--border)':'var(--border)'};border-radius:8px;cursor:${disabled?'default':'pointer'};background:var(--surface);${disabled?'opacity:0.4;pointer-events:none;':''}">
+          <input type="checkbox" class="es-dienst-cb" value="${kuerzel}" ${checked?'checked':''} ${disabled?'disabled':''} style="cursor:${disabled?'default':'pointer'}"> ${kuerzel} <span style="font-size:10px;color:var(--text3);margin-left:2px">${label}${disabled?' (nicht erlaubt)':''}</span>
         </label>`;
       }).join('');
 
@@ -2033,6 +2036,26 @@ function openEditStaff(staffId){
   } else {
     sb.from('gruppe_dienste').select('*').eq('gruppe_id', currentGruppeId)
       .then(({data})=>{ if(data) _gruppenDienste=data; buildDienste(); });
+  }
+
+  // RB-Status aus Benutzerverwaltung anwenden
+  const rbErlaubtUser = staff.rb_erlaubt !== false;
+  const nachRbBox = document.getElementById('esNachRbBox');
+  const nachRbSel = document.getElementById('esNachRb');
+  if(!rbErlaubtUser){
+    nachRbBox.style.opacity = '0.4';
+    nachRbBox.style.pointerEvents = 'none';
+    nachRbSel.disabled = true;
+    // Hinweis-Label ergänzen
+    const label = nachRbBox.querySelector('div');
+    if(label && !label.textContent.includes('deaktiviert'))
+      label.textContent = 'Tag nach RB? (RB nicht erlaubt)';
+  } else {
+    nachRbBox.style.opacity = '';
+    nachRbBox.style.pointerEvents = '';
+    nachRbSel.disabled = false;
+    const label = nachRbBox.querySelector('div');
+    if(label) label.textContent = 'Tag nach RB?';
   }
 }
 
