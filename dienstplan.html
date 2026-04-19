@@ -2193,7 +2193,12 @@ async function openKIModal(){
 
 async function runKIPlanner(){
   const days = daysInMonth(currentYear, currentMonth);
-  const hols = new Set(holidaysForYear(currentYear).map(h=>h.date||h));
+  const holsObj = holidaysForYear(currentYear); // {dateStr: name}
+  const hols = new Set(Object.keys(holsObj));
+
+  // Toast anzeigen
+  showToast('⏳ KI plant den Monat…');
+  closeModal('kiModal');
 
   // ─── Daten laden ───────────────────────────────────────────────────────────
   // Unternehmensrahmen
@@ -2240,9 +2245,14 @@ async function runKIPlanner(){
 
   // ─── Mitarbeiter vorbereiten ──────────────────────────────────────────────
   // Nur Mitarbeiter der aktuellen Gruppe
-  const staff = state.staff.filter(s =>
-    (s.gruppe_ids||[s.gruppe_id]).map(String).includes(String(currentGruppeId))
-  );
+  const staff = state.staff.filter(s => {
+    const ids = (s.gruppe_ids || (s.gruppe_id ? [s.gruppe_id] : [])).map(String);
+    return ids.includes(String(currentGruppeId));
+  });
+
+  if(!staff.length){
+    showToast('⚠️ Keine Mitarbeiter in dieser Gruppe gefunden'); return;
+  }
 
   // Monatssoll berechnen
   const monatssoll = {};
@@ -2495,7 +2505,7 @@ async function runKIPlanner(){
   }
 
   _kiProposal = proposal.map(p=>({...p, status:'pending'}));
-  closeModal('kiModal');
+  showToast(`✅ ${proposal.length} Einträge geplant`);
   showKIPreview();
 }
 
