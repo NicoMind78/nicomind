@@ -704,7 +704,7 @@
           <div id="esDiensteErlaubtBox" style="display:flex;flex-wrap:wrap;gap:6px"></div>
         </div>
 
-        <div style="margin-bottom:10px">
+        <div id="esMaxWeMonatBox" style="margin-bottom:10px">
           <div style="font-size:10px;color:var(--text3);margin-bottom:3px">Max. Wochenenden/Monat</div>
           <input type="number" id="esMaxWeMonat" value="2" min="0" max="5" style="width:100%;padding:7px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:12px;background:var(--surface);color:var(--text)">
         </div>
@@ -2056,6 +2056,23 @@ function openEditStaff(staffId){
     nachRbSel.disabled = false;
     const label = nachRbBox.querySelector('div');
     if(label) label.textContent = 'Tag nach RB?';
+  }
+
+  // WE-Feld ausgrauen wenn Sa (6) UND So (7) beide als feste freie Tage eingetragen
+  const freitage = staff.feste_freitage || [];
+  const keinWE  = freitage.includes(6) && freitage.includes(7);
+  const weBox   = document.getElementById('esMaxWeMonatBox');
+  const weInput = document.getElementById('esMaxWeMonat');
+  if(keinWE){
+    weBox.style.opacity = '0.4';
+    weBox.style.pointerEvents = 'none';
+    weInput.disabled = true;
+    weBox.querySelector('div').textContent = 'Max. Wochenenden/Monat (Sa & So vertraglich frei)';
+  } else {
+    weBox.style.opacity = '';
+    weBox.style.pointerEvents = '';
+    weInput.disabled = false;
+    weBox.querySelector('div').textContent = 'Max. Wochenenden/Monat';
   }
 }
 
