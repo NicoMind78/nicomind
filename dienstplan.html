@@ -264,10 +264,21 @@
   .modal-close-apple {
     width: 14px; height: 14px; border-radius: 50%;
     background: #ff5f57; border: none; cursor: pointer;
-    flex-shrink: 0; transition: filter .14s;
-    display: inline-block;
+    flex-shrink: 0; position: relative; display: inline-flex;
+    align-items: center; justify-content: center;
   }
-  .modal-close-apple:hover { filter: brightness(.8); }
+  .modal-close-apple::before,
+  .modal-close-apple::after {
+    content: '';
+    position: absolute;
+    width: 7px; height: 1.5px;
+    background: rgba(0,0,0,0); border-radius: 1px;
+    transition: background .12s;
+  }
+  .modal-close-apple::before { transform: rotate(45deg); }
+  .modal-close-apple::after  { transform: rotate(-45deg); }
+  .modal-close-apple:hover::before,
+  .modal-close-apple:hover::after { background: rgba(0,0,0,0.55); }
   .modal-header-apple {
     display: flex; align-items: center; gap: 10px; margin-bottom: 4px;
   }
