@@ -1382,7 +1382,16 @@ async function loadFromSupabase(){
         soll: s.soll, color: s.color,
         notes: s.notes||'', rules: s.rules||{},
         standort_id: s.standort_id, gruppe_id: s.gruppe_id,
-        standort_ids: s.standort_ids||[], gruppe_ids: s.gruppe_ids||[]
+        standort_ids: s.standort_ids||[], gruppe_ids: s.gruppe_ids||[],
+        // Planungsregeln
+        rb_erlaubt:      s.rb_erlaubt !== false,
+        nach_rb:         s.nach_rb || 'frei',
+        max_we_monat:    s.max_we_monat ?? 2,
+        dienste_erlaubt: s.dienste_erlaubt || [],
+        feste_freitage:  s.feste_freitage || [],
+        qualifikationen: s.qualifikationen || [],
+        fza_vor_urlaub:  s.fza_vor_urlaub || false,
+        fza_nach_urlaub: s.fza_nach_urlaub || false,
       }));
       state.nextId = Math.max(...staffRes.data.map(s=>s.id)) + 1;
     } else {
