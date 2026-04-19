@@ -261,6 +261,16 @@
   .form-textarea { resize: vertical; min-height: 72px; }
   .shift-picker { display: flex; flex-wrap: wrap; gap: 7px; }
   .shift-picker .shift-chip { width: auto; height: auto; padding: 5px 11px; font-size: 12px; }
+  .modal-close-apple {
+    width: 14px; height: 14px; border-radius: 50%;
+    background: #ff5f57; border: none; cursor: pointer;
+    flex-shrink: 0; transition: filter .14s;
+    display: inline-block;
+  }
+  .modal-close-apple:hover { filter: brightness(.8); }
+  .modal-header-apple {
+    display: flex; align-items: center; gap: 10px; margin-bottom: 4px;
+  }
   .modal-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 18px; }
   .release-info { background: var(--surface2); border-radius: var(--radius-sm); padding: 12px; margin-bottom: 14px; }
   .release-info-row { display: flex; justify-content: space-between; font-size: 12.5px; margin-bottom: 3px; }
@@ -837,7 +847,10 @@
 <!-- Unternehmen Modal -->
 <div class="modal-overlay" id="unternehmenModal" onclick="if(event.target===this)closeModal('unternehmenModal')">
   <div class="modal modal-wide" style="max-height:85vh;display:flex;flex-direction:column">
-    <div class="modal-title">🏭 Unternehmen</div>
+    <div class="modal-header-apple">
+      <button class="modal-close-apple" onclick="closeModal('unternehmenModal')"></button>
+      <div class="modal-title" style="margin-bottom:0">Unternehmen</div>
+    </div>
     <div class="modal-sub">Unternehmen verwalten und wechseln</div>
 
     <div style="overflow-y:auto;flex:1">
@@ -865,21 +878,20 @@
       <div style="font-size:11px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">Alle Unternehmen</div>
       <div id="unternehmenList" style="display:flex;flex-direction:column;gap:8px"></div>
     </div>
-
-    <div class="modal-actions" style="margin-top:16px;border-top:1px solid var(--border);padding-top:14px;flex-shrink:0">
-      <button class="btn btn-secondary" onclick="closeModal('unternehmenModal')">Schließen</button>
-    </div>
   </div>
 </div>
 
 <!-- Standorte Modal -->
 <div class="modal-overlay" id="standorteModal" onclick="if(event.target===this)closeModal('standorteModal')">
-  <div class="modal modal-wide">
-    <div class="modal-title">🏢 Standorte & Gruppen</div>
-    <div class="modal-sub">Aktiven Standort und Gruppe wechseln</div>
-    <div id="standorteList" style="display:flex;flex-direction:column;gap:12px;max-height:400px;overflow-y:auto"></div>
-    <div class="modal-actions" style="margin-top:16px;border-top:1px solid var(--border);padding-top:14px">
-      <button class="btn btn-secondary" onclick="closeModal('standorteModal')">Schließen</button>
+  <div class="modal modal-wide" style="max-height:85vh;display:flex;flex-direction:column">
+    <div class="modal-header-apple">
+      <button class="modal-close-apple" onclick="closeModal('standorteModal')"></button>
+      <div class="modal-title" style="margin-bottom:0">Standorte & Gruppen</div>
+    </div>
+    <div class="modal-sub" id="standorteModalSub">Aktiven Standort und Gruppe wechseln</div>
+    <div id="standorteList" style="display:flex;flex-direction:column;gap:12px;overflow-y:auto;flex:1"></div>
+    <div style="margin-top:12px;border-top:1px solid var(--border);padding-top:12px;flex-shrink:0">
+      <button onclick="addStandort()" style="width:100%;padding:8px;border:1.5px dashed var(--border);border-radius:8px;background:var(--surface);color:var(--text2);cursor:pointer;font-size:12px">+ Neuer Standort</button>
     </div>
   </div>
 </div>
@@ -887,7 +899,10 @@
 <!-- User Management Modal -->
 <div class="modal-overlay" id="userMgmtModal" onclick="if(event.target===this)closeModal('userMgmtModal')">
   <div class="modal modal-wide" style="max-height:90vh;display:flex;flex-direction:column">
-    <div class="modal-title">👥 Benutzerverwaltung</div>
+    <div class="modal-header-apple">
+      <button class="modal-close-apple" onclick="closeModal('userMgmtModal')"></button>
+      <div class="modal-title" style="margin-bottom:0">Benutzerverwaltung</div>
+    </div>
     <div class="modal-sub">Benutzer einladen und Rollen verwalten</div>
 
     <!-- Scrollbarer Inhalt -->
@@ -995,10 +1010,6 @@
       <div id="userList" style="display:flex;flex-direction:column;gap:6px"></div>
 
     </div><!-- end scrollable -->
-
-    <div class="modal-actions" style="margin-top:16px;border-top:1px solid var(--border);padding-top:14px;flex-shrink:0">
-      <button class="btn btn-secondary" onclick="closeModal('userMgmtModal')">Schließen</button>
-    </div>
   </div>
 </div>
 
@@ -1180,9 +1191,11 @@
 
 <!-- Gruppenrahmen Modal (Ebene 2) -->
 <div class="modal-overlay" id="gruppenrahmenModal" onclick="if(event.target===this)closeModal('gruppenrahmenModal')">
-  <div class="modal modal-wide" style="max-height:85vh;display:flex;flex-direction:column">
-    <div class="modal-title">📋 Gruppen-Vorgaben</div>
-    <div class="modal-sub" id="gruppenrahmenSub">Vorgaben für aktuelle Gruppe</div>
+  <div class="modal modal-wide" style="max-height:92vh;display:flex;flex-direction:column;width:680px">
+    <div class="modal-header-apple">
+      <button class="modal-close-apple" onclick="closeModal('gruppenrahmenModal')"></button>
+      <div class="modal-title" style="margin-bottom:0" id="gruppenrahmenSub">Gruppen-Vorgaben</div>
+    </div>
     <div style="overflow-y:auto;flex:1;padding-right:4px">
 
       <!-- Besetzung -->
@@ -3479,11 +3492,44 @@ function renderUnternehmenList(){
           <div style="display:flex;gap:6px">
             ${!isActive?`<button onclick="switchUnternehmen('${u.id}')" style="font-size:11px;padding:5px 10px;border:1px solid var(--accent);border-radius:6px;background:var(--accent-soft);color:var(--accent);cursor:pointer">Wechseln</button>`:''}
             <button onclick="openUnternehmenStandorte('${u.id}','${u.name}')" style="font-size:11px;padding:5px 10px;border:1px solid var(--border);border-radius:6px;background:var(--surface);color:var(--text2);cursor:pointer">🏢 Standorte</button>
-            <button onclick="renameUnternehmen('${u.id}','${u.name}')" style="font-size:11px;padding:5px 10px;border:1px solid var(--border);border-radius:6px;background:var(--surface);color:var(--text2);cursor:pointer">✎</button>
+            <button onclick="editUnternehmen('${u.id}')" style="font-size:11px;padding:5px 10px;border:1px solid var(--border);border-radius:6px;background:var(--surface);color:var(--text2);cursor:pointer">✎</button>
+          </div>
+        </div>
+        <!-- Edit Form (hidden by default) -->
+        <div id="uEdit_${u.id}" style="display:none;padding:12px 14px;background:var(--surface);border-top:1px solid var(--border)">
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
+            <div><div style="font-size:10px;color:var(--text3);margin-bottom:3px">Name</div>
+              <input type="text" id="uName_${u.id}" value="${u.name}" style="width:100%;padding:6px 8px;border:1.5px solid var(--border);border-radius:6px;font-size:12px;background:var(--surface);color:var(--text)"></div>
+            <div><div style="font-size:10px;color:var(--text3);margin-bottom:3px">Kontakt</div>
+              <input type="text" id="uKontakt_${u.id}" value="${u.kontakt||''}" style="width:100%;padding:6px 8px;border:1.5px solid var(--border);border-radius:6px;font-size:12px;background:var(--surface);color:var(--text)"></div>
+          </div>
+          <div style="margin-bottom:8px"><div style="font-size:10px;color:var(--text3);margin-bottom:3px">Adresse</div>
+            <input type="text" id="uAdresse_${u.id}" value="${u.adresse||''}" style="width:100%;padding:6px 8px;border:1.5px solid var(--border);border-radius:6px;font-size:12px;background:var(--surface);color:var(--text)"></div>
+          <div style="display:flex;gap:6px;justify-content:flex-end">
+            <button onclick="editUnternehmen('${u.id}')" style="font-size:11px;padding:5px 10px;border:1px solid var(--border);border-radius:6px;background:var(--surface);color:var(--text2);cursor:pointer">Abbrechen</button>
+            <button onclick="saveUnternehmenEdit('${u.id}')" style="font-size:11px;padding:5px 10px;border:1px solid var(--accent);border-radius:6px;background:var(--accent);color:#fff;cursor:pointer">Speichern</button>
           </div>
         </div>
       </div>`;
   }).join('');
+}
+
+function editUnternehmen(id){
+  const box = document.getElementById('uEdit_'+id);
+  if(box) box.style.display = box.style.display==='none' ? '' : 'none';
+}
+
+async function saveUnternehmenEdit(id){
+  const name    = document.getElementById('uName_'+id).value.trim();
+  const kontakt = document.getElementById('uKontakt_'+id).value.trim();
+  const adresse = document.getElementById('uAdresse_'+id).value.trim();
+  if(!name){ showToast('Name darf nicht leer sein'); return; }
+  const {error} = await sb.from('unternehmen').update({name, kontakt, adresse}).eq('id', id);
+  if(error){ showToast('Fehler: '+error.message); return; }
+  showToast('✅ Gespeichert');
+  await loadUnternehmenData();
+  renderUnternehmenList();
+  updateUnternehmenLabel();
 }
 
 async function createUnternehmen(){
@@ -3587,33 +3633,36 @@ async function openStandorteModal(){
 
 function renderStandorteList(){
   const list = document.getElementById('standorteList');
-  const canEdit   = ['owner','master_admin','admin'].includes(currentUserRole);
-  const isPlaner  = currentUserRole === 'planer';
+  const canEdit  = ['owner','master_admin','admin'].includes(currentUserRole);
+  const isPlaner = currentUserRole === 'planer';
 
   list.innerHTML = allStandorte.map(s=>{
-    const gruppen    = allGruppen.filter(g=>g.standort_id===s.id);
-    const isActiveS  = s.id === currentStandortId;
-    // Planer sieht nur seinen aktiven Standort
+    const gruppen   = allGruppen.filter(g=>g.standort_id===s.id);
+    const isActiveS = s.id === currentStandortId;
     if(isPlaner && !isActiveS) return '';
-
     return `
       <div style="border:1.5px solid ${isActiveS?'var(--accent)':'var(--border)'};border-radius:10px;overflow:hidden">
-        <div style="padding:10px 14px;background:${isActiveS?'var(--accent-soft)':'var(--surface2)'};display:flex;align-items:center;gap:8px">
+        <div style="padding:10px 14px;background:${isActiveS?'var(--accent-soft)':'var(--surface2)'};display:flex;align-items:center;gap:6px">
           <div style="font-size:13px;font-weight:600;color:${isActiveS?'var(--accent)':'var(--text)'};flex:1">${s.name}</div>
-          ${canEdit?`<button onclick="renameStandort('${s.id}','${s.name}')" style="font-size:10px;padding:3px 8px;border:1px solid var(--border);border-radius:6px;background:var(--surface);color:var(--text2);cursor:pointer">✎ Umbenennen</button>`:''}
+          ${canEdit?`
+            <button onclick="renameStandort('${s.id}','${s.name}')" style="font-size:10px;padding:3px 7px;border:1px solid var(--border);border-radius:6px;background:var(--surface);color:var(--text2);cursor:pointer">✎</button>
+            <button onclick="addGruppeToStandort('${s.id}')" style="font-size:10px;padding:3px 7px;border:1px solid var(--accent);border-radius:6px;background:var(--accent-soft);color:var(--accent);cursor:pointer">+ Gruppe</button>
+            <button onclick="deleteStandort('${s.id}','${s.name}')" style="font-size:10px;padding:3px 7px;border:1px solid var(--red);border-radius:6px;background:var(--red-soft);color:var(--red);cursor:pointer">✕</button>
+          `:''}
         </div>
         <div style="padding:8px 14px;display:flex;gap:6px;flex-wrap:wrap">
           ${gruppen.map(g=>{
             const isActiveG = g.id===currentGruppeId && isActiveS;
-            // Planer: Gruppen-Button immer klickbar (nur im eigenen Standort)
-            // Admin+: alle Standorte und Gruppen klickbar
             const canSwitch = isPlaner ? isActiveS : true;
-            return `<div style="display:flex;align-items:center;gap:4px">
+            return `<div style="display:flex;align-items:center;gap:3px">
               <button onclick="${canSwitch?`switchGruppe('${s.id}','${g.id}')`:''}"
                 style="padding:5px 12px;border:1.5px solid ${isActiveG?'var(--accent)':'var(--border)'};border-radius:8px;background:${isActiveG?'var(--accent)':'var(--surface)'};color:${isActiveG?'#fff':'var(--text)'};font-size:12px;font-weight:${isActiveG?600:400};cursor:${canSwitch?'pointer':'default'};opacity:${canSwitch?1:0.5}">
                 ${g.name}
               </button>
-              ${canEdit?`<button onclick="renameGruppe('${g.id}','${g.name}')" style="font-size:9px;padding:2px 5px;border:1px solid var(--border);border-radius:5px;background:var(--surface2);color:var(--text3);cursor:pointer">✎</button>`:''}
+              ${canEdit?`
+                <button onclick="renameGruppe('${g.id}','${g.name}')" style="font-size:9px;padding:2px 5px;border:1px solid var(--border);border-radius:5px;background:var(--surface2);color:var(--text3);cursor:pointer">✎</button>
+                <button onclick="deleteGruppe('${g.id}','${g.name}')" style="font-size:9px;padding:2px 5px;border:1px solid var(--red);border-radius:5px;background:var(--red-soft);color:var(--red);cursor:pointer">✕</button>
+              `:''}
             </div>`;
           }).join('')}
         </div>
@@ -3652,6 +3701,76 @@ async function renameGruppe(id, currentName){
   if(error){showToast('Fehler beim Umbenennen'); return;}
   await loadStandorteData(); renderStandorteList();
   showToast('✅ Gruppe umbenannt');
+}
+
+async function addStandort(){
+  const name = prompt('Name des neuen Standorts:');
+  if(!name || !name.trim()) return;
+  const {data, error} = await sb.from('standorte').insert({
+    name: name.trim(), unternehmen_id: currentUnternehmenId
+  }).select().single();
+  if(error){ showToast('Fehler: '+error.message); return; }
+  // Default Gruppe anlegen
+  const {data: grp} = await sb.from('gruppen').insert({
+    name:'Gruppe 1', position:1, standort_id:data.id, unternehmen_id:currentUnternehmenId
+  }).select().single();
+  if(grp) await sb.from('gruppenrahmen').insert({gruppe_id:grp.id}).catch(()=>{});
+  showToast(`✅ ${name.trim()} angelegt`);
+  await loadStandorteData();
+  renderStandorteList();
+}
+
+async function deleteStandort(id, name){
+  if(!confirm(`Standort „${name}" und alle Gruppen löschen?\nAlle Einträge und Dienste gehen verloren!`)) return;
+  await sb.from('standorte').delete().eq('id', id);
+  if(currentStandortId===id){ currentStandortId=null; currentGruppeId=null; }
+  showToast(`✅ ${name} gelöscht`);
+  await loadStandorteData();
+  renderStandorteList();
+  if(!currentStandortId && allStandorte.length){
+    currentStandortId = allStandorte[0].id;
+    const erste = allGruppen.find(g=>g.standort_id===currentStandortId);
+    if(erste) currentGruppeId = erste.id;
+    updateStandortLabel();
+    loadFromSupabase();
+  }
+}
+
+async function addGruppeToStandort(standortId){
+  const name = prompt('Name der neuen Gruppe:');
+  if(!name || !name.trim()) return;
+  const pos = allGruppen.filter(g=>g.standort_id===standortId).length + 1;
+  const {data, error} = await sb.from('gruppen').insert({
+    name: name.trim(), position: pos, standort_id: standortId, unternehmen_id: currentUnternehmenId
+  }).select().single();
+  if(error){ showToast('Fehler: '+error.message); return; }
+  // Gruppenrahmen anlegen + Standard-Dienste
+  await sb.from('gruppenrahmen').insert({gruppe_id:data.id}).catch(()=>{});
+  const standardDienste = [
+    {kuerzel:'F',  label:'Frühdienst',    beginn:'07:30',ende:'16:00',pause_min:30,farbe:'#cc7a00',ist_standard:true},
+    {kuerzel:'S',  label:'Spätdienst',    beginn:'13:00',ende:'21:30',pause_min:30,farbe:'#c44b00',ist_standard:true},
+    {kuerzel:'RB', label:'Rufbereitschaft',beginn:'00:00',ende:'00:00',pause_min:0, farbe:'#cc0000',ist_standard:true},
+    {kuerzel:'FS', label:'Fallsteuerung', beginn:'08:00',ende:'16:00',pause_min:30,farbe:'#555555',ist_standard:true},
+  ];
+  for(const d of standardDienste){
+    await sb.from('gruppe_dienste').insert({gruppe_id:data.id, ...d}).catch(()=>{});
+  }
+  showToast(`✅ ${name.trim()} angelegt`);
+  await loadStandorteData();
+  renderStandorteList();
+}
+
+async function deleteGruppe(id, name){
+  if(!confirm(`Gruppe „${name}" löschen?\nAlle Einträge und Dienste dieser Gruppe gehen verloren!`)) return;
+  await sb.from('gruppen').delete().eq('id', id);
+  if(currentGruppeId===id){
+    const fallback = allGruppen.find(g=>g.id!==id && g.standort_id===currentStandortId);
+    currentGruppeId = fallback?.id || null;
+  }
+  showToast(`✅ ${name} gelöscht`);
+  await loadStandorteData();
+  renderStandorteList();
+  if(currentGruppeId) loadFromSupabase();
 }
 
 // 1. Beim Verlassen der Seite ausloggen
