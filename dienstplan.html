@@ -1220,18 +1220,6 @@
           <div style="font-size:11px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.5px">🕐 Dienste definieren</div>
           <button onclick="addGruppenDienst()" style="font-size:11px;padding:4px 10px;border:1px solid var(--accent);border-radius:6px;background:var(--accent-soft);color:var(--accent);cursor:pointer">+ Neuer Dienst</button>
         </div>
-        <div style="display:grid;grid-template-columns:52px 1fr 72px 72px 52px 38px 38px 32px 32px 28px;gap:4px;padding:0 2px;margin-bottom:4px">
-          <div style="font-size:9px;color:var(--text3)">Kürzel</div>
-          <div style="font-size:9px;color:var(--text3)">Bezeichnung</div>
-          <div style="font-size:9px;color:var(--text3)">Beginn</div>
-          <div style="font-size:9px;color:var(--text3)">Ende</div>
-          <div style="font-size:9px;color:var(--text3)">Pause</div>
-          <div style="font-size:9px;color:var(--text3)">Min</div>
-          <div style="font-size:9px;color:var(--text3)">Max</div>
-          <div style="font-size:9px;color:var(--text3)">WE</div>
-          <div style="font-size:9px;color:var(--text3)">Farbe</div>
-          <div></div>
-        </div>
         <div id="gruppenDiensteList" style="display:flex;flex-direction:column;gap:6px"></div>
       </div>
     </div>
@@ -2515,11 +2503,11 @@ async function runKIPlanner(){
 
     for(const schicht of planSchichten){
       const cfg = getDienstConfig(schicht);
-      // Dienst am WE/Feiertag nötig?
-      if(isFrei && !cfg.am_we) continue;
+      // Dienst am WE nötig? max_we=0 bedeutet nicht am WE
+      if(isFrei && (cfg.max_we??5) === 0) continue;
       if(isHol(d) && !cfg.am_feiertag) continue;
-      const minBes = cfg.min_tag ?? 0;
-      const maxBes = cfg.max_tag ?? 5;
+      const minBes = isFrei ? (cfg.min_we??0)   : (cfg.min_tag??0);
+      const maxBes = isFrei ? (cfg.max_we??5)   : (cfg.max_tag??5);
 
       while((tagesCount[schicht]||0) < minBes){
         let best=null, bestSc=-Infinity;
@@ -2569,7 +2557,7 @@ async function runKIPlanner(){
         const cfg = getDienstConfig(schicht);
         if(isFrei && !cfg.am_we) continue;
         if(isHol(d) && !cfg.am_feiertag) continue;
-        const maxBes = cfg.max_tag ?? 5;
+        const maxBes = isFrei ? (cfg.max_we??5) : (cfg.max_tag??5);
         if((tagesCount[schicht]||0) >= maxBes) continue;
         const sc2 = score(s, d, schicht, dayProposal);
         if(sc2===null) continue;
@@ -3390,11 +3378,21 @@ function renderGruppenDienste(){
     return;
   }
   const sorted = [..._gruppenDienste].sort((a,b)=>(a.position??10)-(b.position??10));
-  const cols = '30px 52px 1fr 72px 72px 48px 36px 36px 28px 28px 24px';
+  const cols = '42px 52px 1fr 70px 70px 44px 32px 32px 32px 32px 28px 24px';
   list.innerHTML = `
     <div style="display:grid;grid-template-columns:${cols};gap:4px;padding:0 2px;margin-bottom:4px">
       <div style="font-size:9px;color:var(--accent);font-weight:700" title="Planungspriorität: niedrig = zuerst">Prio</div>
-      ${['Kürzel','Bezeichnung','Beginn','Ende','Pause','Min','Max','WE','Farbe',''].map(h=>`<div style="font-size:9px;color:var(--text3)">${h}</div>`).join('')}
+      <div style="font-size:9px;color:var(--text3)">Kürzel</div>
+      <div style="font-size:9px;color:var(--text3)">Bezeichnung</div>
+      <div style="font-size:9px;color:var(--text3)">Beginn</div>
+      <div style="font-size:9px;color:var(--text3)">Ende</div>
+      <div style="font-size:9px;color:var(--text3)">Pause</div>
+      <div style="font-size:9px;color:var(--text3)" title="Min. Besetzung Werktag">Min</div>
+      <div style="font-size:9px;color:var(--text3)" title="Max. Besetzung Werktag">Max</div>
+      <div style="font-size:9px;color:var(--accent)" title="Min. Besetzung Wochenende">WE↓</div>
+      <div style="font-size:9px;color:var(--accent)" title="Max. Besetzung Wochenende">WE↑</div>
+      <div style="font-size:9px;color:var(--text3)">Farbe</div>
+      <div></div>
     </div>` +
     sorted.map(d=>`
     <div style="display:grid;grid-template-columns:${cols};gap:4px;align-items:center;padding:6px 6px;background:var(--surface);border:1px solid var(--border);border-radius:8px">
@@ -3409,13 +3407,15 @@ function renderGruppenDienste(){
       <input type="time" value="${d.ende||''}" onchange="updateGruppenDienst('${d.id}','ende',this.value)"
         style="padding:4px 4px;border:1px solid var(--border);border-radius:5px;font-size:11px;background:var(--surface);color:var(--text);width:100%">
       <input type="number" value="${d.pause_min||0}" min="0" max="120" step="5" onchange="updateGruppenDienst('${d.id}','pause_min',this.value)"
-        style="width:100%;padding:4px 3px;border:1px solid var(--border);border-radius:5px;font-size:11px;background:var(--surface);color:var(--text);text-align:center">
+        style="width:100%;padding:4px 2px;border:1px solid var(--border);border-radius:5px;font-size:11px;background:var(--surface);color:var(--text);text-align:center">
       <input type="number" value="${d.min_tag??0}" min="0" max="20" onchange="updateGruppenDienst('${d.id}','min_tag',this.value)"
-        style="width:100%;padding:4px 3px;border:1px solid var(--border);border-radius:5px;font-size:11px;background:var(--surface);color:var(--text);text-align:center">
+        title="Min. Werktag" style="width:100%;padding:4px 2px;border:1px solid var(--border);border-radius:5px;font-size:11px;background:var(--surface);color:var(--text);text-align:center">
       <input type="number" value="${d.max_tag??5}" min="0" max="30" onchange="updateGruppenDienst('${d.id}','max_tag',this.value)"
-        style="width:100%;padding:4px 3px;border:1px solid var(--border);border-radius:5px;font-size:11px;background:var(--surface);color:var(--text);text-align:center">
-      <input type="checkbox" ${d.am_we!==false?'checked':''} onchange="updateGruppenDienst('${d.id}','am_we',this.checked)"
-        title="Am Wochenende nötig?" style="width:16px;height:16px;cursor:pointer;margin:auto">
+        title="Max. Werktag" style="width:100%;padding:4px 2px;border:1px solid var(--border);border-radius:5px;font-size:11px;background:var(--surface);color:var(--text);text-align:center">
+      <input type="number" value="${d.min_we??0}" min="0" max="20" onchange="updateGruppenDienst('${d.id}','min_we',this.value)"
+        title="Min. Wochenende (0 = nicht nötig)" style="width:100%;padding:4px 2px;border:1.5px solid var(--accent);border-radius:5px;font-size:11px;background:var(--accent-soft);color:var(--accent);text-align:center">
+      <input type="number" value="${d.max_we??5}" min="0" max="30" onchange="updateGruppenDienst('${d.id}','max_we',this.value)"
+        title="Max. Wochenende" style="width:100%;padding:4px 2px;border:1.5px solid var(--accent);border-radius:5px;font-size:11px;background:var(--accent-soft);color:var(--accent);text-align:center">
       <input type="color" value="${d.farbe||'#0071e3'}" onchange="updateGruppenDienst('${d.id}','farbe',this.value)"
         style="width:26px;height:24px;padding:1px;border:1px solid var(--border);border-radius:5px;cursor:pointer">
       <button onclick="deleteGruppenDienst('${d.id}')"
@@ -3426,7 +3426,7 @@ function renderGruppenDienste(){
 function updateGruppenDienst(id, field, value){
   const d = _gruppenDienste.find(d=>d.id===id);
   if(!d) return;
-  if(['pause_min','min_tag','max_tag','position'].includes(field)) d[field] = parseInt(value)||0;
+  if(['pause_min','min_tag','max_tag','min_we','max_we','position'].includes(field)) d[field] = parseInt(value)||0;
   else if(field==='am_we' || field==='am_feiertag') d[field] = value===true || value==='true';
   else d[field] = value;
 }
@@ -3479,6 +3479,7 @@ async function saveGruppenrahmen(){
       label: d.label, beginn: d.beginn, ende: d.ende,
       pause_min: d.pause_min||0, farbe: d.farbe,
       min_tag: d.min_tag??0, max_tag: d.max_tag??5,
+      min_we: d.min_we??0,   max_we: d.max_we??5,
       am_we: d.am_we!==false, am_feiertag: d.am_feiertag!==false,
       position: d.position??10,
     }).eq('id', d.id);
