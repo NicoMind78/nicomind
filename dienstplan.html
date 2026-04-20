@@ -2498,19 +2498,29 @@ async function runKIPlanner(){
       const weRueckstand = sollWe - weCount[s.id];
       sc += weRueckstand * 15;
 
-      // WE komplett: Bonus wenn der MA den anderen WE-Tag bereits arbeitet
+      // WE komplett: starker Bonus/Malus für komplette vs. halbe Wochenenden
       if(weKomplett){
-        if(dow(d)===0){ // Sonntag – hat er Sa gearbeitet?
+        if(dow(d)===6){ // Samstag – kann MA auch Sonntag?
+          // Prüfe ob dieser MA am Sonntag verfügbar wäre (keine Soll-Frei, kein fester Freitag)
+          const soTag = d+1;
+          if(soTag <= days){
+            const soFrei = SOLL_FREI[s.id].has(ds(soTag));
+            const soFesttag = istFesterFreitag(s, soTag);
+            if(!soFrei && !soFesttag){
+              sc += 50; // Kann beide Tage → starker Bonus
+            } else {
+              sc -= 40; // Kann nur Sa, So blockiert → Malus (anderer MA bevorzugen)
+            }
+          }
+        }
+        if(dow(d)===0){ // Sonntag – hat MA am Samstag gearbeitet?
           const saDs = ds(d-1);
           const saEntry = proposal.find(x=>x.staffId==s.id && x.dateStr===saDs);
-          if(saEntry && saEntry.shift!=='FREI') sc += 35;
-        }
-        if(dow(d)===6){ // Samstag – hat er So (nächste Woche) bereits... nein, vorausschauend nicht möglich
-          // Stattdessen: Malus wenn er letzten So nicht gearbeitet hat (fördert Gleichmäßigkeit)
-          const soDs = ds(d+1);
-          // Kleiner Bonus wenn dieser MA schon viele halbe WEs hat (motiviert komplette WEs)
-          const halbeWE = weCount[s.id] % 1 !== 0;
-          if(halbeWE) sc += 25; // Hat schon ein offenes Sa ohne So → bevorzuge diesen MA auch für Sa
+          if(saEntry && saEntry.shift!=='FREI'){
+            sc += 60; // Sa bereits gearbeitet → sehr starker Bonus für komplettes WE
+          } else {
+            sc -= 30; // Sa nicht gearbeitet → Malus (bevorzuge MA der Sa gearbeitet hat)
+          }
         }
       }
     }
@@ -2543,7 +2553,16 @@ async function runKIPlanner(){
       });
 
     // ── Schritt 2: Besetzung sichern ───────────────────────────────────────
-    const shuffled = [...staff].sort(()=>Math.random()-.5);
+    // An Sonntagen: MA die Sa gearbeitet haben werden bevorzugt (weKomplett)
+    let shuffled = [...staff].sort(()=>Math.random()-.5);
+    if(weKomplett && dow(d)===0){
+      const saDs = ds(d-1);
+      shuffled.sort((a,b)=>{
+        const aHatSa = proposal.some(x=>x.staffId==a.id && x.dateStr===saDs && x.shift!=='FREI') ? -1 : 1;
+        const bHatSa = proposal.some(x=>x.staffId==b.id && x.dateStr===saDs && x.shift!=='FREI') ? -1 : 1;
+        return aHatSa - bHatSa;
+      });
+    }
 
     for(const schicht of planSchichten){
       const cfg = getDienstConfig(schicht);
