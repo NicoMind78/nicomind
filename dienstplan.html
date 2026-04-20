@@ -2258,12 +2258,13 @@ async function runKIPlanner(){
   const rbRhythmus  = gr?.rb_rhythmus_tage  || 7;
   const feiertagWieSo = gr?.feiertag_wie_sonntag !== false;
 
-  // Gruppendienste (planbare) – min/max jetzt direkt am Dienst
-  const gDienste = _gruppenDienste.length ? _gruppenDienste :
-    [{kuerzel:'F',stunden:7.75,min_tag:1,max_tag:5,am_we:true,am_feiertag:true},
-     {kuerzel:'S',stunden:7.75,min_tag:1,max_tag:5,am_we:true,am_feiertag:true},
-     {kuerzel:'RB',stunden:0,min_tag:0,max_tag:2,am_we:true,am_feiertag:true},
-     {kuerzel:'FS',stunden:7.75,min_tag:0,max_tag:5,am_we:false,am_feiertag:false}];
+  // Gruppendienste (planbare) – nach Priorität sortiert
+  const gDienste = (_gruppenDienste.length
+    ? [..._gruppenDienste].sort((a,b)=>(a.position??10)-(b.position??10))
+    : [{kuerzel:'F',stunden:7.75,min_tag:1,max_tag:5,am_we:true,am_feiertag:true,position:10},
+       {kuerzel:'S',stunden:7.75,min_tag:1,max_tag:5,am_we:true,am_feiertag:true,position:20},
+       {kuerzel:'RB',stunden:0,min_tag:0,max_tag:2,am_we:true,am_feiertag:true,position:30},
+       {kuerzel:'FS',stunden:7.75,min_tag:0,max_tag:5,am_we:false,am_feiertag:false,position:5}]);
   const PLANBAR = gDienste.map(d=>d.kuerzel);
   const getDienstConfig = k => gDienste.find(d=>d.kuerzel===k) || {};
   const getStunden = k => {
@@ -2457,8 +2458,16 @@ async function runKIPlanner(){
     // Tageszähler: min/max Besetzung pro Dienst
     const tagesCount = { F:0, S:0, RB:0, FS:0 };
 
-    // Dienste die heute zu besetzen sind
-    const planSchichten = PLANBAR.filter(k=>k!=='FREI');
+    // Dienste nach Prio (position) sortieren, dann min_tag als Tiebreaker
+    const planSchichten = PLANBAR
+      .filter(k=>k!=='FREI')
+      .sort((a,b)=>{
+        const ca = getDienstConfig(a);
+        const cb = getDienstConfig(b);
+        const posDiff = (ca.position??10) - (cb.position??10);
+        if(posDiff !== 0) return posDiff;
+        return (cb.min_tag??0) - (ca.min_tag??0);
+      });
 
     // ── Schritt 2: Besetzung sichern ───────────────────────────────────────
     const shuffled = [...staff].sort(()=>Math.random()-.5);
@@ -3335,35 +3344,44 @@ function renderGruppenDienste(){
     list.innerHTML = '<div style="color:var(--text3);font-size:12px">Keine Dienste definiert</div>';
     return;
   }
-
-  // Header
-  const cols = '55px 1fr 82px 82px 58px 42px 42px 42px 42px 30px';
+  const sorted = [..._gruppenDienste].sort((a,b)=>(a.position??10)-(b.position??10));
+  const cols = '30px 52px 1fr 72px 72px 48px 36px 36px 28px 28px 24px';
   list.innerHTML = `
-    <div style="display:grid;grid-template-columns:${cols};gap:5px;padding:0 8px;margin-bottom:4px">
-      ${['Kürzel','Bezeichnung','Beginn','Ende','Pause','Min','Max','WE','Ft.',''].map(h=>`<div style="font-size:9px;color:var(--text3);text-align:${['Min','Max','WE','Ft.'].includes(h)?'center':'left'}">${h}</div>`).join('')}
+    <div style="display:grid;grid-template-columns:${cols};gap:4px;padding:0 2px;margin-bottom:4px">
+      <div style="font-size:9px;color:var(--accent);font-weight:700" title="Planungspriorität: niedrig = zuerst">Prio</div>
+      ${['Kürzel','Bezeichnung','Beginn','Ende','Pause','Min','Max','WE','Farbe',''].map(h=>`<div style="font-size:9px;color:var(--text3)">${h}</div>`).join('')}
     </div>` +
-    _gruppenDienste.map(d=>`
-    <div style="display:grid;grid-template-columns:${cols};gap:5px;align-items:center;padding:7px 8px;background:var(--surface);border:1px solid var(--border);border-radius:8px">
-      <div style="font-size:11px;font-weight:700;color:var(--text);padding:2px 4px;background:${d.farbe||'#0071e3'}22;border:1px solid ${d.farbe||'#0071e3'};border-radius:5px;text-align:center">${d.kuerzel}</div>
-      <input type="text" value="${d.label}" onchange="updateGruppenDienst('${d.id}','label',this.value)" style="padding:4px 6px;border:1px solid var(--border);border-radius:5px;font-size:11px;background:var(--surface);color:var(--text);width:100%">
-      <input type="time" value="${d.beginn||''}" onchange="updateGruppenDienst('${d.id}','beginn',this.value)" style="padding:4px 5px;border:1px solid var(--border);border-radius:5px;font-size:11px;background:var(--surface);color:var(--text);width:100%">
-      <input type="time" value="${d.ende||''}" onchange="updateGruppenDienst('${d.id}','ende',this.value)" style="padding:4px 5px;border:1px solid var(--border);border-radius:5px;font-size:11px;background:var(--surface);color:var(--text);width:100%">
-      <div style="display:flex;align-items:center;gap:2px">
-        <input type="number" value="${d.pause_min||0}" min="0" max="120" step="5" onchange="updateGruppenDienst('${d.id}','pause_min',this.value)" style="width:36px;padding:4px 3px;border:1px solid var(--border);border-radius:5px;font-size:11px;background:var(--surface);color:var(--text);text-align:center">
-        <span style="font-size:8px;color:var(--text3)">m</span>
-      </div>
-      <input type="number" value="${d.min_tag??0}" min="0" max="20" onchange="updateGruppenDienst('${d.id}','min_tag',this.value)" style="width:100%;padding:4px 3px;border:1px solid var(--border);border-radius:5px;font-size:11px;background:var(--surface);color:var(--text);text-align:center">
-      <input type="number" value="${d.max_tag??5}" min="0" max="20" onchange="updateGruppenDienst('${d.id}','max_tag',this.value)" style="width:100%;padding:4px 3px;border:1px solid var(--border);border-radius:5px;font-size:11px;background:var(--surface);color:var(--text);text-align:center">
-      <div style="text-align:center"><input type="checkbox" title="Am Wochenende nötig?" ${d.am_we!==false?'checked':''} onchange="updateGruppenDienst('${d.id}','am_we',this.checked)" style="cursor:pointer;width:15px;height:15px"></div>
-      <div style="text-align:center"><input type="checkbox" title="An Feiertagen nötig?" ${d.am_feiertag!==false?'checked':''} onchange="updateGruppenDienst('${d.id}','am_feiertag',this.checked)" style="cursor:pointer;width:15px;height:15px"></div>
-      <button onclick="deleteGruppenDienst('${d.id}')" style="width:24px;height:24px;border:none;background:var(--red-soft);color:var(--red);border-radius:5px;cursor:pointer;font-size:13px;padding:0">✕</button>
+    sorted.map(d=>`
+    <div style="display:grid;grid-template-columns:${cols};gap:4px;align-items:center;padding:6px 6px;background:var(--surface);border:1px solid var(--border);border-radius:8px">
+      <input type="number" value="${d.position??10}" min="1" max="99" title="Planungspriorität (1=zuerst geplant)"
+        onchange="updateGruppenDienst('${d.id}','position',this.value)"
+        style="width:100%;padding:3px 2px;border:1.5px solid var(--accent);border-radius:5px;font-size:11px;background:var(--accent-soft);color:var(--accent);font-weight:700;text-align:center">
+      <div style="font-size:11px;font-weight:700;color:#fff;padding:2px 4px;background:${d.farbe||'#0071e3'};border-radius:5px;text-align:center">${d.kuerzel}</div>
+      <input type="text" value="${d.label}" onchange="updateGruppenDienst('${d.id}','label',this.value)"
+        style="padding:4px 6px;border:1px solid var(--border);border-radius:5px;font-size:11px;background:var(--surface);color:var(--text);width:100%">
+      <input type="time" value="${d.beginn||''}" onchange="updateGruppenDienst('${d.id}','beginn',this.value)"
+        style="padding:4px 4px;border:1px solid var(--border);border-radius:5px;font-size:11px;background:var(--surface);color:var(--text);width:100%">
+      <input type="time" value="${d.ende||''}" onchange="updateGruppenDienst('${d.id}','ende',this.value)"
+        style="padding:4px 4px;border:1px solid var(--border);border-radius:5px;font-size:11px;background:var(--surface);color:var(--text);width:100%">
+      <input type="number" value="${d.pause_min||0}" min="0" max="120" step="5" onchange="updateGruppenDienst('${d.id}','pause_min',this.value)"
+        style="width:100%;padding:4px 3px;border:1px solid var(--border);border-radius:5px;font-size:11px;background:var(--surface);color:var(--text);text-align:center">
+      <input type="number" value="${d.min_tag??0}" min="0" max="20" onchange="updateGruppenDienst('${d.id}','min_tag',this.value)"
+        style="width:100%;padding:4px 3px;border:1px solid var(--border);border-radius:5px;font-size:11px;background:var(--surface);color:var(--text);text-align:center">
+      <input type="number" value="${d.max_tag??5}" min="0" max="30" onchange="updateGruppenDienst('${d.id}','max_tag',this.value)"
+        style="width:100%;padding:4px 3px;border:1px solid var(--border);border-radius:5px;font-size:11px;background:var(--surface);color:var(--text);text-align:center">
+      <input type="checkbox" ${d.am_we!==false?'checked':''} onchange="updateGruppenDienst('${d.id}','am_we',this.checked)"
+        title="Am Wochenende nötig?" style="width:16px;height:16px;cursor:pointer;margin:auto">
+      <input type="color" value="${d.farbe||'#0071e3'}" onchange="updateGruppenDienst('${d.id}','farbe',this.value)"
+        style="width:26px;height:24px;padding:1px;border:1px solid var(--border);border-radius:5px;cursor:pointer">
+      <button onclick="deleteGruppenDienst('${d.id}')"
+        style="width:22px;height:22px;border:none;background:var(--red-soft);color:var(--red);border-radius:5px;cursor:pointer;font-size:12px;display:flex;align-items:center;justify-content:center">✕</button>
     </div>`).join('');
 }
 
 function updateGruppenDienst(id, field, value){
   const d = _gruppenDienste.find(d=>d.id===id);
   if(!d) return;
-  if(field==='pause_min' || field==='min_tag' || field==='max_tag') d[field] = parseInt(value)||0;
+  if(['pause_min','min_tag','max_tag','position'].includes(field)) d[field] = parseInt(value)||0;
   else if(field==='am_we' || field==='am_feiertag') d[field] = value===true || value==='true';
   else d[field] = value;
 }
@@ -3401,6 +3419,7 @@ async function saveGruppenrahmen(){
       pause_min: d.pause_min||0, farbe: d.farbe,
       min_tag: d.min_tag??0, max_tag: d.max_tag??5,
       am_we: d.am_we!==false, am_feiertag: d.am_feiertag!==false,
+      position: d.position??10,
     }).eq('id', d.id);
   }
 
