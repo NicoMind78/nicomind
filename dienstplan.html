@@ -2231,25 +2231,29 @@ async function openKIModal(){
 
   // Konflikte erkennen und warnen
   const konflikte = [];
+  const aktiveDienste = new Set(_gruppenDienste.map(d=>d.kuerzel));
+
   state.staff.forEach(s => {
     const freitage = s.feste_freitage || [];
     const erlaubt  = (s.dienste_erlaubt && s.dienste_erlaubt.length > 0) ? s.dienste_erlaubt : null;
     if(!erlaubt) return;
-    // Prüfen: MA hat Sa+So als feste freie Tage → kann nicht am WE planen
-    const nurWerktage = freitage.includes(6) && freitage.includes(7); // Sa=6, So=7 frei
-    const alleErlaubtenNurWerktag = erlaubt.every(k => {
-      const cfg = _gruppenDienste.find(d=>d.kuerzel===k);
-      return cfg && cfg.am_we === false;
-    });
-    if(nurWerktage && alleErlaubtenNurWerktag){
-      konflikte.push(`⚠️ <strong>${s.name}</strong>: Sa & So vertraglich frei, aber erlaubte Dienste nur an Werktagen → KI kann nicht planen`);
+
+    // Dienste in erlaubt die nicht mehr in Gruppe existieren (ignoriere falls Dienst nie in Gruppe war)
+    const nichtVorhanden = erlaubt.filter(k => aktiveDienste.size > 0 && !aktiveDienste.has(k));
+    if(nichtVorhanden.length){
+      konflikte.push(`⚠️ <strong>${s.name}</strong>: Dienst „${nichtVorhanden.join(', ')}" nicht mehr aktiv – bitte Planungsregeln aktualisieren`);
     }
-    // Prüfen ob erlaubte Dienste komplett nicht in Gruppendiensten vorhanden
-    if(_gruppenDienste.length){
-      const nichtVorhanden = erlaubt.filter(k => !_gruppenDienste.find(d=>d.kuerzel===k));
-      if(nichtVorhanden.length){
-        konflikte.push(`⚠️ <strong>${s.name}</strong>: Dienst „${nichtVorhanden.join(', ')}" nicht in Gruppendiensten definiert`);
-      }
+
+    // Nur warnen wenn MA ausschliesslich WE als Arbeitstage hat aber alle Dienste am_we=false
+    const arbeitstage = [1,2,3,4,5,6,7].filter(t => !freitage.includes(t));
+    const nurWEArbeitstag = arbeitstage.length > 0 && arbeitstage.every(t => t===6||t===7);
+    const alleErlaubtenNurWerktag = erlaubt.filter(k=>aktiveDienste.has(k)).length > 0 &&
+      erlaubt.filter(k=>aktiveDienste.has(k)).every(k => {
+        const cfg = _gruppenDienste.find(d=>d.kuerzel===k);
+        return cfg && cfg.am_we === false;
+      });
+    if(nurWEArbeitstag && alleErlaubtenNurWerktag){
+      konflikte.push(`⚠️ <strong>${s.name}</strong>: Nur Sa/So als Arbeitstage, aber alle Dienste nur an Werktagen → KI kann nicht planen`);
     }
   });
 
@@ -3446,8 +3450,24 @@ async function addGruppenDienst(){
 
 async function deleteGruppenDienst(id){
   if(!confirm('Dienst löschen?')) return;
+  const d = _gruppenDienste.find(d=>d.id===id);
+  const kuerzel = d?.kuerzel;
   await sb.from('gruppe_dienste').delete().eq('id', id);
   _gruppenDienste = _gruppenDienste.filter(d=>d.id!==id);
+
+  // Kürzel aus dienste_erlaubt aller Mitarbeiter entfernen
+  if(kuerzel){
+    const { data: staffList } = await sb.from('staff').select('id, dienste_erlaubt').eq('unternehmen_id', currentUnternehmenId);
+    for(const s of (staffList||[])){
+      const erlaubt = s.dienste_erlaubt || [];
+      if(erlaubt.includes(kuerzel)){
+        await sb.from('staff').update({
+          dienste_erlaubt: erlaubt.filter(k=>k!==kuerzel)
+        }).eq('id', s.id);
+      }
+    }
+  }
+
   renderGruppenDienste();
   showToast('✅ Dienst gelöscht');
 }
