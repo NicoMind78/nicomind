@@ -1209,6 +1209,11 @@
           Feiertage wie Sonntage planen
           <span style="font-size:9px;color:var(--text3);margin-left:4px">(= Ruhetag, zählt als WE-Dienst wenn gearbeitet)</span>
         </label>
+        <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text);cursor:pointer;margin-top:6px">
+          <input type="checkbox" id="gr_we_komplett" checked style="width:15px;height:15px">
+          Wochenenden möglichst komplett planen (Sa+So zusammen)
+          <span style="font-size:9px;color:var(--text3);margin-left:4px">(nur im Notfall aufteilen)</span>
+        </label>
       </div>
       <div style="background:var(--accent-soft);border:1px solid var(--accent);border-radius:8px;padding:10px 12px;font-size:11px;color:var(--accent);margin-bottom:12px">
         ⚠️ Diese Regeln sind <strong>hart</strong> – der KI-Planer darf sie niemals überschreiten.
@@ -2280,6 +2285,7 @@ async function runKIPlanner(){
   const grMaxWe     = gr?.max_we_monat      || 2;
   const rbRhythmus  = gr?.rb_rhythmus_tage  || 7;
   const feiertagWieSo = gr?.feiertag_wie_sonntag !== false;
+  const weKomplett    = gr?.we_komplett !== false;
 
   // Gruppendienste frisch laden (nicht auf globalen State verlassen)
   const { data: gdData } = await sb.from('gruppe_dienste')
@@ -2329,17 +2335,15 @@ async function runKIPlanner(){
   // Tracking-Strukturen
   const istStunden   = {};  // geplante Stunden
   const folgeTage    = {};  // aufeinanderfolgende Arbeitstage
-  const weCount      = {};  // WE-Wochenenden (Sa+So beide gearbeitet)
+  const weCount      = {};  // WE-Tage (Sa=0.5, So=0.5 → max_we=2 bedeutet 4 WE-Tage)
   const rbDaten      = {};  // letzte RB-Datum pro MA
   const rbCount      = {};  // RB-Anzahl im Monat
-  const lastSaSa     = {};  // Tracking ob Sa schon eingeplant für WE-Check
   staff.forEach(s => {
     istStunden[s.id]  = 0;
     folgeTage[s.id]   = 0;
     weCount[s.id]     = 0;
     rbDaten[s.id]     = null;
     rbCount[s.id]     = 0;
-    lastSaSa[s.id]    = false;
   });
 
   const proposal = [];
@@ -2424,8 +2428,9 @@ async function runKIPlanner(){
       }
     }
 
-    // HART: Max WE/Monat
-    if(isFreiTag(d) && kuerzel!=='FREI' && weCount[s.id] >= grMaxWe) return null;
+    // HART: Max WE/Monat – individuell pro Mitarbeiter, sonst Gruppenrahmen
+    const maMaxWe = (s.max_we_monat !== undefined && s.max_we_monat !== null) ? s.max_we_monat : grMaxWe;
+    if(isFreiTag(d) && kuerzel!=='FREI' && weCount[s.id] >= maMaxWe) return null;
 
     // HART: Tag nach RB
     if(d>1){
@@ -2464,11 +2469,28 @@ async function runKIPlanner(){
     // Wenn FS explizit als erlaubter Dienst eingetragen ist und MA nur FS+andere hat → boost
     if(kuerzel==='FS' && s.dienste_erlaubt?.includes('FS')) sc += 20;
 
-    // WE-Fairness: proportional zum Soll (Vollzeit arbeitet mehr WE)
+    // WE-Fairness: proportional zum Soll
     if(isFreiTag(d) && kuerzel!=='FREI'){
-      const sollWe = Math.round(grMaxWe * (s.soll / 38.5));
+      const maMaxWe2 = (s.max_we_monat !== undefined && s.max_we_monat !== null) ? s.max_we_monat : grMaxWe;
+      const sollWe = Math.round(maMaxWe2 * (s.soll / 38.5));
       const weRueckstand = sollWe - weCount[s.id];
       sc += weRueckstand * 15;
+
+      // WE komplett: Bonus wenn der MA den anderen WE-Tag bereits arbeitet
+      if(weKomplett){
+        if(dow(d)===0){ // Sonntag – hat er Sa gearbeitet?
+          const saDs = ds(d-1);
+          const saEntry = proposal.find(x=>x.staffId==s.id && x.dateStr===saDs);
+          if(saEntry && saEntry.shift!=='FREI') sc += 35;
+        }
+        if(dow(d)===6){ // Samstag – hat er So (nächste Woche) bereits... nein, vorausschauend nicht möglich
+          // Stattdessen: Malus wenn er letzten So nicht gearbeitet hat (fördert Gleichmäßigkeit)
+          const soDs = ds(d+1);
+          // Kleiner Bonus wenn dieser MA schon viele halbe WEs hat (motiviert komplette WEs)
+          const halbeWE = weCount[s.id] % 1 !== 0;
+          if(halbeWE) sc += 25; // Hat schon ein offenes Sa ohne So → bevorzuge diesen MA auch für Sa
+        }
+      }
     }
 
     // Etwas Zufall für gleiche Scores
@@ -2570,14 +2592,14 @@ async function runKIPlanner(){
         istStunden[s.id] += getStunden(bestSchicht);
         if(bestSchicht==='RB'){ rbDaten[s.id]=dateStr; rbCount[s.id]++; }
         folgeTage[s.id]++;
-        // WE-Tracking: Sa+So beide gearbeitet = 1 WE
-        if(dow(d)===6) lastSaSa[s.id]=true;
-        if(dow(d)===0 && lastSaSa[s.id]){ weCount[s.id]++; lastSaSa[s.id]=false; }
+        // WE-Tracking: Sa oder So gearbeitet = zählt als WE-Tag
+        // Wir zählen in 0.5 Schritten: Sa=0.5, So=0.5 → Sa+So=1 ganzes WE
+        if(dow(d)===6) { weCount[s.id] += 0.5; }
+        if(dow(d)===0) { weCount[s.id] += 0.5; }
       } else {
         // Kein Dienst möglich → FREI
         dayProposal.push({staffId:s.id, dateStr, shift:'FREI'});
         folgeTage[s.id] = 0;
-        if(dow(d)!==6) lastSaSa[s.id]=false;
       }
     }
 
@@ -3357,6 +3379,7 @@ async function openGruppenrahmenModal(){
     document.getElementById('gr_max_tage_folge').value  = data.max_tage_folge ?? 8;
     document.getElementById('gr_rb_rhythmus').value     = data.rb_rhythmus_tage ?? 7;
     document.getElementById('gr_feiertag_sonntag').checked = data.feiertag_wie_sonntag !== false;
+    document.getElementById('gr_we_komplett').checked      = data.we_komplett !== false;
   }
 
   // Dienste laden
@@ -3490,6 +3513,7 @@ async function saveGruppenrahmen(){
     max_tage_folge:       parseInt(document.getElementById('gr_max_tage_folge').value) || 8,
     rb_rhythmus_tage:     parseInt(document.getElementById('gr_rb_rhythmus').value) || 7,
     feiertag_wie_sonntag: document.getElementById('gr_feiertag_sonntag').checked,
+    we_komplett:          document.getElementById('gr_we_komplett').checked,
   };
   const { error } = await sb.from('gruppenrahmen').upsert(payload, { onConflict: 'gruppe_id' });
   if(error){ showToast('Fehler: ' + error.message); return; }
