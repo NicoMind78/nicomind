@@ -2343,17 +2343,20 @@ async function runKIPlanner(){
   // Tracking-Strukturen
   const istStunden   = {};  // geplante Stunden
   const folgeTage    = {};  // aufeinanderfolgende Arbeitstage
-  const weCount      = {};  // WE-Tage (Sa=0.5, So=0.5 → max_we=2 bedeutet 4 WE-Tage)
+  const weCount      = {};  // Komplette Wochenenden (Sa+So beide gearbeitet = 1)
+  const weSaGearbeitet = {};  // ob dieser MA diesen Samstag gearbeitet hat
   const rbDaten      = {};  // letzte RB-Datum pro MA
   const rbCount      = {};  // RB-Anzahl im Monat
   staff.forEach(s => {
     istStunden[s.id]  = 0;
     folgeTage[s.id]   = 0;
     weCount[s.id]     = 0;
+    weSaGearbeitet[s.id] = false;
     rbDaten[s.id]     = null;
     rbCount[s.id]     = 0;
   });
 
+  let _kiWarnungen = [];
   const proposal = [];
 
   // ─── Schritt 1: Soll-Frei Wünsche vormerken (HART) ───────────────────────
@@ -2440,9 +2443,22 @@ async function runKIPlanner(){
       }
     }
 
-    // HART: Max WE/Monat – individuell pro Mitarbeiter, sonst Gruppenrahmen
+    // HART: Max WE/Monat – nur komplette Wochenenden (Sa+So) zählen
     const maMaxWe = (s.max_we_monat !== undefined && s.max_we_monat !== null) ? s.max_we_monat : grMaxWe;
-    if(isFreiTag(d) && kuerzel!=='FREI' && weCount[s.id] >= maMaxWe) return null;
+    if(isFreiTag(d) && kuerzel!=='FREI'){
+      // Samstag: blockieren wenn schon max komplette WEs voll
+      if(dow(d)===6 && weCount[s.id] >= maMaxWe) return null;
+      // Sonntag: blockieren wenn Sa nicht gearbeitet (kein halbes WE) UND schon max voll
+      if(dow(d)===0){
+        const saDs = ds(d-1);
+        const saGearbeitet = proposal.some(x=>x.staffId==s.id && x.dateStr===saDs && x.shift!=='FREI');
+        if(!saGearbeitet && weCount[s.id] >= maMaxWe) return null;
+        // Wenn Sa nicht gearbeitet und weKomplett aktiv → halbes WE nur im Notfall
+        if(!saGearbeitet && weKomplett) return null; // wird in Notfall-Pass freigegeben
+      }
+      // Feiertag wie Sonntag: normale WE-Grenze
+      if(isHol(d) && !isWE(d) && weCount[s.id] >= maMaxWe) return null;
+    }
 
     // HART: Tag nach RB
     if(d>1){
@@ -2579,7 +2595,25 @@ async function runKIPlanner(){
           if(sc2===null) continue;
           if(sc2>bestSc){ bestSc=sc2; best=s; }
         }
-        if(!best) break; // Nicht genug Mitarbeiter verfügbar
+        if(!best && weKomplett && dow(d)===0){
+          // Notfall: weKomplett blockiert alle → halbe WEs erlauben
+          for(const s of shuffled){
+            if(dayProposal.some(x=>x.staffId==s.id)) continue;
+            if(SOLL_FREI[s.id].has(dateStr)) continue;
+            const maMaxWe2 = (s.max_we_monat !== undefined) ? s.max_we_monat : grMaxWe;
+            if(weCount[s.id] >= maMaxWe2) continue;
+            const erlaubt = (s.dienste_erlaubt && s.dienste_erlaubt.length>0) ? s.dienste_erlaubt : PLANBAR;
+            if(!erlaubt.includes(schicht)) continue;
+            if(s.rb_erlaubt===false && schicht==='RB') continue;
+            best=s; break;
+          }
+        }
+        if(!best){
+          // Warnung: Mindestbesetzung nicht erfüllbar
+          if(!_kiWarnungen) _kiWarnungen=[];
+          _kiWarnungen.push(`${dateStr}: ${schicht} Mindestbesetzung nicht erfüllt (min ${minBes})`);
+          break;
+        }
         dayProposal.push({staffId:best.id, dateStr, shift:schicht});
         tagesCount[schicht]++;
         istStunden[best.id] += getStunden(schicht);
@@ -2635,8 +2669,10 @@ async function runKIPlanner(){
         folgeTage[s.id]++;
         // WE-Tracking: Sa oder So gearbeitet = zählt als WE-Tag
         // Wir zählen in 0.5 Schritten: Sa=0.5, So=0.5 → Sa+So=1 ganzes WE
-        if(dow(d)===6) { weCount[s.id] += 0.5; }
-        if(dow(d)===0) { weCount[s.id] += 0.5; }
+        // WE-Tracking: nur komplettes Sa+So zählt als 1 WE
+        if(dow(d)===6) { weSaGearbeitet[s.id] = true; }
+        if(dow(d)===0 && weSaGearbeitet[s.id]) { weCount[s.id]++; weSaGearbeitet[s.id]=false; }
+        if(dow(d)===1) { weSaGearbeitet[s.id]=false; } // Montag: Sa ohne So zurücksetzen
       } else {
         // Kein Dienst möglich → FREI
         dayProposal.push({staffId:s.id, dateStr, shift:'FREI'});
@@ -2654,12 +2690,23 @@ async function runKIPlanner(){
 
   _kiProposal = proposal.map(p=>({...p, status:'pending'}));
   showToast(`✅ ${proposal.length} Einträge geplant`);
+
+  // Warnungen anzeigen wenn vorhanden
+  if(_kiWarnungen && _kiWarnungen.length){
+    const unique = [...new Set(_kiWarnungen)];
+    showToast(`⚠️ ${unique.length} Besetzungsprobleme – siehe Vorschau`, 6000);
+    _kiVorschauWarnungen = unique;
+  } else {
+    _kiVorschauWarnungen = [];
+  }
+
   showKIPreview();
 }
 
+let _kiVorschauWarnungen = [];
+
 function showKIPreview(){
   const total = _kiProposal.length;
-  const pending = _kiProposal.filter(p=>p.status==='pending').length;
   document.getElementById('kiPreviewSub').textContent =
     `${MONTH_NAMES[currentMonth]} ${currentYear} · ${total} Vorschläge`;
 
@@ -2674,8 +2721,16 @@ function showKIPreview(){
       const label = gd ? gd.label   : (s?.label || sh);
       return `<span class="ki-badge ki-badge-green">${icon} ${label}: ${n}</span>`;
     }).join('') +
-    `<span style="margin-left:auto;font-size:11px;color:var(--text3)">${pending} ausstehend</span>`;
+    (_kiVorschauWarnungen.length ? `<span class="ki-badge" style="background:rgba(255,159,10,.15);color:#b35a00;border:1px solid rgba(255,159,10,.3)">⚠️ ${_kiVorschauWarnungen.length} Probleme</span>` : '') +
+    `<span style="margin-left:auto;font-size:11px;color:var(--text3)">${_kiProposal.filter(p=>p.status==='pending').length} ausstehend</span>`;
 
+  // Warnungen anzeigen
+  const warnBox = _kiVorschauWarnungen.length ? `
+    <div style="background:rgba(255,159,10,.1);border:1px solid rgba(255,159,10,.3);border-radius:8px;padding:10px 12px;margin-bottom:10px;font-size:11px;color:#7a4a00">
+      <div style="font-weight:600;margin-bottom:4px">⚠️ Mindestbesetzung konnte nicht überall erfüllt werden:</div>
+      ${_kiVorschauWarnungen.slice(0,10).map(w=>`<div>• ${w}</div>`).join('')}
+      ${_kiVorschauWarnungen.length>10?`<div style="color:var(--text3)">… und ${_kiVorschauWarnungen.length-10} weitere</div>`:''}
+    </div>` : '';
   // Group by staff
   const byStaff = {};
   _kiProposal.forEach(p=>{
@@ -2721,7 +2776,7 @@ function showKIPreview(){
     });
     html += '</div></div>';
   });
-  document.getElementById('kiPreviewBody').innerHTML = html;
+  document.getElementById('kiPreviewBody').innerHTML = warnBox + html;
   openModal('kiPreviewModal');
 }
 
