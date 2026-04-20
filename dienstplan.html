@@ -2359,27 +2359,28 @@ async function runKIPlanner(){
   const score = (s, d, schicht, dayProposal) => {
     const dateStr = ds(d);
     const w = getWish(s.id, dateStr);
+    const _dbg = schicht==='FS' && d<=5; // Debug erste 5 Tage für FS
 
     // HART: Soll-Frei → niemals planen
-    if(SOLL_FREI[s.id].has(dateStr)) return null;
+    if(SOLL_FREI[s.id].has(dateStr)){ if(_dbg) console.log(`FS d${d} ${s.name}: SOLL_FREI`); return null; }
 
     // HART: Fester freier Tag (außer Wunsch/Feiertag-Ausnahme)
-    if(istFesterFreitag(s, d) && !w) return null;
+    if(istFesterFreitag(s, d) && !w){ if(_dbg) console.log(`FS d${d} ${s.name}: fester Freitag dow=${dow(d)} freitage=${JSON.stringify(s.feste_freitage)}`); return null; }
 
     // HART: Dienst nicht erlaubt für diesen MA
     const erlaubt = (s.dienste_erlaubt && s.dienste_erlaubt.length > 0) ? s.dienste_erlaubt : PLANBAR;
     const kuerzel = schicht;
-    if(!erlaubt.includes(kuerzel) && kuerzel!=='FREI') return null;
+    if(!erlaubt.includes(kuerzel) && kuerzel!=='FREI'){ if(_dbg) console.log(`FS d${d} ${s.name}: nicht erlaubt erlaubt=${JSON.stringify(erlaubt)}`); return null; }
 
     // HART: RB nicht erlaubt
     if(kuerzel==='RB' && s.rb_erlaubt===false) return null;
 
     // HART: Max aufeinanderfolgende Tage
-    if(kuerzel!=='FREI' && folgeTage[s.id] >= Math.min(maxTageFolge, grMaxTage)) return null;
+    if(kuerzel!=='FREI' && folgeTage[s.id] >= Math.min(maxTageFolge, grMaxTage)){ if(_dbg) console.log(`FS d${d} ${s.name}: maxTage folgeTage=${folgeTage[s.id]}`); return null; }
 
     // HART: Max Stunden/Tag (aus Unternehmensrahmen)
     const std = getStunden(kuerzel);
-    if(std > maxStdTag && kuerzel!=='FREI') return null;
+    if(std > maxStdTag && kuerzel!=='FREI'){ if(_dbg) console.log(`FS d${d} ${s.name}: maxStdTag std=${std}`); return null; }
 
     // HART: Max Stunden/Woche (grobe Prüfung: bereits ≥ wöchentliche Grenze?)
     const wocheStart = d - dow(d) + (dow(d)===0 ? -6 : 1);
@@ -2389,7 +2390,7 @@ async function runKIPlanner(){
       const p = proposal.find(x=>x.staffId==s.id && x.dateStr===ds(wd));
       wochenStd += p ? getStunden(p.shift) : 0;
     }
-    if(wochenStd + std > maxStdWoche) return null;
+    if(wochenStd + std > maxStdWoche){ if(_dbg) console.log(`FS d${d} ${s.name}: maxStdWoche wochenStd=${wochenStd}`); return null; }
 
     // HART: RB-Rhythmus (min. Abstand zwischen zwei RBs)
     if(kuerzel==='RB'){
