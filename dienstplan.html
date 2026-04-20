@@ -1081,7 +1081,7 @@
         <div style="font-size:11px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:12px">🗓️ Individuelle Planungsregeln</div>
 
         <div style="margin-bottom:8px">
-          <div style="font-size:10px;color:var(--text3);margin-bottom:6px">Feste freie Tage lt. Vertrag</div>
+          <div style="font-size:10px;color:var(--text3);margin-bottom:6px">Vertragliche Arbeitstage</div>
           <div style="font-size:9px;color:var(--text3);margin-bottom:6px">Bei Wunsch, Feiertag oder Tausch trotzdem planbar</div>
           <div id="euFreitagBox" style="display:flex;gap:6px;flex-wrap:wrap"></div>
         </div>
@@ -2058,9 +2058,9 @@ function openEditStaff(staffId){
     if(label) label.textContent = 'Tag nach RB?';
   }
 
-  // WE-Feld ausgrauen wenn Sa (6) UND So (7) beide als feste freie Tage eingetragen
+  // WE-Feld ausgrauen wenn Sa (6) UND So (7) beide als feste freie Tage eingetragen (= nicht Arbeitstag)
   const freitage = staff.feste_freitage || [];
-  const keinWE  = freitage.includes(6) && freitage.includes(7);
+  const keinWE  = freitage.includes(6) && freitage.includes(7); // Sa+So beide frei
   const weBox   = document.getElementById('esMaxWeMonatBox');
   const weInput = document.getElementById('esMaxWeMonat');
   if(keinWE){
@@ -2229,6 +2229,37 @@ async function openKIModal(){
     preview.textContent = 'Keine Gruppenrahmen-Daten gefunden – bitte zuerst Gruppen-Vorgaben konfigurieren.';
   }
 
+  // Konflikte erkennen und warnen
+  const konflikte = [];
+  state.staff.forEach(s => {
+    const freitage = s.feste_freitage || [];
+    const erlaubt  = (s.dienste_erlaubt && s.dienste_erlaubt.length > 0) ? s.dienste_erlaubt : null;
+    if(!erlaubt) return;
+    // Prüfen: MA hat Sa+So als feste freie Tage → kann nicht am WE planen
+    const nurWerktage = freitage.includes(6) && freitage.includes(7); // Sa=6, So=7 frei
+    const alleErlaubtenNurWerktag = erlaubt.every(k => {
+      const cfg = _gruppenDienste.find(d=>d.kuerzel===k);
+      return cfg && cfg.am_we === false;
+    });
+    if(nurWerktage && alleErlaubtenNurWerktag){
+      konflikte.push(`⚠️ <strong>${s.name}</strong>: Sa & So vertraglich frei, aber erlaubte Dienste nur an Werktagen → KI kann nicht planen`);
+    }
+    // Prüfen ob erlaubte Dienste komplett nicht in Gruppendiensten vorhanden
+    if(_gruppenDienste.length){
+      const nichtVorhanden = erlaubt.filter(k => !_gruppenDienste.find(d=>d.kuerzel===k));
+      if(nichtVorhanden.length){
+        konflikte.push(`⚠️ <strong>${s.name}</strong>: Dienst „${nichtVorhanden.join(', ')}" nicht in Gruppendiensten definiert`);
+      }
+    }
+  });
+
+  if(konflikte.length){
+    preview.innerHTML += `<div style="margin-top:8px;padding:8px;background:rgba(255,159,10,.12);border:1px solid rgba(255,159,10,.3);border-radius:6px;color:#b35a00">
+      <div style="font-weight:600;margin-bottom:4px">⚠️ Konflikte erkannt:</div>
+      ${konflikte.map(k=>`<div style="font-size:10px;margin-top:2px">${k}</div>`).join('')}
+    </div>`;
+  }
+
   openModal('kiModal');
 }
 
@@ -2359,30 +2390,29 @@ async function runKIPlanner(){
   const score = (s, d, schicht, dayProposal) => {
     const dateStr = ds(d);
     const w = getWish(s.id, dateStr);
-    const _dbg = schicht==='FS' && d<=5; // Debug erste 5 Tage für FS
 
     // HART: Soll-Frei → niemals planen
-    if(SOLL_FREI[s.id].has(dateStr)){ if(_dbg) console.log(`FS d${d} ${s.name}: SOLL_FREI`); return null; }
+    if(SOLL_FREI[s.id].has(dateStr)) return null;
 
     // HART: Fester freier Tag (außer Wunsch/Feiertag-Ausnahme)
-    if(istFesterFreitag(s, d) && !w){ if(_dbg) console.log(`FS d${d} ${s.name}: fester Freitag dow=${dow(d)} freitage=${JSON.stringify(s.feste_freitage)}`); return null; }
+    if(istFesterFreitag(s, d) && !w) return null;
 
     // HART: Dienst nicht erlaubt für diesen MA
     const erlaubt = (s.dienste_erlaubt && s.dienste_erlaubt.length > 0) ? s.dienste_erlaubt : PLANBAR;
     const kuerzel = schicht;
-    if(!erlaubt.includes(kuerzel) && kuerzel!=='FREI'){ if(_dbg) console.log(`FS d${d} ${s.name}: nicht erlaubt erlaubt=${JSON.stringify(erlaubt)}`); return null; }
+    if(!erlaubt.includes(kuerzel) && kuerzel!=='FREI') return null;
 
     // HART: RB nicht erlaubt
     if(kuerzel==='RB' && s.rb_erlaubt===false) return null;
 
     // HART: Max aufeinanderfolgende Tage
-    if(kuerzel!=='FREI' && folgeTage[s.id] >= Math.min(maxTageFolge, grMaxTage)){ if(_dbg) console.log(`FS d${d} ${s.name}: maxTage folgeTage=${folgeTage[s.id]}`); return null; }
+    if(kuerzel!=='FREI' && folgeTage[s.id] >= Math.min(maxTageFolge, grMaxTage)) return null;
 
     // HART: Max Stunden/Tag (aus Unternehmensrahmen)
     const std = getStunden(kuerzel);
-    if(std > maxStdTag && kuerzel!=='FREI'){ if(_dbg) console.log(`FS d${d} ${s.name}: maxStdTag std=${std}`); return null; }
+    if(std > maxStdTag && kuerzel!=='FREI') return null;
 
-    // HART: Max Stunden/Woche (grobe Prüfung: bereits ≥ wöchentliche Grenze?)
+    // HART: Max Stunden/Woche
     const wocheStart = d - dow(d) + (dow(d)===0 ? -6 : 1);
     let wochenStd = 0;
     for(let wd=wocheStart; wd<d; wd++){
@@ -2390,7 +2420,7 @@ async function runKIPlanner(){
       const p = proposal.find(x=>x.staffId==s.id && x.dateStr===ds(wd));
       wochenStd += p ? getStunden(p.shift) : 0;
     }
-    if(wochenStd + std > maxStdWoche){ if(_dbg) console.log(`FS d${d} ${s.name}: maxStdWoche wochenStd=${wochenStd}`); return null; }
+    if(wochenStd + std > maxStdWoche) return null;
 
     // HART: RB-Rhythmus (min. Abstand zwischen zwei RBs)
     if(kuerzel==='RB'){
@@ -3162,11 +3192,12 @@ function loadEuRules(s){
   const freitage = s?.feste_freitage  || [];
   const qualis   = s?.qualifikationen || [];
 
-  // Feste freie Tage
+  // Vertragliche Arbeitstage – angehakt = Arbeitstag (umgekehrt von feste_freitage)
+  // feste_freitage speichert freie Tage → Arbeitstag = NOT in feste_freitage
   document.getElementById('euFreitagBox').innerHTML =
     ['Mo','Di','Mi','Do','Fr','Sa','So'].map((t,i)=>`
       <label style="display:flex;align-items:center;gap:4px;font-size:12px;padding:4px 10px;border:1.5px solid var(--border);border-radius:8px;cursor:pointer;background:var(--surface)">
-        <input type="checkbox" class="eu-freitag-cb" value="${i+1}" ${freitage.includes(i+1)?'checked':''} style="cursor:pointer"> ${t}
+        <input type="checkbox" class="eu-freitag-cb" value="${i+1}" ${!freitage.includes(i+1)?'checked':''} style="cursor:pointer"> ${t}
       </label>`).join('');
 
   // Wundversorgung + Extra-Qualifikationen
@@ -3248,7 +3279,10 @@ async function saveEditUser(){
     rb_erlaubt:      document.getElementById('euRbErlaubt').checked,
     fza_vor_urlaub:  document.getElementById('euFzaVorUrlaub').checked,
     fza_nach_urlaub: document.getElementById('euFzaNachUrlaub').checked,
-    feste_freitage:  [...document.querySelectorAll('.eu-freitag-cb:checked')].map(c=>parseInt(c.value)),
+    // Vertragliche Arbeitstage: angehakt = Arbeitstag → feste_freitage = NICHT angehakte Tage
+    feste_freitage: [1,2,3,4,5,6,7].filter(v =>
+      !document.querySelector(`.eu-freitag-cb[value="${v}"]:checked`)
+    ),
     qualifikationen,
   };
 
