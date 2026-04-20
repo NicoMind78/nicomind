@@ -2361,7 +2361,7 @@ async function runKIPlanner(){
     if(istFesterFreitag(s, d) && !w) return null;
 
     // HART: Dienst nicht erlaubt für diesen MA
-    const erlaubt = s.dienste_erlaubt || PLANBAR;
+    const erlaubt = (s.dienste_erlaubt && s.dienste_erlaubt.length > 0) ? s.dienste_erlaubt : PLANBAR;
     const kuerzel = schicht;
     if(!erlaubt.includes(kuerzel) && kuerzel!=='FREI') return null;
 
@@ -2431,6 +2431,9 @@ async function runKIPlanner(){
     const sollQuote = (d-1) / days;
     const rueckstand = sollQuote - istQuote; // positiv = im Rückstand
     sc += rueckstand * 40;
+
+    // Wenn FS explizit als erlaubter Dienst eingetragen ist und MA nur FS+andere hat → boost
+    if(kuerzel==='FS' && s.dienste_erlaubt?.includes('FS')) sc += 20;
 
     // WE-Fairness: proportional zum Soll (Vollzeit arbeitet mehr WE)
     if(isFreiTag(d) && kuerzel!=='FREI'){
