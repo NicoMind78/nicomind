@@ -1137,9 +1137,16 @@
             <input type="number" id="ur_max_std_woche" value="56" min="40" max="60" style="width:100%;padding:7px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:12px;background:var(--surface);color:var(--text)">
           </div>
         </div>
-        <div style="margin-bottom:8px">
-          <div style="font-size:10px;color:var(--text3);margin-bottom:3px">Max. aufeinanderfolgende Tage</div>
-          <input type="number" id="ur_max_tage_folge" value="8" min="4" max="14" style="width:100%;padding:7px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:12px;background:var(--surface);color:var(--text)">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
+          <div>
+            <div style="font-size:10px;color:var(--text3);margin-bottom:3px">Max. aufeinanderfolgende Tage</div>
+            <input type="number" id="ur_max_tage_folge" value="8" min="4" max="14" style="width:100%;padding:7px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:12px;background:var(--surface);color:var(--text)">
+          </div>
+          <div>
+            <div style="font-size:10px;color:var(--text3);margin-bottom:3px">Toleranz Stunden/Monat (±h)</div>
+            <input type="number" id="ur_stunden_toleranz" value="8" min="0" max="40" step="0.5" style="width:100%;padding:7px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:12px;background:var(--surface);color:var(--text)">
+            <div style="font-size:9px;color:var(--text3);margin-top:2px">KI plant nicht über Monatssoll + X Stunden</div>
+          </div>
         </div>
 
         <!-- Pausenregelung Info -->
@@ -2275,7 +2282,8 @@ async function runKIPlanner(){
     .select('*').eq('unternehmen_id', currentUnternehmenId).single();
   const maxStdTag    = ur?.max_stunden_tag  || 10;
   const maxStdWoche  = ur?.max_stunden_woche || 56;
-  const maxTageFolge = ur?.max_tage_folge   || 8;   // aus Unternehmensrahmen als globale Grenze
+  const maxTageFolge = ur?.max_tage_folge   || 8;
+  const stdToleranz  = ur?.stunden_toleranz ?? 8;
   const weUrlaub     = ur?.we_vor_urlaub_frei !== false;
 
   // Gruppenrahmen
@@ -2404,8 +2412,12 @@ async function runKIPlanner(){
     // HART: Max aufeinanderfolgende Tage
     if(kuerzel!=='FREI' && folgeTage[s.id] >= Math.min(maxTageFolge, grMaxTage)) return null;
 
-    // HART: Max Stunden/Tag (aus Unternehmensrahmen)
+    // HART: Monatssoll + Toleranz = absolute Obergrenze
     const std = getStunden(kuerzel);
+    const moSoll = monatssoll[s.id] || 1;
+    if(kuerzel!=='FREI' && istStunden[s.id] + std > moSoll + stdToleranz) return null;
+
+    // HART: Max Stunden/Tag (aus Unternehmensrahmen)
     if(std > maxStdTag && kuerzel!=='FREI') return null;
 
     // HART: Max Stunden/Woche
@@ -2464,9 +2476,19 @@ async function runKIPlanner(){
     const istQuote = istStunden[s.id] / soll;
     const sollQuote = (d-1) / days;
     const rueckstand = sollQuote - istQuote; // positiv = im Rückstand
-    sc += rueckstand * 40;
+    sc += rueckstand * 60; // von 40 auf 60 erhöht
 
-    // Wenn FS explizit als erlaubter Dienst eingetragen ist und MA nur FS+andere hat → boost
+    // Monatsende-Boost: wenn MA noch deutlich unter Soll und wenig Zeit übrig
+    const stundenFehlen = soll - istStunden[s.id];
+    if(stundenFehlen > 0 && restTage <= 10 && kuerzel!=='FREI'){
+      sc += Math.min(stundenFehlen * 5, 80);
+    }
+    // Malus wenn bereits über Soll
+    if(istStunden[s.id] > soll && kuerzel!=='FREI'){
+      sc -= (istStunden[s.id] - soll) * 8;
+    }
+
+    // FS-Boost wenn explizit erlaubt
     if(kuerzel==='FS' && s.dienste_erlaubt?.includes('FS')) sc += 20;
 
     // WE-Fairness: proportional zum Soll
@@ -3339,6 +3361,7 @@ async function openUnternehmensrahmenModal(){
     document.getElementById('ur_max_std_tag').value       = data.max_stunden_tag || 10;
     document.getElementById('ur_max_std_woche').value     = data.max_stunden_woche || 56;
     document.getElementById('ur_max_tage_folge').value    = data.max_tage_folge || 8;
+    document.getElementById('ur_stunden_toleranz').value  = data.stunden_toleranz ?? 8;
     document.getElementById('ur_we_urlaub').checked       = data.we_vor_urlaub_frei !== false;
     document.getElementById('ur_betriebsvereinbarung').value = data.betriebsvereinbarung || '';
     document.getElementById('ur_tarifvertrag').value      = data.tarifvertrag || '';
@@ -3352,6 +3375,7 @@ async function saveUnternehmensrahmen(){
     max_stunden_tag:      parseFloat(document.getElementById('ur_max_std_tag').value) || 10,
     max_stunden_woche:    parseFloat(document.getElementById('ur_max_std_woche').value) || 56,
     max_tage_folge:       parseInt(document.getElementById('ur_max_tage_folge').value) || 8,
+    stunden_toleranz:     parseFloat(document.getElementById('ur_stunden_toleranz').value) ?? 8,
     we_vor_urlaub_frei:   document.getElementById('ur_we_urlaub').checked,
     we_nach_urlaub_frei:  document.getElementById('ur_we_urlaub').checked,
     betriebsvereinbarung: document.getElementById('ur_betriebsvereinbarung').value.trim(),
