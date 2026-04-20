@@ -2258,6 +2258,11 @@ async function runKIPlanner(){
   const rbRhythmus  = gr?.rb_rhythmus_tage  || 7;
   const feiertagWieSo = gr?.feiertag_wie_sonntag !== false;
 
+  // Gruppendienste frisch laden (nicht auf globalen State verlassen)
+  const { data: gdData } = await sb.from('gruppe_dienste')
+    .select('*').eq('gruppe_id', currentGruppeId).order('position');
+  if(gdData && gdData.length) _gruppenDienste = gdData;
+
   // Gruppendienste (planbare) – nach Priorität sortiert
   const gDienste = (_gruppenDienste.length
     ? [..._gruppenDienste].sort((a,b)=>(a.position??10)-(b.position??10))
@@ -2455,8 +2460,9 @@ async function runKIPlanner(){
     const isFrei  = isFreiTag(d);
     const dayProposal = [];
 
-    // Tageszähler: min/max Besetzung pro Dienst
-    const tagesCount = { F:0, S:0, RB:0, FS:0 };
+    // Tageszähler dynamisch aus Gruppendiensten aufbauen
+    const tagesCount = {};
+    gDienste.forEach(gd => { tagesCount[gd.kuerzel] = 0; });
 
     // Dienste nach Prio (position) sortieren, dann min_tag als Tiebreaker
     const planSchichten = PLANBAR
