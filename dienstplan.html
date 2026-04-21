@@ -1377,7 +1377,7 @@ async function loadFromSupabase(){
         // Planungsregeln
         rb_erlaubt:      s.rb_erlaubt !== false,
         nach_rb:         s.nach_rb || 'frei',
-        max_we_monat:    s.max_we_monat ?? 2,
+        max_we_monat:    s.max_we_monat || 2,
         dienste_erlaubt: s.dienste_erlaubt || [],
         feste_freitage:  s.feste_freitage || [],
         qualifikationen: s.qualifikationen || [],
@@ -1402,7 +1402,7 @@ async function loadFromSupabase(){
     const staffIds = state.staff.map(s=>s.id);
     if(staffIds.length){
       state.entries = {};
-      allEntriesRes.data?.forEach(e=>{
+      allEntriesRes.(data && data.forEac)h(e=>{
         const staffId = parseInt(e.key.split('_')[0]);
         if(staffIds.includes(staffId)){
           state.entries[e.key] = {shift:e.shift, info:e.info||'', gruppe_id:e.gruppe_id, standort_id:e.standort_id};
@@ -1510,7 +1510,7 @@ function sliderClickMonth(i){
 var _sdX=null, _sdDragging=false;
 
 function sliderDragStart(e){
-  _sdX = e.clientX ?? e.touches?.[0]?.clientX;
+  _sdX = e.clientX != null ? e.clientX : (e.touches && e.touches[0] ? e.touches[0].clientX : 0);
   _sdDragging = false;
   document.onmousemove = sliderDragMove;
   document.onmouseup   = sliderDragEnd;
@@ -1523,7 +1523,7 @@ function sliderTouchStart(e){
 }
 function sliderDragMove(e){
   if(_sdX===null) return;
-  if(Math.abs((e.clientX??0)-_sdX)>8) _sdDragging=true;
+  if(Math.abs((e.clientX || 0)-_sdX)>8) _sdDragging=true;
 }
 function sliderTouchMove(e){
   if(_sdX===null) return;
@@ -1531,7 +1531,7 @@ function sliderTouchMove(e){
 }
 function sliderDragEnd(e){
   if(_sdX===null) return;
-  const ex = e.clientX ?? e.changedTouches?.[0]?.clientX ?? _sdX;
+  const ex = e.clientX != null ? e.clientX : (e.changedTouches && e.changedTouches[0] ? e.changedTouches[0].clientX : _sdX);
   const dx = ex - _sdX;
   const wasDragging = _sdDragging;
   _sdX=null; _sdDragging=false;
@@ -1650,7 +1650,7 @@ function renderGrid(){
         const chipCls   = gruppenDienstChip ? getChipClass(gruppenDienstChip.kuerzel) : shift.cls;
         const chipIcon  = gruppenDienstChip ? gruppenDienstChip.kuerzel : shift.icon;
         const chipLabel = gruppenDienstChip ? gruppenDienstChip.label   : shift.label;
-        html+=`<button class="shift-chip ${chipCls}" onclick="quickEdit('${staff.id}','${ds}')" title="${chipLabel}${entry?.info?' – '+entry.info:''}${tipExtra}${conflict?' 🔴 Konflikt mit '+getConflictStandort(staff.id,ds):''}" style="position:relative">${chipIcon}${conflictDot}</button>`;
+        html+=`<button class="shift-chip ${chipCls}" onclick="quickEdit('${staff.id}','${ds}')" title="${chipLabel}${(entry && entry.info)?' – '+entry.info:''}${tipExtra}${conflict?' 🔴 Konflikt mit '+getConflictStandort(staff.id,ds):''}" style="position:relative">${chipIcon}${conflictDot}</button>`;
       } else {
         html+=`<button class="shift-chip chip-frei" onclick="quickEdit('${staff.id}','${ds}')" title="${holName?holName+' – ':''}Frei / Eintrag ändern${conflict?' 🔴 In '+getConflictStandort(staff.id,ds)+' eingetragen':''}" style="position:relative">✕${conflictDot}</button>`;
       }
@@ -1783,10 +1783,10 @@ function quickEdit(staffId,dateStr){
   const entry=state.entries[`${staffId}_${dateStr}`];
   document.getElementById('entryModalTitle').textContent=staff.name;
   document.getElementById('entryModalSub').textContent=new Date(dateStr+'T12:00:00').toLocaleDateString('de-DE',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
-  document.getElementById('entryInfo').value=entry?.info||'';
+  document.getElementById('entryInfo').value=(entry && entry.info)||'';
   populateStaffSelect(staffId);
   populateDaySelect(dateStr);
-  renderShiftPicker(entry?.shift);
+  renderShiftPicker((entry && entry.shift));
   openModal('entryModal');
 }
 
@@ -1860,9 +1860,9 @@ async function saveEntry(){
   if(_selectedShift && hasConflict(staffId, dateStr)){
     const conflictStandort = getConflictStandort(staffId, dateStr);
     const conflictEntry = state.allEntries[`${staffId}_${dateStr}`];
-    const conflictShift = conflictEntry?.shift === 'FREI' ? 'als Frei eingetragen' : `mit ${SHIFT_MAP[conflictEntry?.shift]?.label||conflictEntry?.shift} eingeplant`;
+    const conflictShift = (conflictEntry && conflictEntry.shift) === 'FREI' ? 'als Frei eingetragen' : `mit ${SHIFT_MAP[(conflictEntry && conflictEntry.shift)] && ].label||(conflictEntry && conflictEntry.shift)} eingeplant`;
     const confirmed = window.confirm(
-      `⚠️ ${state.staff.find(s=>s.id===staffId)?.name} ist an diesem Tag in ${conflictStandort} ${conflictShift}.\n\nTrotzdem hier einplanen? Der Eintrag in ${conflictStandort} wird automatisch überschrieben.`
+      `⚠️ ${state.staff.find(s=>s.id===staffId).name} ist an diesem Tag in ${conflictStandort} ${conflictShift}.\n\nTrotzdem hier einplanen? Der Eintrag in ${conflictStandort} wird automatisch überschrieben.`
     );
     if(!confirmed) return;
     // Eintrag in anderen Standorten löschen
@@ -1952,7 +1952,7 @@ function showToast(msg){
 function getShiftHours(id){
   return (state.shiftHours && state.shiftHours[id] !== undefined)
     ? state.shiftHours[id]
-    : (SHIFTS.find(s=>s.id===id)?.hours ?? 0);
+    : (SHIFTS.find(s=>s.id===id).hours || 0);
 }
 function applyShiftHours(){
   SHIFTS.forEach(s=>{ s.hours = getShiftHours(s.id); });
@@ -1989,7 +1989,7 @@ function openEditStaff(staffId){
     // Immer alle Dienste anzeigen, RB ausgegraut wenn nicht erlaubt
     const verfuegbareDienste = _gruppenDienste.length
       ? _gruppenDienste
-      : ['F','S','RB','FS'].map(k=>({kuerzel:k, label:SHIFTS.find(s=>s.id===k||s.id===(k==='RB'?'RU':k))?.label||k}));
+      : ['F','S','RB','FS'].map(k=>({kuerzel:k, label:SHIFTS.find(s=>s.id===k||s.id===(k==='RB'?'RU':k)) && .label||k}));
 
     document.getElementById('esDiensteErlaubtBox').innerHTML =
       verfuegbareDienste.map(d=>{
@@ -2077,7 +2077,7 @@ function showStaffPopup(e, staffId){
   for(let d=1;d<=days;d++){
     const en=state.entries[`${staff.id}_${fmtDate(new Date(currentYear,currentMonth,d))}`];
     if(en){
-      ist+=(SHIFT_MAP[en.shift]?.hours||0);
+      ist+=(SHIFT_MAP[en.shift] && ].hours||0);
       if(en.shift==='F') cF++;
       else if(en.shift==='S') cS++;
       else if(en.shift==='RU') cRU++;
@@ -2192,15 +2192,15 @@ async function openKIModal(){
   const preview = document.getElementById('kiRulesPreview');
   if(gr && ur){
     const diensteInfo = _gruppenDienste.length
-      ? _gruppenDienste.map(d=>`<div>• ${d.kuerzel} – ${d.label}: min. ${d.min_tag??0} / max. ${d.max_tag??5} pro Tag${d.am_we!==false?' · WE ✓':'· WE ✕'}</div>`).join('')
-      : `<div>• Frühdienst: min. ${gr.min_besetzung_f??1} / max. ${gr.max_besetzung_f??5}</div>
-         <div>• Spätdienst: min. ${gr.min_besetzung_s??1} / max. ${gr.max_besetzung_s??5}</div>
-         <div>• Rufbereitschaft: min. ${gr.min_besetzung_rb??0} / max. ${gr.max_besetzung_rb??2}</div>`;
+      ? _gruppenDienste.map(d=>`<div>• ${d.kuerzel} – ${d.label}: min. ${d.min_tag || 0} / max. ${d.max_tag || 5} pro Tag${d.am_we!==false?' · WE ✓':'· WE ✕'}</div>`).join('')
+      : `<div>• Frühdienst: min. ${gr.min_besetzung_f || 1} / max. ${gr.max_besetzung_f || 5}</div>
+         <div>• Spätdienst: min. ${gr.min_besetzung_s || 1} / max. ${gr.max_besetzung_s || 5}</div>
+         <div>• Rufbereitschaft: min. ${gr.min_besetzung_rb || 0} / max. ${gr.max_besetzung_rb || 2}</div>`;
     preview.innerHTML = diensteInfo +
-      `<div>• Max. aufeinanderfolgende Tage: ${gr.max_tage_folge??8}</div>
-       <div>• Max. Wochenenden/Monat: ${gr.max_we_monat??2} (stunden-proportional)</div>
-       <div>• RB-Rhythmus: min. ${gr.rb_rhythmus_tage??7} Tage Abstand</div>
-       <div>• Max. Stunden/Tag: ${ur.max_stunden_tag??10}h · Max. Stunden/Woche: ${ur.max_stunden_woche??56}h</div>`;
+      `<div>• Max. aufeinanderfolgende Tage: ${gr.max_tage_folge || 8}</div>
+       <div>• Max. Wochenenden/Monat: ${gr.max_we_monat || 2} (stunden-proportional)</div>
+       <div>• RB-Rhythmus: min. ${gr.rb_rhythmus_tage || 7} Tage Abstand</div>
+       <div>• Max. Stunden/Tag: ${ur.max_stunden_tag || 10}h · Max. Stunden/Woche: ${ur.max_stunden_woche || 56}h</div>`;
   } else {
     preview.textContent = 'Keine Gruppenrahmen-Daten gefunden – bitte zuerst Gruppen-Vorgaben konfigurieren.';
   }
@@ -2256,20 +2256,20 @@ async function runKIPlanner(){
   // Unternehmensrahmen
   const _urRes = await sb.from('unternehmensrahmen').select('*').eq('unternehmen_id', currentUnternehmenId).single();
   const ur = _urRes.data;
-  const maxStdTag    = ur?.max_stunden_tag  || 10;
-  const maxStdWoche  = ur?.max_stunden_woche || 56;
-  const maxTageFolge = ur?.max_tage_folge   || 8;
-  const stdToleranz  = ur?.stunden_toleranz ?? 8;
-  const weUrlaub     = ur?.we_vor_urlaub_frei !== false;
+  const maxStdTag    = (ur&&ur.max_stunden_tag!=null?ur.max_stunden_tag:null)  || 10;
+  const maxStdWoche  = (ur&&ur.max_stunden_woche!=null?ur.max_stunden_woche:null) || 56;
+  const maxTageFolge = (ur&&ur.max_tage_folge!=null?ur.max_tage_folge:null)   || 8;
+  const stdToleranz  = (ur&&ur.stunden_toleranz!=null?ur.stunden_toleranz:null) || 8;
+  const weUrlaub     = (ur?ur.we_vor_urlaub_frei:undefined) !== false;
 
   // Gruppenrahmen
   const _grRes = await sb.from('gruppenrahmen').select('*').eq('gruppe_id', currentGruppeId).single();
   const gr = _grRes.data;
-  const grMaxTage   = gr?.max_tage_folge    || 8;
-  const grMaxWe     = gr?.max_we_monat      || 2;
-  const rbRhythmus  = gr?.rb_rhythmus_tage  || 7;
-  const feiertagWieSo = gr?.feiertag_wie_sonntag !== false;
-  const weKomplett    = gr?.we_komplett !== false;
+  const grMaxTage   = (gr&&gr.max_tage_folge!=null?gr.max_tage_folge:null)    || 8;
+  const grMaxWe     = (gr&&gr.max_we_monat!=null?gr.max_we_monat:null)      || 2;
+  const rbRhythmus  = (gr&&gr.rb_rhythmus_tage!=null?gr.rb_rhythmus_tage:null)  || 7;
+  const feiertagWieSo = (gr?gr.feiertag_wie_sonntag:undefined) !== false;
+  const weKomplett    = (gr?gr.we_komplett:undefined) !== false;
 
   // Gruppendienste frisch laden (nicht auf globalen State verlassen)
   const _gdRes = await sb.from('gruppe_dienste').select('*').eq('gruppe_id', currentGruppeId).order('position');
@@ -2277,7 +2277,7 @@ async function runKIPlanner(){
 
   // Gruppendienste (planbare) – nach Priorität sortiert
   const gDienste = (_gruppenDienste.length
-    ? [..._gruppenDienste].sort((a,b)=>(a.position??10)-(b.position??10))
+    ? [..._gruppenDienste].sort((a,b)=>(a.position|| 10)-(b.position|| 10))
     : [{kuerzel:'F',stunden:7.75,min_tag:1,max_tag:5,am_we:true,am_feiertag:true,position:10},
        {kuerzel:'S',stunden:7.75,min_tag:1,max_tag:5,am_we:true,am_feiertag:true,position:20},
        {kuerzel:'RB',stunden:0,min_tag:0,max_tag:2,am_we:true,am_feiertag:true,position:30},
@@ -2286,12 +2286,12 @@ async function runKIPlanner(){
   const getDienstConfig = k => gDienste.find(d=>d.kuerzel===k) || {};
   const getStunden = k => {
     const gd = gDienste.find(d=>d.kuerzel===k);
-    if(gd?.stunden) return parseFloat(gd.stunden)||0;
-    return SHIFT_MAP[k]?.hours || SHIFT_MAP[k==='RB'?'RU':k]?.hours || 0;
+    if((gd&&gd.stunden)) return parseFloat(gd.stunden)||0;
+    return (SHIFT_MAP[k]&&SHIFT_MAP[k].hours) || (SHIFT_MAP[k==='RB'?'RU':k]&&SHIFT_MAP[k==='RB'?'RU':k].hours) || 0;
   };
 
   // Wünsche aus state.wishes (schon geladen)
-  const getWish = (staffId, dateStr) => state.wishes?.[`w_${staffId}_${dateStr}`] || null;
+  const getWish = (staffId, dateStr) => (state.wishes&&state.wishes[`w_${staffId}_${dateStr}`]) || null;
 
   // Hilfsfunktion: Datum-String
   const ds = (d) => fmtDate(new Date(currentYear, currentMonth, d));
@@ -2339,7 +2339,7 @@ async function runKIPlanner(){
   staff.forEach(s => {
     for(let d=1; d<=days; d++){
       const w = getWish(s.id, ds(d));
-      if(w?.prioritaet === 'soll_frei') SOLL_FREI[s.id].add(ds(d));
+      if((w&&w.prioritaet) === 'soll_frei') SOLL_FREI[s.id].add(ds(d));
     }
   });
 
@@ -2348,7 +2348,7 @@ async function runKIPlanner(){
     staff.forEach(s => {
       for(let d=1; d<=days; d++){
         const w = getWish(s.id, ds(d));
-        if(w?.prioritaet === 'soll_frei'){
+        if((w&&w.prioritaet) === 'soll_frei'){
           // Prüfe ob das ein Urlaubsblock ist – dann WE davor/danach auch frei
           // Wochenende vor Urlaub
           if(d>1 && isWE(d-1)) SOLL_FREI[s.id].add(ds(d-1));
@@ -2400,7 +2400,7 @@ async function runKIPlanner(){
   const kannArbeiten = (s, d, schicht) => {
     if(plan[s.id][ds(d)]) return false;           // schon verplant
     if(isBlocked(s,d)) return false;               // gesperrt
-    const erlaubt = (s.dienste_erlaubt?.length>0) ? s.dienste_erlaubt : PLANBAR;
+    const erlaubt = (s.(dienste_erlaubt && dienste_erlaubt.length)>0) ? s.dienste_erlaubt : PLANBAR;
     if(!erlaubt.includes(schicht)) return false;
     if(schicht==='RB' && s.rb_erlaubt===false) return false;
     if(folgeTage[s.id] >= Math.min(maxTageFolge,grMaxTage)) return false;
@@ -2421,12 +2421,12 @@ async function runKIPlanner(){
         folgeTage[s.id]=0;
       }
       // Grüner Wunsch-Dienst aktiv setzen
-      else if(w?.prioritaet==='wunsch_dienst' && w?.dienst && w.dienst!=='frei'){
+      else if((w && w.prioritaet)==='wunsch_dienst' && (w && w.dienst) && w.dienst!=='frei'){
         if(kannArbeiten(s,d,w.dienst)){
           setEntry(s.id, d, w.dienst);
         }
       }
-      else if(w?.prioritaet==='wunsch_dienst' && w?.dienst==='frei'){
+      else if((w && w.prioritaet)==='wunsch_dienst' && (w && w.dienst)==='frei'){
         plan[s.id][ds(d)]='FREI';
         folgeTage[s.id]=0;
       }
@@ -2439,9 +2439,9 @@ async function runKIPlanner(){
     const rbCfg = rbDienste[0];
     for(let d=1; d<=days; d++){
       const isFrei = isFreiTag(d);
-      const maxRB = isFrei ? (rbCfg.max_we??2) : (rbCfg.max_tag??2);
-      const minRB = isFrei ? (rbCfg.min_we??0) : (rbCfg.min_tag??0);
-      if((isFrei && (rbCfg.max_we??2)===0)) continue;
+      const maxRB = isFrei ? (rbCfg.max_we || 2) : (rbCfg.max_tag || 2);
+      const minRB = isFrei ? (rbCfg.min_we || 0) : (rbCfg.min_tag || 0);
+      if((isFrei && (rbCfg.max_we || 2)===0)) continue;
 
       const rbHeute = Object.values(plan).filter(p=>p[ds(d)]==='RB').length;
       let needed = minRB - rbHeute;
@@ -2483,16 +2483,16 @@ async function runKIPlanner(){
   }
 
   // WE-Dienste = alle Dienste mit am_we nicht 0
-  const weDienste = gDienste.filter(d=>d.kuerzel!=='RB' && (d.max_we??5)>0);
+  const weDienste = gDienste.filter(d=>d.kuerzel!=='RB' && (d.max_we || 5)>0);
 
   // Pro WE: MA die beide Tage können priorisieren
   for(const {sa,so} of wePaare){
     // Zähle schon belegte Slots
     const countWEDienst = (d,schicht) => Object.values(plan).filter(p=>p[ds(d)]===schicht).length;
 
-    for(const cfg of weDienste.sort((a,b)=>(a.position??10)-(b.position??10))){
-      const minWE = cfg.min_we??0;
-      const maxWE = cfg.max_we??5;
+    for(const cfg of weDienste.sort((a,b)=>(a.position || 10)-(b.position || 10))){
+      const minWE = cfg.min_we || 0;
+      const maxWE = cfg.max_we || 5;
       if(maxWE===0) continue;
 
       // Kandidaten die BEIDE Tage können (komplettes WE)
@@ -2540,7 +2540,7 @@ async function runKIPlanner(){
   }
 
   // ─── PHASE 4: Werktage auffüllen nach Stunden ───────────────────────────
-  const werktagsDienste = gDienste.filter(d=>d.kuerzel!=='RB').sort((a,b)=>(a.position??10)-(b.position??10));
+  const werktagsDienste = gDienste.filter(d=>d.kuerzel!=='RB').sort((a,b)=>(a.position || 10)-(b.position || 10));
 
   for(let d=1; d<=days; d++){
     if(isFreiTag(d)) continue; // WEs schon verplant
@@ -2550,7 +2550,7 @@ async function runKIPlanner(){
 
     // Mindestbesetzung sichern
     for(const cfg of werktagsDienste){
-      const minB = cfg.min_tag??0;
+      const minB = cfg.min_tag || 0;
       if((tCount[cfg.kuerzel]||0)>=minB) continue;
 
       const kands = [...staff]
@@ -2574,13 +2574,13 @@ async function runKIPlanner(){
       // Bester Dienst für diesen MA
       let bestSchicht=null, bestScore=-Infinity;
       for(const cfg of werktagsDienste){
-        if((tCount[cfg.kuerzel]||0)>=(cfg.max_tag??99)) continue;
+        if((tCount[cfg.kuerzel]||0)>=(cfg.max_tag || 99)) continue;
         if(!kannArbeiten(s,d,cfg.kuerzel)) continue;
-        const erlaubt=(s.dienste_erlaubt?.length>0)?s.dienste_erlaubt:PLANBAR;
+        const erlaubt=(s.dienste_erlaubt && s.dienste_erlaubt.length>0)?s.dienste_erlaubt:PLANBAR;
         if(!erlaubt.includes(cfg.kuerzel)) continue;
         // Score: wer mehr Stunden braucht bekommt Vorrang
         const rueckstand=(monatssoll[s.id]||1)-istStunden[s.id];
-        const sc = rueckstand + (cfg.position??10)*-1 + Math.random()*3;
+        const sc = rueckstand + (cfg.position || 10)*-1 + Math.random()*3;
         if(sc>bestScore){ bestScore=sc; bestSchicht=cfg.kuerzel; }
       }
       if(bestSchicht){
@@ -2628,8 +2628,8 @@ function showKIPreview(){
     Object.entries(counts).map(([sh,n])=>{
       const s = SHIFT_MAP[sh] || SHIFT_MAP[sh==='RB'?'RU':sh];
       const gd = _gruppenDienste.find(d=>d.kuerzel===sh);
-      const icon  = gd ? gd.kuerzel : (s?.icon  || sh);
-      const label = gd ? gd.label   : (s?.label || sh);
+      const icon  = gd ? gd.kuerzel : ((s && s.icon)  || sh);
+      const label = gd ? gd.label   : ((s && s.label) || sh);
       return `<span class="ki-badge ki-badge-green">${icon} ${label}: ${n}</span>`;
     }).join('') +
     (_kiVorschauWarnungen.length ? `<span class="ki-badge" style="background:rgba(255,159,10,.15);color:#b35a00;border:1px solid rgba(255,159,10,.3)">⚠️ ${_kiVorschauWarnungen.length} Probleme</span>` : '') +
@@ -2664,8 +2664,8 @@ function showKIPreview(){
       // Erst in SHIFT_MAP suchen, dann in _gruppenDienste
       const shift = SHIFT_MAP[p.shift] || SHIFT_MAP[p.shift==='RB'?'RU':p.shift];
       const gruppenD = _gruppenDienste.find(gd=>gd.kuerzel===p.shift);
-      const shiftIcon  = gruppenD ? gruppenD.kuerzel : (shift?.icon  || p.shift);
-      const shiftLabel = gruppenD ? gruppenD.label   : (shift?.label || p.shift);
+      const shiftIcon  = gruppenD ? gruppenD.kuerzel : ((shift && shift.icon)  || p.shift);
+      const shiftLabel = gruppenD ? gruppenD.label   : ((shift && shift.label) || p.shift);
       if(!shift && !gruppenD) return; // Unbekannter Dienst überspringen
       const dt = new Date(p.dateStr+'T12:00:00');
       const dayLabel = DAY_SHORT[dt.getDay()]+' '+dt.getDate();
@@ -2772,12 +2772,12 @@ function openWish(staffId, dateStr){
   // Bestehenden Wunsch laden
   const wkey=`w_${staffId}_${dateStr}`;
   const existing=state.wishes&&state.wishes[wkey];
-  document.getElementById('wishNotiz').value=existing?.notiz||'';
+  document.getElementById('wishNotiz').value=(existing && existing.notiz)||'';
   ['soll_frei','wichtig','wunsch_dienst'].forEach(p=>{
     const btn=document.getElementById('wbtn_'+p);
     if(btn){ btn.style.borderColor='var(--border)'; btn.style.background='var(--surface)'; }
   });
-  if(existing?.prioritaet){
+  if((existing && existing.prioritaet)){
     selectWishPrio(existing.prioritaet);
     if(existing.prioritaet==='wunsch_dienst' && existing.dienst){
       document.getElementById('wishDienstWahl').value = existing.dienst;
@@ -2882,7 +2882,7 @@ function updateGruppeCheckboxes(){
     return `
       <label style="display:flex;align-items:center;gap:5px;font-size:12px;color:var(--text);cursor:pointer;padding:5px 10px;border:1.5px solid var(--border);border-radius:8px;background:var(--surface)">
         <input type="checkbox" class="inv-gruppe-cb" value="${g.id}" style="cursor:pointer">
-        ${s?.name||''} – ${g.name}
+        ${(s && s.name)||''} – ${g.name}
       </label>
     `;
   }).join('');
@@ -2919,7 +2919,7 @@ async function inviteUser(){
   if(staffOnly){
     // Staff-only direkt per Supabase anlegen (kein Auth-Account nötig)
     const { data: maxId } = await sb.from('staff').select('id').order('id',{ascending:false}).limit(1);
-    const nextId = (maxId?.[0]?.id || 0) + 1;
+    const nextId = (maxId && maxId[0] ? maxId[0].id : 0) + 1;
     const colors = ['#0071e3','#32d74b','#ff9f0a','#bf5af2','#ff375f','#5ac8fa','#ff6961','#6e9887'];
     const color = colors[Math.floor(Math.random()*colors.length)];
     const fullName = `${vorname} ${name}`.trim();
@@ -3069,7 +3069,7 @@ async function loadUserList(){
   const authUsers = filteredRoles.map(u=>{
     const profile = profiles.find(p=>p.user_id===u.user_id);
     const displayName = profile ? `${profile.vorname||''} ${profile.name||''}`.trim()||'–' : u.user_id.substring(0,12)+'…';
-    const subLabel = profile?.position ? `${ROLE_LABELS[u.role]||u.role} · ${profile.position}` : ROLE_LABELS[u.role]||u.role;
+    const subLabel = (profile && profile.position) ? `${ROLE_LABELS[u.role]||u.role} · ${profile.position}` : ROLE_LABELS[u.role]||u.role;
     const isMe = u.user_id === currentUserId;
     return `
       <div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:var(--surface2);border-radius:8px">
@@ -3106,7 +3106,7 @@ async function loadUserList(){
   const staffOnlyHtml = canEdit ? staffOnlyList.map(s=>{
     const standort = allStandorte.find(st=>st.id===s.standort_id);
     const gruppe   = allGruppen.find(g=>g.id===s.gruppe_id);
-    const location = [standort?.name, gruppe?.name].filter(Boolean).join(' · ');
+    const location = [(standort && standort.name), (gruppe && gruppe.name)].filter(Boolean).join(' · ');
     return `
       <div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:var(--surface2);border-radius:8px;border-left:3px solid var(--orange)">
         <div style="width:32px;height:32px;border-radius:50%;background:rgba(255,159,10,.15);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:#cc7a00;flex-shrink:0">${(s.name[0]||'?').toUpperCase()}</div>
@@ -3210,21 +3210,21 @@ async function openEditUser(userId){
   _editStaffId = null;
   const { data: profile } = await sb.from('user_profiles').select('*').eq('user_id', userId).single();
   document.getElementById('editUserSub').textContent = profile ? `${profile.vorname||''} ${profile.name||''}`.trim() : userId.substring(0,12)+'…';
-  document.getElementById('euName').value        = profile?.name || '';
-  document.getElementById('euVorname').value     = profile?.vorname || '';
-  document.getElementById('euHandy').value       = profile?.handy || '';
-  document.getElementById('euKostenstelle').value= profile?.kostenstelle || '';
-  document.getElementById('euSoll').value        = profile?.soll || 38.5;
-  document.getElementById('euAuto1').checked     = profile?.auto1 || false;
-  document.getElementById('euPoolAuto').checked  = profile?.pool_auto || false;
+  document.getElementById('euName').value        = (profile && profile.name) || '';
+  document.getElementById('euVorname').value     = (profile && profile.vorname) || '';
+  document.getElementById('euHandy').value       = (profile && profile.handy) || '';
+  document.getElementById('euKostenstelle').value= (profile && profile.kostenstelle) || '';
+  document.getElementById('euSoll').value        = (profile && profile.soll) || 38.5;
+  document.getElementById('euAuto1').checked     = (profile && profile.auto1) || false;
+  document.getElementById('euPoolAuto').checked  = (profile && profile.pool_auto) || false;
   // Position
   const sel = document.getElementById('euPosition');
-  const pos = profile?.position || '';
+  const pos = (profile && profile.position) || '';
   if(pos && !sel.querySelector(`option[value="${pos}"]`)){
     const opt = document.createElement('option'); opt.value=pos; opt.textContent=pos; sel.appendChild(opt);
   }
   sel.value = pos;
-  renderEuCheckboxes(profile?.standort_ids||[], profile?.gruppe_ids||[]);
+  renderEuCheckboxes((profile && profile.standort_ids)||[], (profile && profile.gruppe_ids)||[]);
 
   // Individuelle Planungsregeln laden
   const { data: staffData } = await sb.from('staff').select('*')
@@ -3256,8 +3256,8 @@ async function openEditStaffOnly(staffId){
 }
 
 function loadEuRules(s){
-  const freitage = s?.feste_freitage  || [];
-  const qualis   = s?.qualifikationen || [];
+  const freitage = (s && s.feste_freitage)  || [];
+  const qualis   = (s && s.qualifikationen) || [];
 
   // Vertragliche Arbeitstage – angehakt = Arbeitstag (umgekehrt von feste_freitage)
   // feste_freitage speichert freie Tage → Arbeitstag = NOT in feste_freitage
@@ -3275,9 +3275,9 @@ function loadEuRules(s){
       <input type="checkbox" class="eu-quali-extra-cb" value="${q}" checked style="cursor:pointer"> ${q}
     </label>`).join('');
 
-  document.getElementById('euRbErlaubt').checked     = s?.rb_erlaubt !== false;
-  document.getElementById('euFzaVorUrlaub').checked  = s?.fza_vor_urlaub || false;
-  document.getElementById('euFzaNachUrlaub').checked = s?.fza_nach_urlaub || false;
+  document.getElementById('euRbErlaubt').checked     = (s && s.rb_erlaubt) !== false;
+  document.getElementById('euFzaVorUrlaub').checked  = (s && s.fza_vor_urlaub) || false;
+  document.getElementById('euFzaNachUrlaub').checked = (s && s.fza_nach_urlaub) || false;
 }
 
 function addEuQualifikation(){
@@ -3310,7 +3310,7 @@ function updateEuGruppeCheckboxes(selectedGruppeIdsStr){
     const s = allStandorte.find(s=>s.id===g.standort_id);
     return `<label style="display:flex;align-items:center;gap:5px;font-size:12px;color:var(--text);cursor:pointer;padding:5px 10px;border:1.5px solid ${selectedGruppeIds.includes(g.id)?'var(--accent)':'var(--border)'};border-radius:8px;background:var(--surface)">
       <input type="checkbox" class="eu-gruppe-cb" value="${g.id}" ${selectedGruppeIds.includes(g.id)?'checked':''}>
-      ${s?.name||''} – ${g.name}
+      ${(s && s.name)||''} – ${g.name}
     </label>`;
   }).join('');
 }
@@ -3392,7 +3392,7 @@ async function openUnternehmensrahmenModal(){
     document.getElementById('ur_max_std_tag').value       = data.max_stunden_tag || 10;
     document.getElementById('ur_max_std_woche').value     = data.max_stunden_woche || 56;
     document.getElementById('ur_max_tage_folge').value    = data.max_tage_folge || 8;
-    document.getElementById('ur_stunden_toleranz').value  = data.stunden_toleranz ?? 8;
+    document.getElementById('ur_stunden_toleranz').value  = data.stunden_toleranz || 8;
     document.getElementById('ur_we_urlaub').checked       = data.we_vor_urlaub_frei !== false;
     document.getElementById('ur_betriebsvereinbarung').value = data.betriebsvereinbarung || '';
     document.getElementById('ur_tarifvertrag').value      = data.tarifvertrag || '';
@@ -3406,7 +3406,7 @@ async function saveUnternehmensrahmen(){
     max_stunden_tag:      parseFloat(document.getElementById('ur_max_std_tag').value) || 10,
     max_stunden_woche:    parseFloat(document.getElementById('ur_max_std_woche').value) || 56,
     max_tage_folge:       parseInt(document.getElementById('ur_max_tage_folge').value) || 8,
-    stunden_toleranz:     parseFloat(document.getElementById('ur_stunden_toleranz').value) ?? 8,
+    stunden_toleranz:     parseFloat(document.getElementById('ur_stunden_toleranz').value) || 8,
     we_vor_urlaub_frei:   document.getElementById('ur_we_urlaub').checked,
     we_nach_urlaub_frei:  document.getElementById('ur_we_urlaub').checked,
     betriebsvereinbarung: document.getElementById('ur_betriebsvereinbarung').value.trim(),
@@ -3426,13 +3426,13 @@ async function openGruppenrahmenModal(){
   const gruppe = allGruppen.find(g=>g.id===currentGruppeId);
   const standort = allStandorte.find(s=>s.id===currentStandortId);
   document.getElementById('gruppenrahmenSub').textContent =
-    `${standort?.name||'–'} – ${gruppe?.name||'–'}`;
+    `${(standort && standort.name)||'–'} – ${(gruppe && gruppe.name)||'–'}`;
 
   const { data } = await sb.from('gruppenrahmen')
     .select('*').eq('gruppe_id', currentGruppeId).single();
   if(data){
-    document.getElementById('gr_max_tage_folge').value  = data.max_tage_folge ?? 8;
-    document.getElementById('gr_rb_rhythmus').value     = data.rb_rhythmus_tage ?? 7;
+    document.getElementById('gr_max_tage_folge').value  = data.max_tage_folge || 8;
+    document.getElementById('gr_rb_rhythmus').value     = data.rb_rhythmus_tage || 7;
     document.getElementById('gr_feiertag_sonntag').checked = data.feiertag_wie_sonntag !== false;
     document.getElementById('gr_we_komplett').checked      = data.we_komplett !== false;
   }
@@ -3455,7 +3455,7 @@ function renderGruppenDienste(){
     list.innerHTML = '<div style="color:var(--text3);font-size:12px">Keine Dienste definiert</div>';
     return;
   }
-  const sorted = [..._gruppenDienste].sort((a,b)=>(a.position??10)-(b.position??10));
+  const sorted = [..._gruppenDienste].sort((a,b)=>(a.position || 10)-(b.position || 10));
   const cols = '42px 52px 1fr 70px 70px 44px 32px 32px 32px 32px 28px 24px';
   list.innerHTML = `
     <div style="display:grid;grid-template-columns:${cols};gap:4px;padding:0 2px;margin-bottom:4px">
@@ -3474,7 +3474,7 @@ function renderGruppenDienste(){
     </div>` +
     sorted.map(d=>`
     <div style="display:grid;grid-template-columns:${cols};gap:4px;align-items:center;padding:6px 6px;background:var(--surface);border:1px solid var(--border);border-radius:8px">
-      <input type="number" value="${d.position??10}" min="1" max="99" title="Planungspriorität (1=zuerst geplant)"
+      <input type="number" value="${d.position || 10}" min="1" max="99" title="Planungspriorität (1=zuerst geplant)"
         onchange="updateGruppenDienst('${d.id}','position',this.value)"
         style="width:100%;padding:3px 2px;border:1.5px solid var(--accent);border-radius:5px;font-size:11px;background:var(--accent-soft);color:var(--accent);font-weight:700;text-align:center">
       <div style="font-size:11px;font-weight:700;color:#fff;padding:2px 4px;background:${d.farbe||'#0071e3'};border-radius:5px;text-align:center">${d.kuerzel}</div>
@@ -3486,13 +3486,13 @@ function renderGruppenDienste(){
         style="padding:4px 4px;border:1px solid var(--border);border-radius:5px;font-size:11px;background:var(--surface);color:var(--text);width:100%">
       <input type="number" value="${d.pause_min||0}" min="0" max="120" step="5" onchange="updateGruppenDienst('${d.id}','pause_min',this.value)"
         style="width:100%;padding:4px 2px;border:1px solid var(--border);border-radius:5px;font-size:11px;background:var(--surface);color:var(--text);text-align:center">
-      <input type="number" value="${d.min_tag??0}" min="0" max="20" onchange="updateGruppenDienst('${d.id}','min_tag',this.value)"
+      <input type="number" value="${d.min_tag || 0}" min="0" max="20" onchange="updateGruppenDienst('${d.id}','min_tag',this.value)"
         title="Min. Werktag" style="width:100%;padding:4px 2px;border:1px solid var(--border);border-radius:5px;font-size:11px;background:var(--surface);color:var(--text);text-align:center">
-      <input type="number" value="${d.max_tag??5}" min="0" max="30" onchange="updateGruppenDienst('${d.id}','max_tag',this.value)"
+      <input type="number" value="${d.max_tag || 5}" min="0" max="30" onchange="updateGruppenDienst('${d.id}','max_tag',this.value)"
         title="Max. Werktag" style="width:100%;padding:4px 2px;border:1px solid var(--border);border-radius:5px;font-size:11px;background:var(--surface);color:var(--text);text-align:center">
-      <input type="number" value="${d.min_we??0}" min="0" max="20" onchange="updateGruppenDienst('${d.id}','min_we',this.value)"
+      <input type="number" value="${d.min_we || 0}" min="0" max="20" onchange="updateGruppenDienst('${d.id}','min_we',this.value)"
         title="Min. Wochenende (0 = nicht nötig)" style="width:100%;padding:4px 2px;border:1.5px solid var(--accent);border-radius:5px;font-size:11px;background:var(--accent-soft);color:var(--accent);text-align:center">
-      <input type="number" value="${d.max_we??5}" min="0" max="30" onchange="updateGruppenDienst('${d.id}','max_we',this.value)"
+      <input type="number" value="${d.max_we || 5}" min="0" max="30" onchange="updateGruppenDienst('${d.id}','max_we',this.value)"
         title="Max. Wochenende" style="width:100%;padding:4px 2px;border:1.5px solid var(--accent);border-radius:5px;font-size:11px;background:var(--accent-soft);color:var(--accent);text-align:center">
       <input type="color" value="${d.farbe||'#0071e3'}" onchange="updateGruppenDienst('${d.id}','farbe',this.value)"
         style="width:26px;height:24px;padding:1px;border:1px solid var(--border);border-radius:5px;cursor:pointer">
@@ -3529,7 +3529,7 @@ async function addGruppenDienst(){
 async function deleteGruppenDienst(id){
   if(!confirm('Dienst löschen?')) return;
   const d = _gruppenDienste.find(d=>d.id===id);
-  const kuerzel = d?.kuerzel;
+  const kuerzel = (d && d.kuerzel);
   await sb.from('gruppe_dienste').delete().eq('id', id);
   _gruppenDienste = _gruppenDienste.filter(d=>d.id!==id);
 
@@ -3556,10 +3556,10 @@ async function saveGruppenrahmen(){
     await sb.from('gruppe_dienste').update({
       label: d.label, beginn: d.beginn, ende: d.ende,
       pause_min: d.pause_min||0, farbe: d.farbe,
-      min_tag: d.min_tag??0, max_tag: d.max_tag??5,
-      min_we: d.min_we??0,   max_we: d.max_we??5,
+      min_tag: d.min_tag || 0, max_tag: d.max_tag || 5,
+      min_we: d.min_we || 0,   max_we: d.max_we || 5,
       am_we: d.am_we!==false, am_feiertag: d.am_feiertag!==false,
-      position: d.position??10,
+      position: d.position || 10,
     }).eq('id', d.id);
   }
 
@@ -3610,7 +3610,7 @@ async function loadUnternehmenData(){
 function updateUnternehmenLabel(){
   const u = allUnternehmen.find(u=>u.id===currentUnternehmenId);
   const el = document.getElementById('unternehmenLabel');
-  if(el) el.textContent = u?.name || '–';
+  if(el) el.textContent = (u && u.name) || '–';
 }
 
 async function openUnternehmenModal(){
@@ -3711,7 +3711,7 @@ async function switchUnternehmen(id){
   await loadStandorteData();
   closeModal('unternehmenModal');
   loadFromSupabase();
-  showToast(`✅ Gewechselt zu ${allUnternehmen.find(u=>u.id===id)?.name}`);
+  showToast(`✅ Gewechselt zu ${allUnternehmen.find(u=>u.id===id).name}`);
 }
 
 
@@ -3756,7 +3756,7 @@ function updateStandortLabel(){
   const s = allStandorte.find(s=>s.id===currentStandortId);
   const g = allGruppen.find(g=>g.id===currentGruppeId);
   const el = document.getElementById('standortLabel');
-  if(el) el.textContent = `${s?.name||'–'} · ${g?.name||'–'}`;
+  if(el) el.textContent = `${(s && s.name)||'–'} · ${(g && g.name)||'–'}`;
 }
 
 async function openStandorteModal(){
@@ -3900,7 +3900,7 @@ async function deleteGruppe(id, name){
   await sb.from('gruppen').delete().eq('id', id);
   if(currentGruppeId===id){
     const fallback = allGruppen.find(g=>g.id!==id && g.standort_id===currentStandortId);
-    currentGruppeId = fallback?.id || null;
+    currentGruppeId = (fallback && fallback.id) || null;
   }
   showToast(`✅ ${name} gelöscht`);
   await loadStandorteData();
