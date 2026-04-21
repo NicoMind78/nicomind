@@ -2184,10 +2184,10 @@ async function openKIModal(){
   document.getElementById('kiMonthLabel').textContent = `${MONTH_NAMES[currentMonth]} ${currentYear}`;
 
   // Regeln aus Gruppenrahmen laden und anzeigen
-  const {data: gr} = await sb.from('gruppenrahmen')
-    .select('*').eq('gruppe_id', currentGruppeId).single();
-  const {data: ur} = await sb.from('unternehmensrahmen')
-    .select('*').eq('unternehmen_id', currentUnternehmenId).single();
+  const _grRes = await sb.from('gruppenrahmen').select('*').eq('gruppe_id', currentGruppeId).single();
+  const gr = _grRes.data;
+  const _urRes = await sb.from('unternehmensrahmen').select('*').eq('unternehmen_id', currentUnternehmenId).single();
+  const ur = _urRes.data;
 
   const preview = document.getElementById('kiRulesPreview');
   if(gr && ur){
@@ -2254,8 +2254,8 @@ async function runKIPlanner(){
 
   // ─── Daten laden ───────────────────────────────────────────────────────────
   // Unternehmensrahmen
-  const {data: ur} = await sb.from('unternehmensrahmen')
-    .select('*').eq('unternehmen_id', currentUnternehmenId).single();
+  const _urRes = await sb.from('unternehmensrahmen').select('*').eq('unternehmen_id', currentUnternehmenId).single();
+  const ur = _urRes.data;
   const maxStdTag    = ur?.max_stunden_tag  || 10;
   const maxStdWoche  = ur?.max_stunden_woche || 56;
   const maxTageFolge = ur?.max_tage_folge   || 8;
@@ -2263,8 +2263,8 @@ async function runKIPlanner(){
   const weUrlaub     = ur?.we_vor_urlaub_frei !== false;
 
   // Gruppenrahmen
-  const {data: gr} = await sb.from('gruppenrahmen')
-    .select('*').eq('gruppe_id', currentGruppeId).single();
+  const _grRes = await sb.from('gruppenrahmen').select('*').eq('gruppe_id', currentGruppeId).single();
+  const gr = _grRes.data;
   const grMaxTage   = gr?.max_tage_folge    || 8;
   const grMaxWe     = gr?.max_we_monat      || 2;
   const rbRhythmus  = gr?.rb_rhythmus_tage  || 7;
@@ -2272,9 +2272,8 @@ async function runKIPlanner(){
   const weKomplett    = gr?.we_komplett !== false;
 
   // Gruppendienste frisch laden (nicht auf globalen State verlassen)
-  const { data: gdData } = await sb.from('gruppe_dienste')
-    .select('*').eq('gruppe_id', currentGruppeId).order('position');
-  if(gdData && gdData.length) _gruppenDienste = gdData;
+  const _gdRes = await sb.from('gruppe_dienste').select('*').eq('gruppe_id', currentGruppeId).order('position');
+  if(_gdRes.data && _gdRes.data.length) _gruppenDienste = _gdRes.data;
 
   // Gruppendienste (planbare) – nach Priorität sortiert
   const gDienste = (_gruppenDienste.length
@@ -2411,30 +2410,6 @@ async function runKIPlanner(){
     if(std > maxStdTag) return false;
     return true;
   };
-
-  // ─── PHASE 0: Vormonat prüfen ────────────────────────────────────────────
-  // Lade die letzten 8 Tage des Vormonats um folgeTage korrekt zu starten
-  const vmMonth = currentMonth===0 ? 11 : currentMonth-1;
-  const vmYear  = currentMonth===0 ? currentYear-1 : currentYear;
-  const vmDays  = daysInMonth(vmYear, vmMonth);
-  try {
-    const prevStart = fmtDate(new Date(vmYear, vmMonth, vmDays-7));
-    const prevEnd   = fmtDate(new Date(vmYear, vmMonth, vmDays));
-    const { data: prevEntries } = await sb.from('entries').select('key,shift')
-      .gte('key', `0_${prevStart}`).lte('key', `99999_${prevEnd}`);
-    if(prevEntries){
-      staff.forEach(s=>{
-        let streak=0;
-        for(let pd=vmDays-7; pd<=vmDays; pd++){
-          const key=`${s.id}_${fmtDate(new Date(vmYear,vmMonth,pd))}`;
-          const e=prevEntries.find(x=>x.key===key);
-          if(e && e.shift!=='FREI') streak++;
-          else streak=0;
-        }
-        folgeTage[s.id]=streak;
-      });
-    }
-  } catch(e){ /* Vormonat nicht verfügbar */ }
 
   // ─── PHASE 1: Soll-Frei + Wunsch-Dienste setzen ─────────────────────────
   staff.forEach(s=>{
