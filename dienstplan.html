@@ -1758,7 +1758,6 @@ function calcMonthSoll(soll, year, month){
 }
 function prevMonth(){ currentMonth--; if(currentMonth<0){currentMonth=11;currentYear--;} render(); }
 function nextMonth(){ currentMonth++; if(currentMonth>11){currentMonth=0;currentYear++;} render(); }
-function goCurrentMonth(){ currentYear=TODAY.getFullYear(); currentMonth=TODAY.getMonth(); render(); }
 
 // ─── MODALS ───
 function openModal(id){ document.getElementById(id).classList.add('open'); }
@@ -1899,14 +1898,6 @@ function saveStaff(){
 }
 
 let _deleteStaffId=null;
-function openDeleteStaff(staffId){
-  _deleteStaffId=staffId;
-  const staff=state.staff.find(s=>s.id==staffId);
-  document.getElementById('deleteModalSub').textContent=`„${staff.name}" (${staff.role}) entfernen?`;
-  document.getElementById('deleteMonthLabel').textContent=`${MONTH_NAMES[currentMonth]} ${currentYear}`;
-  document.getElementById('deleteScope').value='month';
-  openModal('deleteModal');
-}
 function confirmDelete(){
   const staff=state.staff.find(s=>s.id==_deleteStaffId);
   const scope=document.getElementById('deleteScope').value;
@@ -1967,15 +1958,6 @@ function applyShiftHours(){
   SHIFTS.forEach(s=>{ s.hours = getShiftHours(s.id); });
   SHIFTS.forEach(s=>{ SHIFT_MAP[s.id] = s; });
 }
-function openShiftSettings(){
-  document.getElementById('shiftSettingsBody').innerHTML = SHIFTS.map(s=>`
-    <div class="form-group">
-      <label class="form-label">${s.icon} ${s.label}</label>
-      <input type="number" class="form-input" id="sh_${s.id}" value="${s.hours}" min="0" max="24" step="0.25">
-    </div>
-  `).join('');
-  openModal('shiftSettingsModal');
-}
 function saveShiftSettings(){
   if(!state.shiftHours) state.shiftHours={};
   SHIFTS.forEach(s=>{
@@ -1988,13 +1970,6 @@ function saveShiftSettings(){
 }
 
 // ─── EDIT STAFF ───
-const ALL_RULES = ['weekend','moFr','dayShift','afterRuFrei','afterRuSpaet','noConsecRu',
-  'noFruehAfterSpaet','afterAuFrei','beforeUrlFrei','afterUrlFrei','weAroundUrl',
-  'maxRuMonth','maxFruehWeek','maxSpaetWeek','minFreiWeek','preferShift','preferNoWeekend'];
-
-const PLAN_TABS = ['vertrag','dienste','rufbereitschaft','wochenende','wechsel','frueh','spaet','frei','fza'];
-const SCALE_KEYS = ['ruWunsch','ruWichtig','wechselWichtig','fruehWunsch','fruehWichtig','spaetWunsch','spaetWichtig','freiBlock'];
-const TOGGLE_RULES = ['afterRuFrei','afterRuSpaet','noConsecRu','noFruehAfterSpaet','maxFruehWeek','maxSpaetWeek','minFreiWeek'];
 
 let _editStaffSollId = null;
 
@@ -2203,6 +2178,7 @@ function renderMonthSlider(){
 
 
 let _kiProposal = []; // [{staffId, dateStr, shift, status:'pending'|'accepted'|'rejected'}]
+let _kiVorschauWarnungen = [];
 
 async function openKIModal(){
   document.getElementById('kiMonthLabel').textContent = `${MONTH_NAMES[currentMonth]} ${currentYear}`;
@@ -2357,7 +2333,6 @@ async function runKIPlanner(){
   });
 
   let _kiWarnungen = [];
-  const proposal = [];
 
   // ─── Schritt 1: Soll-Frei Wünsche vormerken (HART) ───────────────────────
   const SOLL_FREI = {}; // staffId → Set<dateStr>
@@ -2393,317 +2368,278 @@ async function runKIPlanner(){
     return freitage.includes(dow(d));
   };
 
-  // ─── Score-Funktion für Dienstzuweisung ──────────────────────────────────
-  const score = (s, d, schicht, dayProposal) => {
-    const dateStr = ds(d);
-    const w = getWish(s.id, dateStr);
-
-    // HART: Soll-Frei → niemals planen
-    if(SOLL_FREI[s.id].has(dateStr)) return null;
-
-    // HART: Fester freier Tag (außer Wunsch/Feiertag-Ausnahme)
-    if(istFesterFreitag(s, d) && !w) return null;
-
-    // HART: Dienst nicht erlaubt für diesen MA
-    const erlaubt = (s.dienste_erlaubt && s.dienste_erlaubt.length > 0) ? s.dienste_erlaubt : PLANBAR;
-    const kuerzel = schicht;
-    if(!erlaubt.includes(kuerzel) && kuerzel!=='FREI') return null;
-
-    // HART: RB nicht erlaubt
-    if(kuerzel==='RB' && s.rb_erlaubt===false) return null;
-
-    // HART: Max aufeinanderfolgende Tage
-    if(kuerzel!=='FREI' && folgeTage[s.id] >= Math.min(maxTageFolge, grMaxTage)) return null;
-
-    // HART: Monatssoll + Toleranz = absolute Obergrenze
-    const std = getStunden(kuerzel);
-    const moSoll = monatssoll[s.id] || 1;
-    if(kuerzel!=='FREI' && istStunden[s.id] + std > moSoll + stdToleranz) return null;
-
-    // HART: Max Stunden/Tag (aus Unternehmensrahmen)
-    if(std > maxStdTag && kuerzel!=='FREI') return null;
-
-    // HART: Max Stunden/Woche
-    const wocheStart = d - dow(d) + (dow(d)===0 ? -6 : 1);
-    let wochenStd = 0;
-    for(let wd=wocheStart; wd<d; wd++){
-      if(wd<1) continue;
-      const p = proposal.find(x=>x.staffId==s.id && x.dateStr===ds(wd));
-      wochenStd += p ? getStunden(p.shift) : 0;
-    }
-    if(wochenStd + std > maxStdWoche) return null;
-
-    // HART: RB-Rhythmus (min. Abstand zwischen zwei RBs)
-    if(kuerzel==='RB'){
-      if(rbDaten[s.id]){
-        const lastRB = new Date(rbDaten[s.id]+'T12:00:00');
-        const today  = new Date(currentYear, currentMonth, d);
-        const diff   = Math.round((today-lastRB)/86400000);
-        if(diff < rbRhythmus) return null;
-      }
-    }
-
-    // HART: Max WE/Monat – nur komplette Wochenenden (Sa+So) zählen
-    const maMaxWe = (s.max_we_monat !== undefined && s.max_we_monat !== null) ? s.max_we_monat : grMaxWe;
-    if(isFreiTag(d) && kuerzel!=='FREI'){
-      // Samstag: blockieren wenn schon max komplette WEs voll
-      if(dow(d)===6 && weCount[s.id] >= maMaxWe) return null;
-      // Sonntag: blockieren wenn Sa nicht gearbeitet (kein halbes WE) UND schon max voll
-      if(dow(d)===0){
-        const saDs = ds(d-1);
-        const saGearbeitet = proposal.some(x=>x.staffId==s.id && x.dateStr===saDs && x.shift!=='FREI');
-        if(!saGearbeitet && weCount[s.id] >= maMaxWe) return null;
-        // Wenn Sa nicht gearbeitet und weKomplett aktiv → halbes WE nur im Notfall
-        if(!saGearbeitet && weKomplett) return null; // wird in Notfall-Pass freigegeben
-      }
-      // Feiertag wie Sonntag: normale WE-Grenze
-      if(isHol(d) && !isWE(d) && weCount[s.id] >= maMaxWe) return null;
-    }
-
-    // HART: Tag nach RB
-    if(d>1){
-      const vorher = proposal.find(x=>x.staffId==s.id && x.dateStr===ds(d-1));
-      if(vorher?.shift==='RB'){
-        const nachRb = s.nach_rb || 'frei';
-        if(nachRb==='frei' && kuerzel!=='FREI') return null;
-        if(nachRb==='spaet' && kuerzel==='F') return null;
-      }
-    }
-
-    // Gleichzeitig schon für diesen Tag eingeplant?
-    if(dayProposal.some(x=>x.staffId==s.id)) return null;
-
-    // ─── Score berechnen ──────────────────────────────────────────────────
-    let sc = 100;
-
-    // Wunsch-Prioritäten
-    if(w){
-      if(w.prioritaet==='wichtig' && kuerzel!=='FREI') sc -= 70; // Wichtiger Termin: vermeiden
-      if(w.prioritaet==='wunsch_dienst'){
-        if(w.dienst==='frei' && kuerzel==='FREI') sc += 80;
-        else if(w.dienst===kuerzel) sc += 80;
-        else if(w.dienst && w.dienst!=='frei' && kuerzel==='FREI') sc -= 30;
-      }
-    }
-
-    // Fairness: Stunden-proportional – wer am weitesten unter Soll ist, bekommt Vorrang
-    const soll = monatssoll[s.id] || 1;
-    const restTage = days - d + 1;
-    const istQuote = istStunden[s.id] / soll;
-    const sollQuote = (d-1) / days;
-    const rueckstand = sollQuote - istQuote; // positiv = im Rückstand
-    sc += rueckstand * 60; // von 40 auf 60 erhöht
-
-    // Monatsende-Boost: wenn MA noch deutlich unter Soll und wenig Zeit übrig
-    const stundenFehlen = soll - istStunden[s.id];
-    if(stundenFehlen > 0 && restTage <= 10 && kuerzel!=='FREI'){
-      sc += Math.min(stundenFehlen * 5, 80);
-    }
-    // Malus wenn bereits über Soll
-    if(istStunden[s.id] > soll && kuerzel!=='FREI'){
-      sc -= (istStunden[s.id] - soll) * 8;
-    }
-
-    // FS-Boost wenn explizit erlaubt
-    if(kuerzel==='FS' && s.dienste_erlaubt?.includes('FS')) sc += 20;
-
-    // WE-Fairness: proportional zum Soll
-    if(isFreiTag(d) && kuerzel!=='FREI'){
-      const maMaxWe2 = (s.max_we_monat !== undefined && s.max_we_monat !== null) ? s.max_we_monat : grMaxWe;
-      const sollWe = Math.round(maMaxWe2 * (s.soll / 38.5));
-      const weRueckstand = sollWe - weCount[s.id];
-      sc += weRueckstand * 15;
-
-      // WE komplett: starker Bonus/Malus für komplette vs. halbe Wochenenden
-      if(weKomplett){
-        if(dow(d)===6){ // Samstag – kann MA auch Sonntag?
-          // Prüfe ob dieser MA am Sonntag verfügbar wäre (keine Soll-Frei, kein fester Freitag)
-          const soTag = d+1;
-          if(soTag <= days){
-            const soFrei = SOLL_FREI[s.id].has(ds(soTag));
-            const soFesttag = istFesterFreitag(s, soTag);
-            if(!soFrei && !soFesttag){
-              sc += 50; // Kann beide Tage → starker Bonus
-            } else {
-              sc -= 40; // Kann nur Sa, So blockiert → Malus (anderer MA bevorzugen)
-            }
-          }
-        }
-        if(dow(d)===0){ // Sonntag – hat MA am Samstag gearbeitet?
-          const saDs = ds(d-1);
-          const saEntry = proposal.find(x=>x.staffId==s.id && x.dateStr===saDs);
-          if(saEntry && saEntry.shift!=='FREI'){
-            sc += 60; // Sa bereits gearbeitet → sehr starker Bonus für komplettes WE
-          } else {
-            sc -= 30; // Sa nicht gearbeitet → Malus (bevorzuge MA der Sa gearbeitet hat)
-          }
-        }
-      }
-    }
-
-    // Etwas Zufall für gleiche Scores
-    sc += Math.random() * 4;
-
-    return sc;
   };
 
-  // ─── Hauptschleife: Tag für Tag planen ──────────────────────────────────
-  for(let d=1; d<=days; d++){
-    const dateStr = ds(d);
-    const isFrei  = isFreiTag(d);
-    const dayProposal = [];
+  // ═══════════════════════════════════════════════════════════════════════════
+  // 5-PHASEN PLANUNG
+  // ═══════════════════════════════════════════════════════════════════════════
 
-    // Tageszähler dynamisch aus Gruppendiensten aufbauen
-    const tagesCount = {};
-    gDienste.forEach(gd => { tagesCount[gd.kuerzel] = 0; });
+  // Plan-Map: staffId → dateStr → schicht
+  const plan = {};
+  staff.forEach(s => { plan[s.id] = {}; });
 
-    // Dienste nach Prio (position) sortieren, dann min_tag als Tiebreaker
-    const planSchichten = PLANBAR
-      .filter(k=>k!=='FREI')
-      .sort((a,b)=>{
-        const ca = getDienstConfig(a);
-        const cb = getDienstConfig(b);
-        const posDiff = (ca.position??10) - (cb.position??10);
-        if(posDiff !== 0) return posDiff;
-        return (cb.min_tag??0) - (ca.min_tag??0);
-      });
+  const setEntry = (staffId, d, schicht) => {
+    plan[staffId][ds(d)] = schicht;
+    if(schicht !== 'FREI'){
+      const std = getStunden(schicht);
+      istStunden[staffId] += std;
+      if(schicht !== 'FREI') folgeTage[staffId]++;
+      if(schicht === 'RB'){ rbDaten[staffId]=ds(d); rbCount[staffId]++; }
+      // WE-Tracking
+      if(dow(d)===6) weSaGearbeitet[staffId]=true;
+      if(dow(d)===0 && weSaGearbeitet[staffId]){ weCount[staffId]++; weSaGearbeitet[staffId]=false; }
+    } else {
+      folgeTage[staffId] = 0;
+      if(dow(d)===1) weSaGearbeitet[staffId]=false;
+    }
+  };
 
-    // ── Schritt 2: Besetzung sichern ───────────────────────────────────────
-    // An Sonntagen: MA die Sa gearbeitet haben werden bevorzugt (weKomplett)
-    let shuffled = [...staff].sort(()=>Math.random()-.5);
-    if(weKomplett && dow(d)===0){
-      const saDs = ds(d-1);
-      shuffled.sort((a,b)=>{
-        const aHatSa = proposal.some(x=>x.staffId==a.id && x.dateStr===saDs && x.shift!=='FREI') ? -1 : 1;
-        const bHatSa = proposal.some(x=>x.staffId==b.id && x.dateStr===saDs && x.shift!=='FREI') ? -1 : 1;
-        return aHatSa - bHatSa;
+  const isBlocked = (s, d) =>
+    SOLL_FREI[s.id].has(ds(d)) ||
+    (istFesterFreitag(s,d) && !getWish(s.id,ds(d)));
+
+  const kannArbeiten = (s, d, schicht) => {
+    if(plan[s.id][ds(d)]) return false;           // schon verplant
+    if(isBlocked(s,d)) return false;               // gesperrt
+    const erlaubt = (s.dienste_erlaubt?.length>0) ? s.dienste_erlaubt : PLANBAR;
+    if(!erlaubt.includes(schicht)) return false;
+    if(schicht==='RB' && s.rb_erlaubt===false) return false;
+    if(folgeTage[s.id] >= Math.min(maxTageFolge,grMaxTage)) return false;
+    const std = getStunden(schicht);
+    const moSoll = monatssoll[s.id]||1;
+    if(istStunden[s.id]+std > moSoll+stdToleranz) return false;
+    if(std > maxStdTag) return false;
+    return true;
+  };
+
+  // ─── PHASE 0: Vormonat prüfen ────────────────────────────────────────────
+  // Lade die letzten 8 Tage des Vormonats um folgeTage korrekt zu starten
+  const vmMonth = currentMonth===0 ? 11 : currentMonth-1;
+  const vmYear  = currentMonth===0 ? currentYear-1 : currentYear;
+  const vmDays  = daysInMonth(vmYear, vmMonth);
+  try {
+    const prevStart = fmtDate(new Date(vmYear, vmMonth, vmDays-7));
+    const prevEnd   = fmtDate(new Date(vmYear, vmMonth, vmDays));
+    const { data: prevEntries } = await sb.from('entries').select('key,shift')
+      .gte('key', `0_${prevStart}`).lte('key', `99999_${prevEnd}`);
+    if(prevEntries){
+      staff.forEach(s=>{
+        let streak=0;
+        for(let pd=vmDays-7; pd<=vmDays; pd++){
+          const key=`${s.id}_${fmtDate(new Date(vmYear,vmMonth,pd))}`;
+          const e=prevEntries.find(x=>x.key===key);
+          if(e && e.shift!=='FREI') streak++;
+          else streak=0;
+        }
+        folgeTage[s.id]=streak;
       });
     }
+  } catch(e){ /* Vormonat nicht verfügbar */ }
 
-    for(const schicht of planSchichten){
-      const cfg = getDienstConfig(schicht);
-      // Dienst am WE nötig? max_we=0 bedeutet nicht am WE
-      if(isFrei && (cfg.max_we??5) === 0) continue;
-      if(isHol(d) && !cfg.am_feiertag) continue;
-      const minBes = isFrei ? (cfg.min_we??0)   : (cfg.min_tag??0);
-      const maxBes = isFrei ? (cfg.max_we??5)   : (cfg.max_tag??5);
-
-      while((tagesCount[schicht]||0) < minBes){
-        let best=null, bestSc=-Infinity;
-        for(const s of shuffled){
-          const sc2 = score(s, d, schicht, dayProposal);
-          if(sc2===null) continue;
-          if(sc2>bestSc){ bestSc=sc2; best=s; }
+  // ─── PHASE 1: Soll-Frei + Wunsch-Dienste setzen ─────────────────────────
+  staff.forEach(s=>{
+    for(let d=1; d<=days; d++){
+      const w = getWish(s.id, ds(d));
+      // Soll-Frei hart setzen
+      if(SOLL_FREI[s.id].has(ds(d))){
+        plan[s.id][ds(d)] = 'FREI';
+        folgeTage[s.id]=0;
+      }
+      // Grüner Wunsch-Dienst aktiv setzen
+      else if(w?.prioritaet==='wunsch_dienst' && w?.dienst && w.dienst!=='frei'){
+        if(kannArbeiten(s,d,w.dienst)){
+          setEntry(s.id, d, w.dienst);
         }
-        if(!best && weKomplett && dow(d)===0){
-          // Notfall: weKomplett blockiert alle → halbe WEs erlauben
-          for(const s of shuffled){
-            if(dayProposal.some(x=>x.staffId==s.id)) continue;
-            if(SOLL_FREI[s.id].has(dateStr)) continue;
-            const maMaxWe2 = (s.max_we_monat !== undefined) ? s.max_we_monat : grMaxWe;
-            if(weCount[s.id] >= maMaxWe2) continue;
-            const erlaubt = (s.dienste_erlaubt && s.dienste_erlaubt.length>0) ? s.dienste_erlaubt : PLANBAR;
-            if(!erlaubt.includes(schicht)) continue;
-            if(s.rb_erlaubt===false && schicht==='RB') continue;
-            best=s; break;
+      }
+      else if(w?.prioritaet==='wunsch_dienst' && w?.dienst==='frei'){
+        plan[s.id][ds(d)]='FREI';
+        folgeTage[s.id]=0;
+      }
+    }
+  });
+
+  // ─── PHASE 2: Rufbereitschaft verteilen ──────────────────────────────────
+  const rbDienste = gDienste.filter(d=>d.kuerzel==='RB');
+  if(rbDienste.length){
+    const rbCfg = rbDienste[0];
+    for(let d=1; d<=days; d++){
+      const isFrei = isFreiTag(d);
+      const maxRB = isFrei ? (rbCfg.max_we??2) : (rbCfg.max_tag??2);
+      const minRB = isFrei ? (rbCfg.min_we??0) : (rbCfg.min_tag??0);
+      if((isFrei && (rbCfg.max_we??2)===0)) continue;
+
+      const rbHeute = Object.values(plan).filter(p=>p[ds(d)]==='RB').length;
+      let needed = minRB - rbHeute;
+      if(needed<=0) continue;
+
+      // MA nach RB-Abstand sortieren (längster ohne RB zuerst)
+      const kandidaten = [...staff]
+        .filter(s=>kannArbeiten(s,d,'RB'))
+        .filter(s=>!rbDaten[s.id] || Math.round((new Date(currentYear,currentMonth,d)-new Date(rbDaten[s.id]+'T12:00:00'))/86400000) >= rbRhythmus)
+        .sort((a,b)=>{
+          const dA = rbDaten[a.id] ? Math.round((new Date(currentYear,currentMonth,d)-new Date(rbDaten[a.id]+'T12:00:00'))/86400000) : 999;
+          const dB = rbDaten[b.id] ? Math.round((new Date(currentYear,currentMonth,d)-new Date(rbDaten[b.id]+'T12:00:00'))/86400000) : 999;
+          return dB-dA;
+        });
+
+      for(const s of kandidaten){
+        if(needed<=0) break;
+        setEntry(s.id, d, 'RB');
+        // Tag nach RB
+        if(d<days){
+          const nachRb = s.nach_rb||'frei';
+          if(nachRb==='frei' && !plan[s.id][ds(d+1)]){
+            plan[s.id][ds(d+1)]='FREI'; folgeTage[s.id]=0;
           }
         }
-        if(!best){
-          // Warnung: Mindestbesetzung nicht erfüllbar
-          if(!_kiWarnungen) _kiWarnungen=[];
-          _kiWarnungen.push(`${dateStr}: ${schicht} Mindestbesetzung nicht erfüllt (min ${minBes})`);
-          break;
-        }
-        dayProposal.push({staffId:best.id, dateStr, shift:schicht});
-        tagesCount[schicht]++;
-        istStunden[best.id] += getStunden(schicht);
-        if(schicht==='RB'){ rbDaten[best.id]=dateStr; rbCount[best.id]++; }
-        folgeTage[best.id]++;
+        needed--;
       }
+      if(needed>0) _kiWarnungen.push(`${ds(d)}: RB Mindestbesetzung ${minRB} nicht erfüllt`);
     }
-
-    // ── Schritt 3: Individuelle Regeln – restliche Mitarbeiter einplanen ──
-    for(const s of shuffled){
-      if(dayProposal.some(x=>x.staffId==s.id)) continue;
-
-      // Soll-Frei → explizit als FREI markieren
-      if(SOLL_FREI[s.id].has(dateStr)){
-        dayProposal.push({staffId:s.id, dateStr, shift:'FREI'});
-        folgeTage[s.id] = 0;
-        continue;
-      }
-
-      // Fester freier Tag
-      if(istFesterFreitag(s, d)){
-        dayProposal.push({staffId:s.id, dateStr, shift:'FREI'});
-        folgeTage[s.id] = 0;
-        continue;
-      }
-
-      // Wunsch Dienst/Frei (Grün)
-      const w = getWish(s.id, dateStr);
-      if(w?.prioritaet==='wunsch_dienst' && w?.dienst==='frei'){
-        dayProposal.push({staffId:s.id, dateStr, shift:'FREI'});
-        folgeTage[s.id] = 0;
-        continue;
-      }
-
-      // Versuche einen passenden Dienst zu finden (Stunden-Fairness)
-      let bestSchicht=null, bestSc=-Infinity;
-      for(const schicht of planSchichten){
-        const cfg = getDienstConfig(schicht);
-        if(isFrei && !cfg.am_we) continue;
-        if(isHol(d) && !cfg.am_feiertag) continue;
-        const maxBes = isFrei ? (cfg.max_we??5) : (cfg.max_tag??5);
-        if((tagesCount[schicht]||0) >= maxBes) continue;
-        const sc2 = score(s, d, schicht, dayProposal);
-        if(sc2===null) continue;
-        if(sc2>bestSc){ bestSc=sc2; bestSchicht=schicht; }
-      }
-
-      if(bestSchicht){
-        dayProposal.push({staffId:s.id, dateStr, shift:bestSchicht});
-        tagesCount[bestSchicht]=(tagesCount[bestSchicht]||0)+1;
-        istStunden[s.id] += getStunden(bestSchicht);
-        if(bestSchicht==='RB'){ rbDaten[s.id]=dateStr; rbCount[s.id]++; }
-        folgeTage[s.id]++;
-        // WE-Tracking: Sa oder So gearbeitet = zählt als WE-Tag
-        // Wir zählen in 0.5 Schritten: Sa=0.5, So=0.5 → Sa+So=1 ganzes WE
-        // WE-Tracking: nur komplettes Sa+So zählt als 1 WE
-        if(dow(d)===6) { weSaGearbeitet[s.id] = true; }
-        if(dow(d)===0 && weSaGearbeitet[s.id]) { weCount[s.id]++; weSaGearbeitet[s.id]=false; }
-        if(dow(d)===1) { weSaGearbeitet[s.id]=false; } // Montag: Sa ohne So zurücksetzen
-      } else {
-        // Kein Dienst möglich → FREI
-        dayProposal.push({staffId:s.id, dateStr, shift:'FREI'});
-        folgeTage[s.id] = 0;
-      }
-    }
-
-    // Folgetage zurücksetzen für FREI-Tage
-    dayProposal.forEach(p=>{
-      if(p.shift==='FREI') folgeTage[p.staffId]=0;
-    });
-
-    proposal.push(...dayProposal);
   }
+
+  // ─── PHASE 3: Wochenenden als Sa+So Paare verteilen ─────────────────────
+  // Alle WE-Paare des Monats ermitteln
+  const wePaare = [];
+  for(let d=1; d<=days; d++){
+    if(dow(d)===6 && d+1<=days){ // Samstag mit Sonntag
+      wePaare.push({sa:d, so:d+1});
+    }
+  }
+
+  // WE-Dienste = alle Dienste mit am_we nicht 0
+  const weDienste = gDienste.filter(d=>d.kuerzel!=='RB' && (d.max_we??5)>0);
+
+  // Pro WE: MA die beide Tage können priorisieren
+  for(const {sa,so} of wePaare){
+    // Zähle schon belegte Slots
+    const countWEDienst = (d,schicht) => Object.values(plan).filter(p=>p[ds(d)]===schicht).length;
+
+    for(const cfg of weDienste.sort((a,b)=>(a.position??10)-(b.position??10))){
+      const minWE = cfg.min_we??0;
+      const maxWE = cfg.max_we??5;
+      if(maxWE===0) continue;
+
+      // Kandidaten die BEIDE Tage können (komplettes WE)
+      const beideKannList = staff.filter(s=>{
+        if(plan[s.id][ds(sa)] || plan[s.id][ds(so)]) return false;
+        const maMaxWe = (s.max_we_monat!=null) ? s.max_we_monat : grMaxWe;
+        if(weCount[s.id]>=maMaxWe) return false;
+        return kannArbeiten(s,sa,cfg.kuerzel) && kannArbeiten(s,so,cfg.kuerzel);
+      }).sort((a,b)=>{
+        // Fairness: wer weniger WEs hat zuerst, dann wer mehr Stunden fehlen
+        const weDiff = weCount[a.id]-weCount[b.id];
+        if(weDiff!==0) return weDiff;
+        const sollA = monatssoll[a.id]||1, sollB = monatssoll[b.id]||1;
+        return (istStunden[a.id]/sollA)-(istStunden[b.id]/sollB);
+      });
+
+      // Mindestbesetzung mit kompletten WEs erfüllen
+      let saSlotsNow = countWEDienst(sa,cfg.kuerzel);
+      let soSlotsNow = countWEDienst(so,cfg.kuerzel);
+      const needed = Math.max(minWE-saSlotsNow, minWE-soSlotsNow, 0);
+
+      for(const s of beideKannList){
+        if(countWEDienst(sa,cfg.kuerzel)>=maxWE && countWEDienst(so,cfg.kuerzel)>=maxWE) break;
+        if(countWEDienst(sa,cfg.kuerzel)<maxWE && countWEDienst(so,cfg.kuerzel)<maxWE){
+          setEntry(s.id, sa, cfg.kuerzel);
+          setEntry(s.id, so, cfg.kuerzel);
+        }
+      }
+
+      // Notfall: Mindestbesetzung noch nicht erfüllt → einzelne Tage erlauben
+      if(countWEDienst(sa,cfg.kuerzel)<minWE || countWEDienst(so,cfg.kuerzel)<minWE){
+        for(const dd of [sa,so]){
+          if(countWEDienst(dd,cfg.kuerzel)>=minWE) continue;
+          const notfallKand = staff.filter(s=>!plan[s.id][ds(dd)] && kannArbeiten(s,dd,cfg.kuerzel));
+          for(const s of notfallKand){
+            if(countWEDienst(dd,cfg.kuerzel)>=minWE) break;
+            setEntry(s.id, dd, cfg.kuerzel);
+            _kiWarnungen.push(`${ds(dd)}: ${cfg.kuerzel} nur halbes WE für ${s.name} (Notfall)`);
+          }
+          if(countWEDienst(dd,cfg.kuerzel)<minWE)
+            _kiWarnungen.push(`${ds(dd)}: ${cfg.kuerzel} Mindestbesetzung ${minWE} nicht erfüllt`);
+        }
+      }
+    }
+  }
+
+  // ─── PHASE 4: Werktage auffüllen nach Stunden ───────────────────────────
+  const werktagsDienste = gDienste.filter(d=>d.kuerzel!=='RB').sort((a,b)=>(a.position??10)-(b.position??10));
+
+  for(let d=1; d<=days; d++){
+    if(isFreiTag(d)) continue; // WEs schon verplant
+    const dateStr=ds(d);
+    const tCount={};
+    gDienste.forEach(gd=>{ tCount[gd.kuerzel]=Object.values(plan).filter(p=>p[dateStr]===gd.kuerzel).length; });
+
+    // Mindestbesetzung sichern
+    for(const cfg of werktagsDienste){
+      const minB = cfg.min_tag??0;
+      if((tCount[cfg.kuerzel]||0)>=minB) continue;
+
+      const kands = [...staff]
+        .filter(s=>!plan[s.id][dateStr] && kannArbeiten(s,d,cfg.kuerzel))
+        .sort((a,b)=>(istStunden[a.id]/(monatssoll[a.id]||1))-(istStunden[b.id]/(monatssoll[b.id]||1)));
+
+      for(const s of kands){
+        if((tCount[cfg.kuerzel]||0)>=(minB)) break;
+        setEntry(s.id, d, cfg.kuerzel);
+        tCount[cfg.kuerzel]=(tCount[cfg.kuerzel]||0)+1;
+      }
+      if((tCount[cfg.kuerzel]||0)<minB)
+        _kiWarnungen.push(`${dateStr}: ${cfg.kuerzel} Mindestbesetzung ${minB} nicht erfüllt`);
+    }
+
+    // Restliche MA nach Stunden-Rückstand einplanen
+    const restMA = staff.filter(s=>!plan[s.id][dateStr] && !isBlocked(s,d));
+    restMA.sort((a,b)=>(istStunden[a.id]/(monatssoll[a.id]||1))-(istStunden[b.id]/(monatssoll[b.id]||1)));
+
+    for(const s of restMA){
+      // Bester Dienst für diesen MA
+      let bestSchicht=null, bestScore=-Infinity;
+      for(const cfg of werktagsDienste){
+        if((tCount[cfg.kuerzel]||0)>=(cfg.max_tag??99)) continue;
+        if(!kannArbeiten(s,d,cfg.kuerzel)) continue;
+        const erlaubt=(s.dienste_erlaubt?.length>0)?s.dienste_erlaubt:PLANBAR;
+        if(!erlaubt.includes(cfg.kuerzel)) continue;
+        // Score: wer mehr Stunden braucht bekommt Vorrang
+        const rueckstand=(monatssoll[s.id]||1)-istStunden[s.id];
+        const sc = rueckstand + (cfg.position??10)*-1 + Math.random()*3;
+        if(sc>bestScore){ bestScore=sc; bestSchicht=cfg.kuerzel; }
+      }
+      if(bestSchicht){
+        setEntry(s.id, d, bestSchicht);
+        tCount[bestSchicht]=(tCount[bestSchicht]||0)+1;
+      } else {
+        plan[s.id][dateStr]='FREI';
+        folgeTage[s.id]=0;
+      }
+    }
+  }
+
+  // ─── Plan → Proposal konvertieren ────────────────────────────────────────
+  const proposal=[];
+  staff.forEach(s=>{
+    Object.entries(plan[s.id]).forEach(([dateStr,schicht])=>{
+      proposal.push({staffId:s.id, dateStr, shift:schicht});
+    });
+  });
+  proposal.sort((a,b)=>a.dateStr.localeCompare(b.dateStr)||String(a.staffId).localeCompare(String(b.staffId)));
 
   _kiProposal = proposal.map(p=>({...p, status:'pending'}));
   showToast(`✅ ${proposal.length} Einträge geplant`);
 
-  // Warnungen anzeigen wenn vorhanden
   if(_kiWarnungen && _kiWarnungen.length){
-    const unique = [...new Set(_kiWarnungen)];
-    showToast(`⚠️ ${unique.length} Besetzungsprobleme – siehe Vorschau`, 6000);
-    _kiVorschauWarnungen = unique;
+    const unique=[...new Set(_kiWarnungen)];
+    showToast(`⚠️ ${unique.length} Besetzungsprobleme – siehe Vorschau`);
+    _kiVorschauWarnungen=unique;
   } else {
-    _kiVorschauWarnungen = [];
+    _kiVorschauWarnungen=[];
   }
 
   showKIPreview();
 }
-
-let _kiVorschauWarnungen = [];
 
 function showKIPreview(){
   const total = _kiProposal.length;
@@ -3005,13 +2941,49 @@ async function inviteUser(){
 
   const staffOnly = !email && !password;
 
+  if(staffOnly){
+    // Staff-only direkt per Supabase anlegen (kein Auth-Account nötig)
+    const { data: maxId } = await sb.from('staff').select('id').order('id',{ascending:false}).limit(1);
+    const nextId = (maxId?.[0]?.id || 0) + 1;
+    const colors = ['#0071e3','#32d74b','#ff9f0a','#bf5af2','#ff375f','#5ac8fa','#ff6961','#6e9887'];
+    const color = colors[Math.floor(Math.random()*colors.length)];
+    const fullName = `${vorname} ${name}`.trim();
+
+    const { error } = await sb.from('staff').insert({
+      id: nextId,
+      name: fullName,
+      role: position || 'Mitarbeiter',
+      soll, color, notes: '', rules: {},
+      unternehmen_id: currentUnternehmenId,
+      standort_id: standortIds[0] || null,
+      gruppe_id: gruppeIds[0] || null,
+      standort_ids: standortIds,
+      gruppe_ids: gruppeIds,
+    });
+
+    if(error){ showToast('Fehler: ' + error.message); return; }
+    showToast(`✅ ${fullName} im Dienstplan angelegt`);
+
+    // Formular leeren
+    ['inviteEmail','invitePassword','inviteName','inviteVorname','invitePosition','inviteHandy','inviteKostenstelle','inviteSoll'].forEach(id=>{
+      const el=document.getElementById(id); if(el) el.value='';
+    });
+    document.getElementById('inviteAuto1').checked=false;
+    document.getElementById('invitePoolAuto').checked=false;
+
+    await loadUserList();
+    await loadFromSupabase();
+    return;
+  }
+
+  // MIT E-Mail/Passwort: über Edge Function
   const { data: { session } } = await sb.auth.getSession();
   const response = await fetch(`${SUPABASE_URL}/functions/v1/create-user`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session.access_token}` },
     body: JSON.stringify({
       email: email||null, password: password||null, role,
-      meta: { name, vorname, position, handy, kostenstelle, soll, auto1, poolAuto, standortIds, gruppeIds }
+      meta: { name, vorname, position, handy, kostenstelle, soll, auto1, poolAuto, standortIds, gruppeIds, unternehmenId: currentUnternehmenId }
     })
   });
 
@@ -3143,10 +3115,20 @@ async function loadUserList(){
 
   // Mitarbeiter OHNE Auth-Account (staff-only)
   // Finde Staff-Einträge die keinem Auth-User zugeordnet sind
-  const profileUserStaffNames = profiles.map(p=>`${p.vorname||''} ${p.name||''}`.trim());
-  const staffOnly = staffData.filter(s=> !profileUserStaffNames.includes(s.name));
+  // Mitarbeiter OHNE Auth-Account: staff-Einträge die keinem user_profile user_id zugeordnet sind
+  // Wir nutzen auth_user_id Feld falls vorhanden, sonst Name-Matching als Fallback
+  const profileLinkedStaffIds = new Set();
+  rolesData.forEach(u => {
+    const profile = profiles.find(p=>p.user_id===u.user_id);
+    if(profile){
+      const name = `${profile.vorname||''} ${profile.name||''}`.trim();
+      const match = staffData.find(s=>s.name===name);
+      if(match) profileLinkedStaffIds.add(match.id);
+    }
+  });
+  const staffOnlyList = staffData.filter(s=> !profileLinkedStaffIds.has(s.id));
 
-  const staffOnlyHtml = canEdit ? staffOnly.map(s=>{
+  const staffOnlyHtml = canEdit ? staffOnlyList.map(s=>{
     const standort = allStandorte.find(st=>st.id===s.standort_id);
     const gruppe   = allGruppen.find(g=>g.id===s.gruppe_id);
     const location = [standort?.name, gruppe?.name].filter(Boolean).join(' · ');
@@ -3757,15 +3739,6 @@ async function switchUnternehmen(id){
   showToast(`✅ Gewechselt zu ${allUnternehmen.find(u=>u.id===id)?.name}`);
 }
 
-async function renameUnternehmen(id, currentName){
-  const newName = prompt('Neuer Name:', currentName);
-  if(!newName || newName===currentName) return;
-  const {error} = await sb.from('unternehmen').update({name:newName}).eq('id',id);
-  if(error){ showToast('Fehler: '+error.message); return; }
-  await loadUnternehmenData();
-  renderUnternehmenList();
-  showToast('✅ Umbenannt');
-}
 
 async function openUnternehmenStandorte(unternehmenId, unternehmenName){
   currentUnternehmenId = unternehmenId;
