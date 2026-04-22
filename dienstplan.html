@@ -2400,7 +2400,7 @@ async function runKIPlanner(){
   const kannArbeiten = (s, d, schicht) => {
     if(plan[s.id][ds(d)]) return false;           // schon verplant
     if(isBlocked(s,d)) return false;               // gesperrt
-    const erlaubt = (s.(dienste_erlaubt && dienste_erlaubt.length)>0) ? s.dienste_erlaubt : PLANBAR;
+    const erlaubt = (s.dienste_erlaubt && s.dienste_erlaubt.length > 0) ? s.dienste_erlaubt : PLANBAR;
     if(!erlaubt.includes(schicht)) return false;
     if(schicht==='RB' && s.rb_erlaubt===false) return false;
     if(folgeTage[s.id] >= Math.min(maxTageFolge,grMaxTage)) return false;
