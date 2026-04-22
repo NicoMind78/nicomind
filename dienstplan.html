@@ -1402,7 +1402,7 @@ async function loadFromSupabase(){
     const staffIds = state.staff.map(s=>s.id);
     if(staffIds.length){
       state.entries = {};
-      allEntriesRes.(data && data.forEac)h(e=>{
+      allEntriesRes.data && allEntriesRes.data.forEach(e=>{
         const staffId = parseInt(e.key.split('_')[0]);
         if(staffIds.includes(staffId)){
           state.entries[e.key] = {shift:e.shift, info:e.info||'', gruppe_id:e.gruppe_id, standort_id:e.standort_id};
@@ -1451,7 +1451,7 @@ function hasConflict(staffId, dateStr){
 
 function getConflictStandort(staffId, dateStr){
   const key = `${staffId}_${dateStr}`;
-  const entry = state.allEntries?.[key];
+  const entry = (state.allEntries && state.allEntries[key]);
   if(!entry) return 'anderem Standort';
   const gruppe = allGruppen.find(g=>g.id===entry.gruppe_id);
   const standort = allStandorte.find(s=>s.id===entry.standort_id);
@@ -1872,7 +1872,7 @@ async function saveEntry(){
 
   if(!_selectedShift){ 
     delete state.entries[key]; 
-    delete state.allEntries?.[key];
+    delete (state.allEntries && state.allEntries[key]);
   } else { 
     const entryData = {shift:_selectedShift, info, gruppe_id: currentGruppeId, standort_id: currentStandortId};
     state.entries[key] = entryData; 
