@@ -2381,7 +2381,7 @@ async function runKIPlanner(){
       const std = getStunden(schicht);
       istStunden[staffId] += std;
       if(schicht !== 'FREI') folgeTage[staffId]++;
-      if(schicht === 'RB'){ rbDaten[staffId]=ds(d); rbCount[staffId]++; }
+      if((getDienstConfig(schicht).typ||'normal')==='bereitschaft'){ rbDaten[staffId]=ds(d); rbCount[staffId]++; }
       // WE-Tracking
       if(dow(d)===6) weSaGearbeitet[staffId]=true;
       if(dow(d)===0 && weSaGearbeitet[staffId]){ weCount[staffId]++; weSaGearbeitet[staffId]=false; }
@@ -2400,7 +2400,7 @@ async function runKIPlanner(){
     if(isBlocked(s,d)) return false;               // gesperrt
     const erlaubt = (s.dienste_erlaubt && s.dienste_erlaubt.length > 0) ? s.dienste_erlaubt : PLANBAR;
     if(!erlaubt.includes(schicht)) return false;
-    if(schicht==='RB' && s.rb_erlaubt===false) return false;
+    if((getDienstConfig(schicht).typ||'normal')==='bereitschaft' && s.rb_erlaubt===false) return false;
     if(folgeTage[s.id] >= Math.min(maxTageFolge,grMaxTage)) return false;
     const std = getStunden(schicht);
     const moSoll = monatssoll[s.id]||1;
@@ -2434,7 +2434,7 @@ async function runKIPlanner(){
   // ─── PHASE 2: Bereitschaftsdienste verteilen (Min/Max pro Tag) ──────────
   // Gilt für alle Dienste die als Bereitschaft konfiguriert sind (aktuell: kuerzel==='RB')
   // Min = Pflicht planen, Max = harte Obergrenze, zwischen Min und Max = Versuch
-  const bereitschaftsDienste = gDienste.filter(d => d.kuerzel === 'RB');
+  const bereitschaftsDienste = gDienste.filter(d => (d.typ||'normal') === 'bereitschaft');
 
   for(const rbCfg of bereitschaftsDienste){
     for(let d=1; d<=days; d++){
@@ -2476,6 +2476,10 @@ async function runKIPlanner(){
           return diff >= rbRhythmus;
         })
         .sort((a, b) => {
+          // 🟠 Wichtiger Termin: ans Ende sortieren
+          const aOrange = (getWish(a.id,ds(d)) && getWish(a.id,ds(d)).prioritaet==='wichtig') ? 1 : 0;
+          const bOrange = (getWish(b.id,ds(d)) && getWish(b.id,ds(d)).prioritaet==='wichtig') ? 1 : 0;
+          if(aOrange !== bOrange) return aOrange - bOrange;
           const dA = rbDaten[a.id]
             ? Math.round((new Date(currentYear,currentMonth,d) - new Date(rbDaten[a.id]+'T12:00:00')) / 86400000)
             : 999;
@@ -2523,7 +2527,7 @@ async function runKIPlanner(){
   }
 
   // WE-Dienste = alle Dienste mit am_we nicht 0
-  const weDienste = gDienste.filter(d=>d.kuerzel!=='RB' && (d.max_we || 5)>0);
+  const weDienste = gDienste.filter(d=>(d.typ||'normal')!=='bereitschaft' && (d.max_we || 5)>0);
 
   // Pro WE: MA die beide Tage können priorisieren
   for(const {sa,so} of wePaare){
@@ -2542,6 +2546,13 @@ async function runKIPlanner(){
         if(weCount[s.id]>=maMaxWe) return false;
         return kannArbeiten(s,sa,cfg.kuerzel) && kannArbeiten(s,so,cfg.kuerzel);
       }).sort((a,b)=>{
+        // 🟠 Wichtiger Termin: ans Ende sortieren
+        const aOrangeSa = (getWish(a.id,ds(sa)) && getWish(a.id,ds(sa)).prioritaet==='wichtig') ? 1 : 0;
+        const bOrangeSa = (getWish(b.id,ds(sa)) && getWish(b.id,ds(sa)).prioritaet==='wichtig') ? 1 : 0;
+        const aOrangeSo = (getWish(a.id,ds(so)) && getWish(a.id,ds(so)).prioritaet==='wichtig') ? 1 : 0;
+        const bOrangeSo = (getWish(b.id,ds(so)) && getWish(b.id,ds(so)).prioritaet==='wichtig') ? 1 : 0;
+        const orangeDiff = (aOrangeSa+aOrangeSo) - (bOrangeSa+bOrangeSo);
+        if(orangeDiff !== 0) return orangeDiff;
         // Fairness: wer weniger WEs hat zuerst, dann wer mehr Stunden fehlen
         const weDiff = weCount[a.id]-weCount[b.id];
         if(weDiff!==0) return weDiff;
@@ -2580,7 +2591,7 @@ async function runKIPlanner(){
   }
 
   // ─── PHASE 4: Werktage auffüllen nach Stunden ───────────────────────────
-  const werktagsDienste = gDienste.filter(d=>d.kuerzel!=='RB').sort((a,b)=>(a.position || 10)-(b.position || 10));
+  const werktagsDienste = gDienste.filter(d=>(d.typ||'normal')!=='bereitschaft').sort((a,b)=>(a.position || 10)-(b.position || 10));
 
   for(let d=1; d<=days; d++){
     if(isFreiTag(d)) continue; // WEs schon verplant
@@ -2618,6 +2629,10 @@ async function runKIPlanner(){
 
     for(const s of restMA){
       let bestSchicht=null, bestScore=-Infinity;
+      const w = getWish(s.id, dateStr);
+      const hatOrangeTermin = (w && w.prioritaet === 'wichtig');
+      const hatWunschDienst = (w && w.prioritaet === 'wunsch_dienst' && w.dienst && w.dienst !== 'frei');
+
       for(const cfg of werktagsDienste){
         // Max hart – WE und Werktag getrennt
         const maxH = isFreiTag(d)
@@ -2628,8 +2643,17 @@ async function runKIPlanner(){
         if(!kannArbeiten(s, d, cfg.kuerzel)) continue;
         const erlaubt = (s.dienste_erlaubt && s.dienste_erlaubt.length>0) ? s.dienste_erlaubt : PLANBAR;
         if(!erlaubt.includes(cfg.kuerzel)) continue;
+
+        // Score: Stunden-Rückstand als Basis
         const rueckstand = (monatssoll[s.id]||1) - istStunden[s.id];
-        const sc = rueckstand + (cfg.position || 10)*-1 + Math.random()*3;
+        let sc = rueckstand + (cfg.position || 10)*-1 + Math.random()*3;
+
+        // 🟠 Wichtiger Termin: starker Malus – nur im Notfall einplanen
+        if(hatOrangeTermin) sc -= 70;
+
+        // 🟢 Wunsch-Dienst Boost wenn dieser Dienst gewünscht wird
+        if(hatWunschDienst && w.dienst === cfg.kuerzel) sc += 80;
+
         if(sc > bestScore){ bestScore=sc; bestSchicht=cfg.kuerzel; }
       }
       if(bestSchicht){
@@ -2653,6 +2677,28 @@ async function runKIPlanner(){
 
   _kiProposal = proposal.map(p=>({...p, status:'pending'}));
   showToast(`✅ ${proposal.length} Einträge geplant`);
+
+  // ─── Wochenstunden-Check (Warnung, kein harter Block) ────────────────────
+  staff.forEach(s => {
+    // Alle Wochen des Monats durchgehen
+    const wochenStd = {};
+    Object.entries(plan[s.id]).forEach(([dateStr, schicht]) => {
+      if(schicht === 'FREI') return;
+      const dt = new Date(dateStr + 'T12:00:00');
+      const dow = dt.getDay();
+      // Montag dieser Woche als Wochenschlüssel
+      const moOffset = dow === 0 ? -6 : 1 - dow;
+      const mo = new Date(dt);
+      mo.setDate(mo.getDate() + moOffset);
+      const key = fmtDate(mo);
+      wochenStd[key] = (wochenStd[key] || 0) + getStunden(schicht);
+    });
+    Object.entries(wochenStd).forEach(([woche, std]) => {
+      if(std > maxStdWoche){
+        _kiWarnungen.push(`⚠️ ${s.name}: Woche ab ${woche} = ${std.toFixed(1)}h (Max. ${maxStdWoche}h/Woche überschritten)`);
+      }
+    });
+  });
 
   if(_kiWarnungen && _kiWarnungen.length){
     const unique=[...new Set(_kiWarnungen)];
@@ -3506,7 +3552,7 @@ function renderGruppenDienste(){
     return;
   }
   const sorted = [..._gruppenDienste].sort((a,b)=>(a.position || 10)-(b.position || 10));
-  const cols = '42px 52px 1fr 70px 70px 44px 32px 32px 32px 32px 28px 24px';
+  const cols = '42px 52px 1fr 70px 70px 44px 32px 32px 32px 32px 70px 28px 24px';
   list.innerHTML = `
     <div style="display:grid;grid-template-columns:${cols};gap:4px;padding:0 2px;margin-bottom:4px">
       <div style="font-size:9px;color:var(--accent);font-weight:700" title="Planungspriorität: niedrig = zuerst">Prio</div>
@@ -3519,6 +3565,7 @@ function renderGruppenDienste(){
       <div style="font-size:9px;color:var(--text3)" title="Max. Besetzung Werktag">Max</div>
       <div style="font-size:9px;color:var(--accent)" title="Min. Besetzung Wochenende">WE↓</div>
       <div style="font-size:9px;color:var(--accent)" title="Max. Besetzung Wochenende">WE↑</div>
+      <div style="font-size:9px;color:var(--text3)">Typ</div>
       <div style="font-size:9px;color:var(--text3)">Farbe</div>
       <div></div>
     </div>` +
@@ -3544,6 +3591,12 @@ function renderGruppenDienste(){
         title="Min. Wochenende (0 = nicht nötig)" style="width:100%;padding:4px 2px;border:1.5px solid var(--accent);border-radius:5px;font-size:11px;background:var(--accent-soft);color:var(--accent);text-align:center">
       <input type="number" value="${d.max_we || 5}" min="0" max="30" onchange="updateGruppenDienst('${d.id}','max_we',this.value)"
         title="Max. Wochenende" style="width:100%;padding:4px 2px;border:1.5px solid var(--accent);border-radius:5px;font-size:11px;background:var(--accent-soft);color:var(--accent);text-align:center">
+      <select onchange="updateGruppenDienst('${d.id}','typ',this.value)"
+        style="width:100%;padding:3px 2px;border:1px solid var(--border);border-radius:5px;font-size:10px;background:var(--surface);color:var(--text)">
+        <option value="normal" ${(d.typ||'normal')==='normal'?'selected':''}>Normal</option>
+        <option value="bereitschaft" ${(d.typ||'normal')==='bereitschaft'?'selected':''}>Bereitschaft</option>
+        <option value="sonder" ${(d.typ||'normal')==='sonder'?'selected':''}>Sonder</option>
+      </select>
       <input type="color" value="${d.farbe||'#0071e3'}" onchange="updateGruppenDienst('${d.id}','farbe',this.value)"
         style="width:26px;height:24px;padding:1px;border:1px solid var(--border);border-radius:5px;cursor:pointer">
       <button onclick="deleteGruppenDienst('${d.id}')"
@@ -3556,7 +3609,7 @@ function updateGruppenDienst(id, field, value){
   if(!d) return;
   if(['pause_min','min_tag','max_tag','min_we','max_we','position'].includes(field)) d[field] = parseInt(value)||0;
   else if(field==='am_we' || field==='am_feiertag') d[field] = value===true || value==='true';
-  else d[field] = value;
+  else d[field] = value; // label, farbe, beginn, ende, typ
 }
 
 async function addGruppenDienst(){
@@ -3609,7 +3662,7 @@ async function saveGruppenrahmen(){
       min_tag: d.min_tag || 0, max_tag: d.max_tag || 5,
       min_we: d.min_we || 0,   max_we: d.max_we || 5,
       am_we: d.am_we!==false, am_feiertag: d.am_feiertag!==false,
-      position: d.position || 10,
+      position: d.position || 10, typ: d.typ || 'normal',
     }).eq('id', d.id);
   }
 
