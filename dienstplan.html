@@ -3861,12 +3861,24 @@ function switchGruppe(standortId, gruppeId){
     showToast('⚠️ Als Planer kannst du nur Gruppen im eigenen Standort wechseln');
     return;
   }
+
+  // Unternehmen aus Standort ableiten – KRITISCH für Datenschutz
+  const standort = allStandorte.find(s => s.id === standortId);
+  if(!standort){
+    showToast('⚠️ Standort nicht gefunden');
+    return;
+  }
+  if(standort.unternehmen_id && standort.unternehmen_id !== currentUnternehmenId){
+    currentUnternehmenId = standort.unternehmen_id;
+  }
+
   currentStandortId = standortId;
   currentGruppeId   = gruppeId;
-  updateStandortLabel();
-  renderStandorteList();
   closeModal('standorteModal');
-  loadFromSupabase();
+  loadFromSupabase().then(() => {
+    updateStandortLabel();
+    renderStandorteList();
+  });
   showToast('✅ Standort & Gruppe gewechselt');
 }
 
