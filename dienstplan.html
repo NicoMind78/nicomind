@@ -3928,17 +3928,21 @@ async function addGruppeToStandort(standortId){
   const {data, error} = await sb.from('gruppen').insert({
     name: name.trim(), position: pos, standort_id: standortId, unternehmen_id: currentUnternehmenId
   }).select().single();
-  if(error){ showToast('Fehler: '+error.message); return; }
+  if(error){
+    alert('Fehler beim Anlegen der Gruppe:\n' + error.message + '\n\nCode: ' + error.code);
+    return;
+  }
   // Gruppenrahmen anlegen + Standard-Dienste
-  await sb.from('gruppenrahmen').insert({gruppe_id:data.id}).catch(()=>{});
+  const {error: grErr} = await sb.from('gruppenrahmen').insert({gruppe_id:data.id});
+  if(grErr) console.warn('Gruppenrahmen Fehler:', grErr.message);
   const standardDienste = [
-    {kuerzel:'F',  label:'Frühdienst',    beginn:'07:30',ende:'16:00',pause_min:30,farbe:'#cc7a00',ist_standard:true},
-    {kuerzel:'S',  label:'Spätdienst',    beginn:'13:00',ende:'21:30',pause_min:30,farbe:'#c44b00',ist_standard:true},
-    {kuerzel:'RB', label:'Rufbereitschaft',beginn:'00:00',ende:'00:00',pause_min:0, farbe:'#cc0000',ist_standard:true},
-    {kuerzel:'FS', label:'Fallsteuerung', beginn:'08:00',ende:'16:00',pause_min:30,farbe:'#555555',ist_standard:true},
+    {kuerzel:'F',  label:'Frühdienst',    beginn:'07:30',ende:'16:00',pause_min:30,farbe:'#cc7a00',min_tag:1,max_tag:3,min_we:1,max_we:2,position:10},
+    {kuerzel:'S',  label:'Spätdienst',    beginn:'13:00',ende:'21:30',pause_min:30,farbe:'#c44b00',min_tag:1,max_tag:2,min_we:0,max_we:1,position:20},
+    {kuerzel:'RB', label:'Rufbereitschaft',beginn:'00:00',ende:'00:00',pause_min:0, farbe:'#cc0000',min_tag:1,max_tag:1,min_we:0,max_we:1,position:30},
   ];
   for(const d of standardDienste){
-    await sb.from('gruppe_dienste').insert({gruppe_id:data.id, ...d}).catch(()=>{});
+    const {error: dErr} = await sb.from('gruppe_dienste').insert({gruppe_id:data.id, ...d});
+    if(dErr) console.warn('Dienst Fehler:', dErr.message);
   }
   showToast(`✅ ${name.trim()} angelegt`);
   await loadStandorteData();
