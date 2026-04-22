@@ -2431,44 +2431,85 @@ async function runKIPlanner(){
     }
   });
 
-  // ─── PHASE 2: Rufbereitschaft verteilen ──────────────────────────────────
-  const rbDienste = gDienste.filter(d=>d.kuerzel==='RB');
-  if(rbDienste.length){
-    const rbCfg = rbDienste[0];
+  // ─── PHASE 2: Bereitschaftsdienste verteilen (Min/Max pro Tag) ──────────
+  // Gilt für alle Dienste die als Bereitschaft konfiguriert sind (aktuell: kuerzel==='RB')
+  // Min = Pflicht planen, Max = harte Obergrenze, zwischen Min und Max = Versuch
+  const bereitschaftsDienste = gDienste.filter(d => d.kuerzel === 'RB');
+
+  for(const rbCfg of bereitschaftsDienste){
     for(let d=1; d<=days; d++){
       const isFrei = isFreiTag(d);
-      const maxRB = isFrei ? (rbCfg.max_we != null ? rbCfg.max_we : 1) : (rbCfg.max_tag != null ? rbCfg.max_tag : 1);
-      const minRB = isFrei ? (rbCfg.min_we != null ? rbCfg.min_we : 0) : (rbCfg.min_tag != null ? rbCfg.min_tag : 0);
-      if(maxRB === 0) continue;
 
-      const rbHeute = Object.values(plan).filter(p=>p[ds(d)]==='RB').length;
-      if(rbHeute >= maxRB) continue; // Max bereits erreicht
-      let needed = minRB - rbHeute;
-      if(needed<=0) continue;
+      // Min/Max für heute (WE oder Werktag)
+      const maxH = isFrei
+        ? (rbCfg.max_we != null ? rbCfg.max_we : 1)
+        : (rbCfg.max_tag != null ? rbCfg.max_tag : 1);
+      const minH = isFrei
+        ? (rbCfg.min_we != null ? rbCfg.min_we : 0)
+        : (rbCfg.min_tag != null ? rbCfg.min_tag : 0);
 
-      // MA nach RB-Abstand sortieren (längster ohne RB zuerst)
+      // Max = 0 → dieser Dienst wird heute nie geplant
+      if(maxH === 0) continue;
+
+      // Wieviel ist bereits geplant (inkl. Phase 1 Wünsche)?
+      const bereitsGeplant = Object.values(plan).filter(p => p[ds(d)] === rbCfg.kuerzel).length;
+
+      // Max bereits erreicht → gar nichts tun
+      if(bereitsGeplant >= maxH) continue;
+
+      // Wieviel noch nötig?
+      // Wenn bereitsGeplant < minH → bis minH auffüllen (Pflicht)
+      // Wenn bereitsGeplant >= minH aber < maxH → Versuch bis maxH
+      const zielAnzahl = bereitsGeplant < minH ? minH : maxH;
+      let nochZuPlanen = zielAnzahl - bereitsGeplant;
+
+      if(nochZuPlanen <= 0) continue;
+
+      // MA nach RB-Abstand sortieren (längster ohne RB zuerst = fairste Verteilung)
       const kandidaten = [...staff]
-        .filter(s=>kannArbeiten(s,d,'RB'))
-        .filter(s=>!rbDaten[s.id] || Math.round((new Date(currentYear,currentMonth,d)-new Date(rbDaten[s.id]+'T12:00:00'))/86400000) >= rbRhythmus)
-        .sort((a,b)=>{
-          const dA = rbDaten[a.id] ? Math.round((new Date(currentYear,currentMonth,d)-new Date(rbDaten[a.id]+'T12:00:00'))/86400000) : 999;
-          const dB = rbDaten[b.id] ? Math.round((new Date(currentYear,currentMonth,d)-new Date(rbDaten[b.id]+'T12:00:00'))/86400000) : 999;
-          return dB-dA;
+        .filter(s => kannArbeiten(s, d, rbCfg.kuerzel))
+        .filter(s => {
+          if(!rbDaten[s.id]) return true;
+          const diff = Math.round(
+            (new Date(currentYear, currentMonth, d) - new Date(rbDaten[s.id] + 'T12:00:00')) / 86400000
+          );
+          return diff >= rbRhythmus;
+        })
+        .sort((a, b) => {
+          const dA = rbDaten[a.id]
+            ? Math.round((new Date(currentYear,currentMonth,d) - new Date(rbDaten[a.id]+'T12:00:00')) / 86400000)
+            : 999;
+          const dB = rbDaten[b.id]
+            ? Math.round((new Date(currentYear,currentMonth,d) - new Date(rbDaten[b.id]+'T12:00:00')) / 86400000)
+            : 999;
+          return dB - dA;
         });
 
       for(const s of kandidaten){
-        if(needed<=0) break;
-        setEntry(s.id, d, 'RB');
-        // Tag nach RB
-        if(d<days){
-          const nachRb = s.nach_rb||'frei';
-          if(nachRb==='frei' && !plan[s.id][ds(d+1)]){
-            plan[s.id][ds(d+1)]='FREI'; folgeTage[s.id]=0;
+        if(nochZuPlanen <= 0) break;
+
+        // Nochmal prüfen ob Max erreicht (könnte sich durch vorherige Iteration geändert haben)
+        const aktuellGeplant = Object.values(plan).filter(p => p[ds(d)] === rbCfg.kuerzel).length;
+        if(aktuellGeplant >= maxH) break;
+
+        setEntry(s.id, d, rbCfg.kuerzel);
+
+        // Tag nach RB direkt setzen
+        if(d < days){
+          const nachRb = s.nach_rb || 'frei';
+          if(nachRb === 'frei' && !plan[s.id][ds(d+1)]){
+            plan[s.id][ds(d+1)] = 'FREI';
+            folgeTage[s.id] = 0;
           }
         }
-        needed--;
+        nochZuPlanen--;
       }
-      if(needed>0) _kiWarnungen.push(`${ds(d)}: RB Mindestbesetzung ${minRB} nicht erfüllt`);
+
+      // Warnung wenn Mindestbesetzung nicht erfüllt
+      const finalGeplant = Object.values(plan).filter(p => p[ds(d)] === rbCfg.kuerzel).length;
+      if(finalGeplant < minH){
+        _kiWarnungen.push(`${ds(d)}: ${rbCfg.kuerzel} Mindestbesetzung ${minH} nicht erfüllt (nur ${finalGeplant})`);
+      }
     }
   }
 
@@ -2547,21 +2588,27 @@ async function runKIPlanner(){
     const tCount={};
     gDienste.forEach(gd=>{ tCount[gd.kuerzel]=Object.values(plan).filter(p=>p[dateStr]===gd.kuerzel).length; });
 
-    // Mindestbesetzung sichern
+    // Mindestbesetzung sichern – Max ist hart, Min ist Pflicht
     for(const cfg of werktagsDienste){
-      const minB = cfg.min_tag || 0;
-      if((tCount[cfg.kuerzel]||0)>=minB) continue;
+      const minB = cfg.min_tag != null ? cfg.min_tag : 0;
+      const maxB = cfg.max_tag != null ? cfg.max_tag : 99;
+      if(maxB === 0) continue;
+
+      const bereitsGeplant = tCount[cfg.kuerzel] || 0;
+      if(bereitsGeplant >= maxB) continue; // Max hart geblockt
+      if(bereitsGeplant >= minB) continue; // Min bereits erfüllt
 
       const kands = [...staff]
-        .filter(s=>!plan[s.id][dateStr] && kannArbeiten(s,d,cfg.kuerzel))
-        .sort((a,b)=>(istStunden[a.id]/(monatssoll[a.id]||1))-(istStunden[b.id]/(monatssoll[b.id]||1)));
+        .filter(s => !plan[s.id][dateStr] && kannArbeiten(s, d, cfg.kuerzel))
+        .sort((a,b) => (istStunden[a.id]/(monatssoll[a.id]||1)) - (istStunden[b.id]/(monatssoll[b.id]||1)));
 
       for(const s of kands){
-        if((tCount[cfg.kuerzel]||0)>=(minB)) break;
+        if((tCount[cfg.kuerzel]||0) >= minB) break;
+        if((tCount[cfg.kuerzel]||0) >= maxB) break; // Max hart
         setEntry(s.id, d, cfg.kuerzel);
-        tCount[cfg.kuerzel]=(tCount[cfg.kuerzel]||0)+1;
+        tCount[cfg.kuerzel] = (tCount[cfg.kuerzel]||0) + 1;
       }
-      if((tCount[cfg.kuerzel]||0)<minB)
+      if((tCount[cfg.kuerzel]||0) < minB)
         _kiWarnungen.push(`${dateStr}: ${cfg.kuerzel} Mindestbesetzung ${minB} nicht erfüllt`);
     }
 
@@ -2570,30 +2617,27 @@ async function runKIPlanner(){
     restMA.sort((a,b)=>(istStunden[a.id]/(monatssoll[a.id]||1))-(istStunden[b.id]/(monatssoll[b.id]||1)));
 
     for(const s of restMA){
-      // Bester Dienst für diesen MA
       let bestSchicht=null, bestScore=-Infinity;
       for(const cfg of werktagsDienste){
-        if((tCount[cfg.kuerzel]||0)>=(cfg.max_tag != null ? cfg.max_tag : 99)) continue;
-        // RB: prüfe ob heute schon max RB erreicht
-        if(cfg.kuerzel==='RB'){
-          const rbCfgX = gDienste.find(d=>d.kuerzel==='RB');
-          const maxRBX = rbCfgX && rbCfgX.max_tag != null ? rbCfgX.max_tag : 1;
-          if((tCount['RB']||0) >= maxRBX) continue;
-        }
-        if(!kannArbeiten(s,d,cfg.kuerzel)) continue;
-        const erlaubt=(s.dienste_erlaubt && s.dienste_erlaubt.length>0)?s.dienste_erlaubt:PLANBAR;
+        // Max hart – WE und Werktag getrennt
+        const maxH = isFreiTag(d)
+          ? (cfg.max_we != null ? cfg.max_we : 99)
+          : (cfg.max_tag != null ? cfg.max_tag : 99);
+        if(maxH === 0) continue;
+        if((tCount[cfg.kuerzel]||0) >= maxH) continue;
+        if(!kannArbeiten(s, d, cfg.kuerzel)) continue;
+        const erlaubt = (s.dienste_erlaubt && s.dienste_erlaubt.length>0) ? s.dienste_erlaubt : PLANBAR;
         if(!erlaubt.includes(cfg.kuerzel)) continue;
-        // Score: wer mehr Stunden braucht bekommt Vorrang
-        const rueckstand=(monatssoll[s.id]||1)-istStunden[s.id];
+        const rueckstand = (monatssoll[s.id]||1) - istStunden[s.id];
         const sc = rueckstand + (cfg.position || 10)*-1 + Math.random()*3;
-        if(sc>bestScore){ bestScore=sc; bestSchicht=cfg.kuerzel; }
+        if(sc > bestScore){ bestScore=sc; bestSchicht=cfg.kuerzel; }
       }
       if(bestSchicht){
         setEntry(s.id, d, bestSchicht);
-        tCount[bestSchicht]=(tCount[bestSchicht]||0)+1;
+        tCount[bestSchicht] = (tCount[bestSchicht]||0) + 1;
       } else {
-        plan[s.id][dateStr]='FREI';
-        folgeTage[s.id]=0;
+        plan[s.id][dateStr] = 'FREI';
+        folgeTage[s.id] = 0;
       }
     }
   }
