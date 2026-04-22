@@ -497,6 +497,7 @@
         <div class="settings-menu-item" onclick="openStandorteModal()">🏢 Standorte</div>
         <div class="settings-menu-item" id="menuUnternehmensrahmen" onclick="openUnternehmensrahmenModal()">⚖️ Unternehmensrahmen</div>
         <div class="settings-menu-item" onclick="openGruppenrahmenModal()">📋 Gruppen-Vorgaben</div>
+        <div class="settings-menu-item" onclick="openStundenModal()">📊 Stundenübersicht</div>
         <div class="settings-menu-item" onclick="showToast('Datenschutz & TOM folgt bald')">🔒 Datenschutz & TOM</div>
       </div>
     </div>
@@ -775,6 +776,37 @@
       <button class="btn btn-secondary btn-sm" onclick="kiAcceptAll()">✅ Alle annehmen</button>
       <button class="btn btn-secondary btn-sm" onclick="kiRejectAll()">✕ Alle ablehnen</button>
       <button class="btn btn-primary" onclick="kiApplyAccepted()">Akzeptierte übernehmen</button>
+    </div>
+  </div>
+</div>
+
+<!-- Stundenübersicht Modal -->
+<div class="modal-overlay" id="stundenModal" onclick="if(event.target===this)closeModal('stundenModal')">
+  <div class="modal modal-wide" style="max-height:90vh;display:flex;flex-direction:column;width:700px">
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:4px">
+      <div class="modal-title" style="margin:0;flex:1">📊 Stundenübersicht</div>
+      <div id="stundenSperrBadge" style="display:none;padding:4px 10px;border-radius:20px;font-size:11px;font-weight:600"></div>
+    </div>
+    <div class="modal-sub" id="stundenSub"></div>
+
+    <!-- Tabs -->
+    <div style="display:flex;gap:6px;margin:10px 0 0">
+      <button onclick="stundenTab('planer')" id="stTab_planer"
+        style="padding:6px 14px;border:1.5px solid var(--accent);border-radius:8px;background:var(--accent);color:#fff;font-size:11px;font-weight:600;cursor:pointer">Planerübersicht</button>
+      <button onclick="stundenTab('perso')" id="stTab_perso"
+        style="padding:6px 14px;border:1.5px solid var(--border);border-radius:8px;background:var(--surface);color:var(--text2);font-size:11px;cursor:pointer">Perso-Detail</button>
+    </div>
+
+    <div style="overflow-y:auto;flex:1;padding-right:4px;margin-top:10px">
+      <div id="stundenBody"></div>
+    </div>
+
+    <div class="modal-actions" style="margin-top:12px;border-top:1px solid var(--border);padding-top:12px;flex-wrap:wrap;gap:8px">
+      <button class="btn btn-secondary" onclick="closeModal('stundenModal')">Schließen</button>
+      <button id="stundenSperrBtn" class="btn btn-secondary btn-sm" onclick="toggleMonatSperre()" style="display:none"></button>
+      <button class="btn btn-secondary btn-sm" onclick="stundenExportExcel()">📥 Excel</button>
+      <button class="btn btn-secondary btn-sm" onclick="stundenExportPDF()">📄 PDF</button>
+      <button class="btn btn-secondary btn-sm" onclick="window.print()">🖨️ Drucken</button>
     </div>
   </div>
 </div>
@@ -1179,6 +1211,17 @@
         <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text);cursor:pointer">
           <input type="checkbox" id="ur_we_urlaub" checked style="width:15px;height:15px"> Wochenende vor &amp; nach Urlaub frei (gilt für alle Mitarbeiter)
         </label>
+      </div>
+
+      <!-- Zuschläge -->
+      <div style="background:var(--surface2);border-radius:10px;padding:14px;margin-bottom:12px">
+        <div style="display:flex;align-items:center;margin-bottom:10px">
+          <div style="font-size:11px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;flex:1">💰 Zuschläge</div>
+          <button onclick="addZuschlag()" style="font-size:11px;padding:4px 10px;border:1px solid var(--accent);border-radius:6px;background:var(--accent-soft);color:var(--accent);cursor:pointer">+ Neu</button>
+        </div>
+        <div id="zuschlagsListe" style="display:flex;flex-direction:column;gap:6px">
+          <div style="font-size:11px;color:var(--text3)">Lädt…</div>
+        </div>
       </div>
 
       <div style="background:var(--accent-soft);border:1px solid var(--accent);border-radius:8px;padding:10px 12px;font-size:11px;color:var(--accent)">
@@ -1756,8 +1799,8 @@ function calcMonthSoll(soll, year, month){
   }
   return workdays * (soll / 5);
 }
-function prevMonth(){ currentMonth--; if(currentMonth<0){currentMonth=11;currentYear--;} render(); }
-function nextMonth(){ currentMonth++; if(currentMonth>11){currentMonth=0;currentYear++;} render(); }
+function prevMonth(){ currentMonth--; if(currentMonth<0){currentMonth=11;currentYear--;} _monatsSperre=null; render(); }
+function nextMonth(){ currentMonth++; if(currentMonth>11){currentMonth=0;currentYear++;} _monatsSperre=null; render(); }
 
 // ─── MODALS ───
 function openModal(id){ document.getElementById(id).classList.add('open'); }
@@ -1778,6 +1821,14 @@ function openAddEntry(){
 }
 
 function quickEdit(staffId,dateStr){
+  // Monatssperre prüfen
+  const dt = new Date(dateStr+'T12:00:00');
+  if(_monatsSperre && _monatsSperre.gesperrt &&
+     dt.getFullYear()===currentYear && dt.getMonth()===currentMonth){
+    const canUnlock = ['owner','master_admin','admin','personal'].includes(currentUserRole);
+    showToast('🔒 Monat gesperrt' + (canUnlock ? ' – über Stundenübersicht entsperren' : ''));
+    return;
+  }
   _editStaffId=staffId; _editDate=dateStr;
   const staff=state.staff.find(s=>s.id==staffId);
   const entry=state.entries[`${staffId}_${dateStr}`];
@@ -3234,6 +3285,343 @@ async function deleteUser(userId){
 }
 
 
+// ─── STUNDENÜBERSICHT ────────────────────────────────────────────────────────
+
+let _stundenTab = 'planer';
+let _monatsSperre = null;
+let _zuschlaege = [];
+
+async function openStundenModal(){
+  document.getElementById('settingsMenu').style.display = 'none';
+  document.getElementById('stundenSub').textContent =
+    `${MONTH_NAMES[currentMonth]} ${currentYear} · ${allGruppen.find(g=>g.id===currentGruppeId)?.name||''}`;
+
+  // Monatssperre laden
+  const sperrRes = await sb.from('monats_sperren')
+    .select('*').eq('gruppe_id', currentGruppeId)
+    .eq('jahr', currentYear).eq('monat', currentMonth).maybeSingle();
+  _monatsSperre = sperrRes.data || null;
+
+  // Zuschläge laden
+  const zRes = await sb.from('zuschlaege').select('*').eq('unternehmen_id', currentUnternehmenId);
+  _zuschlaege = (zRes.data) || [];
+
+  updateSperrBadge();
+  stundenTab(_stundenTab);
+  openModal('stundenModal');
+}
+
+function updateSperrBadge(){
+  const badge = document.getElementById('stundenSperrBadge');
+  const btn   = document.getElementById('stundenSperrBtn');
+  const canSperre = ['owner','master_admin','admin','personal'].includes(currentUserRole);
+
+  if(_monatsSperre && _monatsSperre.gesperrt){
+    badge.style.display = 'block';
+    badge.style.background = 'rgba(255,59,48,.12)';
+    badge.style.color = 'var(--red)';
+    badge.textContent = '🔒 Gesperrt';
+    if(canSperre && ['owner','master_admin','admin','personal'].includes(currentUserRole)){
+      btn.style.display = 'block';
+      btn.textContent = '🔓 Entsperren';
+      btn.style.borderColor = 'var(--red)';
+      btn.style.color = 'var(--red)';
+    }
+  } else {
+    badge.style.display = 'none';
+    if(canSperre){
+      btn.style.display = 'block';
+      btn.textContent = '🔒 Monat sperren';
+      btn.style.borderColor = 'var(--border)';
+      btn.style.color = 'var(--text2)';
+    } else {
+      btn.style.display = 'none';
+    }
+  }
+}
+
+async function toggleMonatSperre(){
+  const istGesperrt = _monatsSperre && _monatsSperre.gesperrt;
+  if(istGesperrt){
+    const notiz = prompt('Grund für Entsperrung (Pflicht):');
+    if(!notiz || !notiz.trim()){ showToast('Bitte Grund angeben'); return; }
+    const { data: { session } } = await sb.auth.getSession();
+    const userId = session && session.user && session.user.id;
+    await sb.from('monats_sperren').update({
+      gesperrt: false,
+      entsperrt_von: userId,
+      entsperrt_am: new Date().toISOString(),
+      entsperrt_notiz: notiz.trim()
+    }).eq('id', _monatsSperre.id);
+    showToast('✅ Monat entsperrt');
+  } else {
+    if(!confirm(`Monat ${MONTH_NAMES[currentMonth]} ${currentYear} sperren?\n\nNach dem Sperren kann nur noch Perso/Admin entsperren.`)) return;
+    const { data: { session } } = await sb.auth.getSession();
+    const userId = session && session.user && session.user.id;
+    const payload = {
+      unternehmen_id: currentUnternehmenId,
+      gruppe_id: currentGruppeId,
+      jahr: currentYear,
+      monat: currentMonth,
+      gesperrt: true,
+      gesperrt_von: userId,
+      gesperrt_am: new Date().toISOString(),
+      entsperrt_von: null,
+      entsperrt_am: null,
+      entsperrt_notiz: null
+    };
+    await sb.from('monats_sperren').upsert(payload, {onConflict:'gruppe_id,jahr,monat'});
+    showToast('🔒 Monat gesperrt');
+  }
+  // Neu laden
+  const sperrRes = await sb.from('monats_sperren')
+    .select('*').eq('gruppe_id', currentGruppeId)
+    .eq('jahr', currentYear).eq('monat', currentMonth).maybeSingle();
+  _monatsSperre = sperrRes.data || null;
+  updateSperrBadge();
+}
+
+function stundenTab(tab){
+  _stundenTab = tab;
+  ['planer','perso'].forEach(t => {
+    const btn = document.getElementById('stTab_' + t);
+    if(!btn) return;
+    if(t === tab){
+      btn.style.background = 'var(--accent)';
+      btn.style.color = '#fff';
+      btn.style.borderColor = 'var(--accent)';
+    } else {
+      btn.style.background = 'var(--surface)';
+      btn.style.color = 'var(--text2)';
+      btn.style.borderColor = 'var(--border)';
+    }
+  });
+  renderStundenBody();
+}
+
+function renderStundenBody(){
+  const body = document.getElementById('stundenBody');
+  const staff = state.staff;
+  if(!staff || !staff.length){
+    body.innerHTML = '<div style="color:var(--text3);font-size:12px">Keine Mitarbeiter</div>';
+    return;
+  }
+
+  const days = daysInMonth(currentYear, currentMonth);
+
+  // Stunden pro MA berechnen
+  const maData = staff.map(s => {
+    let ist = 0, weAnzahl = 0, rbAnzahl = 0, ftAnzahl = 0;
+    const dienste = {};
+    let letztesSa = false;
+
+    for(let d = 1; d <= days; d++){
+      const dateStr = fmtDate(new Date(currentYear, currentMonth, d));
+      const key = `${s.id}_${dateStr}`;
+      const entry = state.entries && state.entries[key];
+      if(!entry || entry.shift === 'FREI') { if(new Date(currentYear,currentMonth,d).getDay()===0) letztesSa=false; continue; }
+
+      const sh = entry.shift;
+      const gd = _gruppenDienste.find(x=>x.kuerzel===sh);
+      const std = gd ? (parseFloat(gd.stunden)||0) : ((SHIFT_MAP[sh]&&SHIFT_MAP[sh].hours)||0);
+      ist += std;
+
+      dienste[sh] = (dienste[sh]||0) + 1;
+
+      const dow = new Date(currentYear, currentMonth, d).getDay();
+      if(dow === 6) letztesSa = true;
+      if(dow === 0 && letztesSa){ weAnzahl++; letztesSa = false; }
+      if((gd && (gd.typ||'normal') === 'bereitschaft') || sh === 'RB') rbAnzahl++;
+
+      const holsObj = holidaysForYear(currentYear);
+      if(holsObj[dateStr]) ftAnzahl++;
+    }
+
+    const soll = calcMonthSoll(s.soll, currentYear, currentMonth);
+    const diff = ist - soll;
+    return { s, ist, soll, diff, weAnzahl, rbAnzahl, ftAnzahl, dienste };
+  });
+
+  if(_stundenTab === 'planer'){
+    renderStundenPlaner(body, maData);
+  } else {
+    renderStundenPerso(body, maData);
+  }
+}
+
+function renderStundenPlaner(body, maData){
+  const rows = maData.map(({s, ist, soll, diff, weAnzahl, rbAnzahl}) => {
+    const diffColor = diff >= 0 ? 'var(--green)' : 'var(--red)';
+    const diffStr = (diff >= 0 ? '+' : '') + diff.toFixed(1) + 'h';
+    const pct = soll > 0 ? Math.min(ist/soll*100, 110) : 0;
+    const barColor = diff >= -2 && diff <= 5 ? 'var(--green)' : diff < -8 ? 'var(--red)' : 'var(--orange)';
+    return `
+      <tr>
+        <td style="padding:8px 10px;font-size:12px;font-weight:500">${s.name}</td>
+        <td style="padding:8px 10px;font-size:12px;color:var(--text3);text-align:right">${soll.toFixed(1)}h</td>
+        <td style="padding:8px 10px;font-size:12px;text-align:right">${ist.toFixed(1)}h</td>
+        <td style="padding:8px 10px;font-size:12px;font-weight:600;color:${diffColor};text-align:right">${diffStr}</td>
+        <td style="padding:8px 10px">
+          <div style="background:var(--surface2);border-radius:4px;height:8px;width:80px;overflow:hidden">
+            <div style="background:${barColor};height:100%;width:${pct}%;border-radius:4px;transition:width .3s"></div>
+          </div>
+        </td>
+        <td style="padding:8px 10px;font-size:11px;color:var(--text3);text-align:center">${weAnzahl} WE</td>
+        <td style="padding:8px 10px;font-size:11px;color:var(--text3);text-align:center">${rbAnzahl} RB</td>
+      </tr>`;
+  }).join('');
+
+  body.innerHTML = `
+    <table style="width:100%;border-collapse:collapse">
+      <thead>
+        <tr style="border-bottom:2px solid var(--border)">
+          <th style="padding:6px 10px;font-size:10px;color:var(--text3);font-weight:600;text-align:left">Mitarbeiter</th>
+          <th style="padding:6px 10px;font-size:10px;color:var(--text3);font-weight:600;text-align:right">Soll</th>
+          <th style="padding:6px 10px;font-size:10px;color:var(--text3);font-weight:600;text-align:right">Ist</th>
+          <th style="padding:6px 10px;font-size:10px;color:var(--text3);font-weight:600;text-align:right">±</th>
+          <th style="padding:6px 10px;font-size:10px;color:var(--text3);font-weight:600">Auslastung</th>
+          <th style="padding:6px 10px;font-size:10px;color:var(--text3);font-weight:600;text-align:center">WE</th>
+          <th style="padding:6px 10px;font-size:10px;color:var(--text3);font-weight:600;text-align:center">Bereitschaft</th>
+        </tr>
+      </thead>
+      <tbody>${rows}</tbody>
+    </table>`;
+}
+
+function renderStundenPerso(body, maData){
+  const cards = maData.map(({s, ist, soll, diff, weAnzahl, rbAnzahl, ftAnzahl, dienste}) => {
+    const diffColor = diff >= 0 ? '#1a7f37' : '#cf222e';
+    const diffStr = (diff >= 0 ? '+' : '') + diff.toFixed(1) + 'h';
+
+    // Zuschläge berechnen
+    let zuschlagZeilen = '';
+    if(_zuschlaege.length && s.stundenlohn > 0){
+      const zRows = _zuschlaege.map(z => {
+        // Vereinfacht: WE-Zuschlag auf WE-Stunden, Ft-Zuschlag auf Feiertag-Stunden
+        let basisStd = 0;
+        if(z.gilt_we) basisStd += weAnzahl * (s.soll/5||8); // grobe Schätzung
+        if(z.gilt_feiertag) basisStd += ftAnzahl * 8;
+        if(basisStd <= 0) return '';
+        const betrag = z.typ === 'prozent'
+          ? basisStd * s.stundenlohn * (z.wert/100)
+          : basisStd * z.wert;
+        return `<div style="display:flex;justify-content:space-between;font-size:10px;color:var(--text3);padding:2px 0">
+          <span>${z.bezeichnung} (${z.wert}${z.typ==='prozent'?'%':'€'})</span>
+          <span>+${betrag.toFixed(2)}€</span>
+        </div>`;
+      }).filter(Boolean).join('');
+      if(zRows) zuschlagZeilen = `
+        <div style="border-top:1px solid var(--border);margin-top:8px;padding-top:8px">
+          <div style="font-size:10px;font-weight:600;color:var(--text2);margin-bottom:4px">Zuschläge</div>
+          ${zRows}
+        </div>`;
+    }
+
+    const dienstZeilen = Object.entries(dienste).map(([k,n]) => {
+      const gd = _gruppenDienste.find(d=>d.kuerzel===k);
+      return `<span style="padding:2px 7px;border-radius:12px;font-size:10px;background:${(gd&&gd.farbe)||'#0071e3'}22;color:${(gd&&gd.farbe)||'#0071e3'};border:1px solid ${(gd&&gd.farbe)||'#0071e3'}44">${k}: ${n}x</span>`;
+    }).join('');
+
+    return `
+      <div style="background:var(--surface2);border-radius:10px;padding:12px 14px;border:1px solid var(--border)">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+          <div style="width:32px;height:32px;border-radius:50%;background:${s.color||'var(--accent-soft)'};display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:#fff;flex-shrink:0">${(s.name[0]||'?').toUpperCase()}</div>
+          <div style="flex:1">
+            <div style="font-size:13px;font-weight:600;color:var(--text)">${s.name}</div>
+            <div style="font-size:10px;color:var(--text3)">${s.role||'–'} · ${s.soll||0}h/Woche</div>
+          </div>
+          <div style="text-align:right">
+            <div style="font-size:16px;font-weight:700;color:${diffColor}">${diffStr}</div>
+            <div style="font-size:10px;color:var(--text3)">${ist.toFixed(1)}h / ${soll.toFixed(1)}h</div>
+          </div>
+        </div>
+
+        <div style="display:flex;gap:12px;margin-bottom:8px">
+          <div style="text-align:center;flex:1;background:var(--surface);border-radius:8px;padding:6px">
+            <div style="font-size:16px;font-weight:700;color:var(--text)">${weAnzahl}</div>
+            <div style="font-size:9px;color:var(--text3)">Wochenenden</div>
+          </div>
+          <div style="text-align:center;flex:1;background:var(--surface);border-radius:8px;padding:6px">
+            <div style="font-size:16px;font-weight:700;color:var(--text)">${rbAnzahl}</div>
+            <div style="font-size:9px;color:var(--text3)">Bereitschaft</div>
+          </div>
+          <div style="text-align:center;flex:1;background:var(--surface);border-radius:8px;padding:6px">
+            <div style="font-size:16px;font-weight:700;color:var(--text)">${ftAnzahl}</div>
+            <div style="font-size:9px;color:var(--text3)">Feiertage</div>
+          </div>
+        </div>
+
+        <div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:6px">${dienstZeilen}</div>
+        ${zuschlagZeilen}
+      </div>`;
+  }).join('');
+
+  body.innerHTML = `<div style="display:flex;flex-direction:column;gap:10px">${cards}</div>`;
+}
+
+function stundenExportExcel(){
+  showToast('Excel-Export folgt in Kürze');
+}
+
+function stundenExportPDF(){
+  showToast('PDF-Export folgt in Kürze');
+}
+
+// ─── ZUSCHLÄGE ───────────────────────────────────────────────────────────────
+
+async function loadZuschlaege(){
+  const { data } = await sb.from('zuschlaege').select('*')
+    .eq('unternehmen_id', currentUnternehmenId).order('bezeichnung');
+  _zuschlaege = data || [];
+  renderZuschlaege();
+}
+
+function renderZuschlaege(){
+  const list = document.getElementById('zuschlagsListe');
+  if(!list) return;
+  if(!_zuschlaege.length){
+    list.innerHTML = '<div style="font-size:11px;color:var(--text3)">Keine Zuschläge definiert</div>';
+    return;
+  }
+  list.innerHTML = _zuschlaege.map(z => `
+    <div style="display:grid;grid-template-columns:1fr 80px 70px 70px 70px 28px;gap:6px;align-items:center;padding:6px 8px;background:var(--surface);border:1px solid var(--border);border-radius:8px">
+      <div style="font-size:12px;font-weight:500;color:var(--text)">${z.bezeichnung}</div>
+      <div style="font-size:11px;color:var(--text3);text-align:center">${z.wert}${z.typ==='prozent'?'%':'€'}</div>
+      <div style="font-size:10px;color:var(--text3);text-align:center">${z.von_uhrzeit||'–'} – ${z.bis_uhrzeit||'–'}</div>
+      <div style="font-size:10px;text-align:center">${z.gilt_we?'✅ WE':'–'}</div>
+      <div style="font-size:10px;text-align:center">${z.gilt_feiertag?'✅ Ft.':'–'}</div>
+      <button onclick="deleteZuschlag('${z.id}')" style="width:24px;height:24px;border:none;background:var(--red-soft);color:var(--red);border-radius:5px;cursor:pointer;font-size:12px">✕</button>
+    </div>`).join('');
+}
+
+async function addZuschlag(){
+  const bez = prompt('Bezeichnung (z.B. Nacht-Zuschlag, WE-Zuschlag):');
+  if(!bez || !bez.trim()) return;
+  const typStr = prompt('Typ: "prozent" oder "fix" (€ pro Stunde):', 'prozent');
+  const wert = parseFloat(prompt('Wert (z.B. 25 für 25%):', '25')) || 25;
+  const von = prompt('Von Uhrzeit (z.B. 22:00, leer lassen wenn ganztags):', '') || null;
+  const bis = prompt('Bis Uhrzeit (z.B. 06:00):', '') || null;
+  const gitWE = confirm('Gilt für Wochenenden?');
+  const gitFt = confirm('Gilt für Feiertage?');
+
+  const { error } = await sb.from('zuschlaege').insert({
+    unternehmen_id: currentUnternehmenId,
+    bezeichnung: bez.trim(),
+    typ: typStr === 'fix' ? 'fix' : 'prozent',
+    wert, von_uhrzeit: von, bis_uhrzeit: bis,
+    gilt_we: gitWE, gilt_feiertag: gitFt
+  });
+  if(error){ showToast('Fehler: ' + error.message); return; }
+  showToast('✅ Zuschlag angelegt');
+  loadZuschlaege();
+}
+
+async function deleteZuschlag(id){
+  if(!confirm('Zuschlag löschen?')) return;
+  await sb.from('zuschlaege').delete().eq('id', id);
+  loadZuschlaege();
+}
+
 // ─── ROLLE ───
 let currentUserRole = null;
 let currentUserId = null;
@@ -3493,6 +3881,7 @@ async function openUnternehmensrahmenModal(){
     document.getElementById('ur_betriebsvereinbarung').value = data.betriebsvereinbarung || '';
     document.getElementById('ur_tarifvertrag').value      = data.tarifvertrag || '';
   }
+  loadZuschlaege();
   openModal('unternehmensrahmenModal');
 }
 
