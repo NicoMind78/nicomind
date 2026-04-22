@@ -1860,7 +1860,7 @@ async function saveEntry(){
   if(_selectedShift && hasConflict(staffId, dateStr)){
     const conflictStandort = getConflictStandort(staffId, dateStr);
     const conflictEntry = state.allEntries[`${staffId}_${dateStr}`];
-    const conflictShift = (conflictEntry && conflictEntry.shift) === 'FREI' ? 'als Frei eingetragen' : `mit ${SHIFT_MAP[(conflictEntry && conflictEntry.shift)] && ].label||(conflictEntry && conflictEntry.shift)} eingeplant`;
+    const conflictShift = (conflictEntry && conflictEntry.shift) === 'FREI' ? 'als Frei eingetragen' : ('mit ' + ((SHIFT_MAP[conflictEntry && conflictEntry.shift] && SHIFT_MAP[conflictEntry && conflictEntry.shift].label) || (conflictEntry && conflictEntry.shift)) + ' eingeplant');
     const confirmed = window.confirm(
       `⚠️ ${state.staff.find(s=>s.id===staffId).name} ist an diesem Tag in ${conflictStandort} ${conflictShift}.\n\nTrotzdem hier einplanen? Der Eintrag in ${conflictStandort} wird automatisch überschrieben.`
     );
@@ -1989,7 +1989,7 @@ function openEditStaff(staffId){
     // Immer alle Dienste anzeigen, RB ausgegraut wenn nicht erlaubt
     const verfuegbareDienste = _gruppenDienste.length
       ? _gruppenDienste
-      : ['F','S','RB','FS'].map(k=>({kuerzel:k, label:SHIFTS.find(s=>s.id===k||s.id===(k==='RB'?'RU':k)) && .label||k}));
+      : ['F','S','RB','FS'].map(k=>({kuerzel:k, label:(SHIFTS.find(s=>s.id===k||s.id===(k==='RB'?'RU':k)) && SHIFTS.find(s=>s.id===k||s.id===(k==='RB'?'RU':k)).label) || k}));
 
     document.getElementById('esDiensteErlaubtBox').innerHTML =
       verfuegbareDienste.map(d=>{
@@ -2077,7 +2077,7 @@ function showStaffPopup(e, staffId){
   for(let d=1;d<=days;d++){
     const en=state.entries[`${staff.id}_${fmtDate(new Date(currentYear,currentMonth,d))}`];
     if(en){
-      ist+=(SHIFT_MAP[en.shift] && ].hours||0);
+      ist+=(SHIFT_MAP[en.shift] && SHIFT_MAP[en.shift].hours)||0;
       if(en.shift==='F') cF++;
       else if(en.shift==='S') cS++;
       else if(en.shift==='RU') cRU++;
