@@ -3929,7 +3929,7 @@ async function addGruppeToStandort(standortId){
     name: name.trim(), position: pos, standort_id: standortId, unternehmen_id: currentUnternehmenId
   }).select().single();
   if(error){
-    alert('Fehler beim Anlegen der Gruppe:\n' + error.message + '\n\nCode: ' + error.code);
+    showToast('Fehler: ' + error.message + ' (' + error.code + ')');
     return;
   }
   // Gruppenrahmen anlegen + Standard-Dienste
