@@ -2666,6 +2666,18 @@ async function runKIPlanner(){
   for(let d=1; d<=days; d++){
     if(isFreiTag(d)) continue; // WEs schon verplant
     const dateStr=ds(d);
+
+    // folgeTage neu berechnen basierend auf echten Plan-Einträgen
+    // Zähle wie viele aufeinanderfolgende Arbeitstage direkt vor d liegen
+    staff.forEach(s=>{
+      let streak = 0;
+      for(let back=d-1; back>=Math.max(1,d-14); back--){
+        const e = plan[s.id][ds(back)];
+        if(e && e !== 'FREI') streak++;
+        else break;
+      }
+      folgeTage[s.id] = streak;
+    });
     const tCount={};
     gDienste.forEach(gd=>{ tCount[gd.kuerzel]=Object.values(plan).filter(p=>p[dateStr]===gd.kuerzel).length; });
 
