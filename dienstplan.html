@@ -2457,6 +2457,17 @@ async function runKIPlanner(){
     const moSoll = monatssoll[s.id]||1;
     if(istStunden[s.id]+std > moSoll+stdToleranz) return false;
     if(std > maxStdTag) return false;
+
+    // HART: Tages-Maximum für diesen Dienst prüfen
+    const cfg = getDienstConfig(schicht);
+    const isFrei = isFreiTag(d);
+    const maxH = isFrei
+      ? (cfg.max_we != null ? cfg.max_we : (cfg.max_tag != null ? cfg.max_tag : 99))
+      : (cfg.max_tag != null ? cfg.max_tag : 99);
+    if(maxH === 0) return false;
+    const bereitsGeplant = Object.values(plan).filter(p => p[ds(d)] === schicht).length;
+    if(bereitsGeplant >= maxH) return false;
+
     return true;
   };
 
