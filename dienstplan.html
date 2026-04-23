@@ -2447,26 +2447,24 @@ async function runKIPlanner(){
     (istFesterFreitag(s,d) && !getWish(s.id,ds(d)));
 
   const kannArbeiten = (s, d, schicht) => {
-    const _dbg = schicht==='FS' && s.dienste_erlaubt && s.dienste_erlaubt.includes('FS') && d<=5;
-    if(plan[s.id][ds(d)]){ if(_dbg) console.log(`FS d${d} ${s.name}: schon verplant als ${plan[s.id][ds(d)]}`); return false; }
-    if(isBlocked(s,d)){ if(_dbg) console.log(`FS d${d} ${s.name}: geblockt`); return false; }
+    if(plan[s.id][ds(d)]) return false;
+    if(isBlocked(s,d)) return false;
     const erlaubt = (s.dienste_erlaubt && s.dienste_erlaubt.length > 0) ? s.dienste_erlaubt : PLANBAR;
-    if(!erlaubt.includes(schicht)){ if(_dbg) console.log(`FS d${d} ${s.name}: nicht erlaubt ${JSON.stringify(erlaubt)}`); return false; }
+    if(!erlaubt.includes(schicht)) return false;
     if((getDienstConfig(schicht).typ||'normal')==='bereitschaft' && s.rb_erlaubt===false) return false;
-    if(folgeTage[s.id] >= Math.min(maxTageFolge,grMaxTage)){ if(_dbg) console.log(`FS d${d} ${s.name}: maxTage=${folgeTage[s.id]}`); return false; }
+    if(folgeTage[s.id] >= Math.min(maxTageFolge,grMaxTage)) return false;
     const std = getStunden(schicht);
     const moSoll = monatssoll[s.id]||1;
-    if(istStunden[s.id]+std > moSoll+stdToleranz){ if(_dbg) console.log(`FS d${d} ${s.name}: stunden ${istStunden[s.id].toFixed(1)}+${std} > ${moSoll.toFixed(1)}+${stdToleranz}`); return false; }
-    if(std > maxStdTag){ if(_dbg) console.log(`FS d${d} ${s.name}: std ${std} > max ${maxStdTag}`); return false; }
+    if(istStunden[s.id]+std > moSoll+stdToleranz) return false;
+    if(std > maxStdTag) return false;
     const cfg = getDienstConfig(schicht);
     const isFrei = isFreiTag(d);
     const maxH = isFrei
       ? (cfg.max_we != null ? cfg.max_we : (cfg.max_tag != null ? cfg.max_tag : 99))
       : (cfg.max_tag != null ? cfg.max_tag : 99);
-    if(maxH === 0){ if(_dbg) console.log(`FS d${d} ${s.name}: maxH=0`); return false; }
+    if(maxH === 0) return false;
     const bereitsGeplant = Object.values(plan).filter(p => p[ds(d)] === schicht).length;
-    if(bereitsGeplant >= maxH){ if(_dbg) console.log(`FS d${d} ${s.name}: bereitsGeplant ${bereitsGeplant} >= maxH ${maxH}`); return false; }
-    if(_dbg) console.log(`FS d${d} ${s.name}: OK ✓`);
+    if(bereitsGeplant >= maxH) return false;
     return true;
   };
 
@@ -2680,21 +2678,25 @@ async function runKIPlanner(){
         setEntry(s.id, d, cfg.kuerzel);
         tCount[cfg.kuerzel] = (tCount[cfg.kuerzel]||0) + 1;
       }
-      if((tCount[cfg.kuerzel]||0) < minB)
-        _kiWarnungen.push(`${dateStr}: ${cfg.kuerzel} Mindestbesetzung ${minB} nicht erfüllt`);
+      if((tCount[cfg.kuerzel]||0) < minB){
+        // Detaillierte Diagnose: warum kein Kandidat?
+        const diagnose = staff.map(s => {
+          if(plan[s.id][dateStr]) return `${s.name}: schon verplant (${plan[s.id][dateStr]})`;
+          const erlaubt = (s.dienste_erlaubt && s.dienste_erlaubt.length>0) ? s.dienste_erlaubt : PLANBAR;
+          if(!erlaubt.includes(cfg.kuerzel)) return null; // nicht relevant
+          if(isBlocked(s,d)) return `${s.name}: geblockt`;
+          if(folgeTage[s.id] >= Math.min(maxTageFolge,grMaxTage)) return `${s.name}: maxTage(${folgeTage[s.id]})`;
+          const std2 = getStunden(cfg.kuerzel);
+          if(istStunden[s.id]+std2 > monatssoll[s.id]+stdToleranz) return `${s.name}: Stunden(${istStunden[s.id].toFixed(1)}+${std2}>${(monatssoll[s.id]+stdToleranz).toFixed(1)})`;
+          return null;
+        }).filter(Boolean).join(', ');
+        _kiWarnungen.push(`${dateStr}: ${cfg.kuerzel} Mindestbesetzung ${minB} nicht erfüllt${diagnose?' – '+diagnose:''}`);
+      }
     }
 
     // Restliche MA nach Stunden-Rückstand einplanen
     const restMA = staff.filter(s=>!plan[s.id][dateStr] && !isBlocked(s,d));
-    // Debug für FS-MA
-    staff.forEach(s=>{
-      if(s.dienste_erlaubt && s.dienste_erlaubt.includes('FS') && d<=3){
-        const schonVerplant = plan[s.id][dateStr];
-        const geblockt = isBlocked(s,d);
-        const inRest = restMA.includes(s);
-        console.log(`restMA d${d} ${s.name}: verplant=${schonVerplant||'nein'} geblockt=${geblockt} inRest=${inRest}`);
-      }
-    });
+
     restMA.sort((a,b)=>(istStunden[a.id]/(monatssoll[a.id]||1))-(istStunden[b.id]/(monatssoll[b.id]||1)));
 
     for(const s of restMA){
@@ -2702,7 +2704,6 @@ async function runKIPlanner(){
       const w = getWish(s.id, dateStr);
       const hatOrangeTermin = (w && w.prioritaet === 'wichtig');
       const hatWunschDienst = (w && w.prioritaet === 'wunsch_dienst' && w.dienst && w.dienst !== 'frei');
-      const _dbgFS = s.dienste_erlaubt && s.dienste_erlaubt.includes('FS') && d<=5;
 
       for(const cfg of werktagsDienste){
         // Max hart – WE und Werktag getrennt
@@ -2727,7 +2728,6 @@ async function runKIPlanner(){
 
         if(sc > bestScore){ bestScore=sc; bestSchicht=cfg.kuerzel; }
       }
-      if(_dbgFS) console.log(`Phase4 d${d} ${s.name}: bestSchicht=${bestSchicht} score=${bestScore.toFixed(1)} tCount=${JSON.stringify(tCount)}`);
       if(bestSchicht){
         setEntry(s.id, d, bestSchicht);
         tCount[bestSchicht] = (tCount[bestSchicht]||0) + 1;
