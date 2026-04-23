@@ -51,6 +51,9 @@
 
   .settings-menu-item { padding: 9px 16px; font-size: 12.5px; color: var(--text); cursor: pointer; transition: background .12s; }
   .settings-menu-item:hover { background: var(--surface2); }
+  .meins-nav-item { padding:10px 16px;font-size:13px;color:var(--text2);cursor:pointer;border-radius:8px;margin:2px 8px;transition:all .15s; }
+  .meins-nav-item:hover { background:var(--surface2);color:var(--text); }
+  .meins-nav-item.active { background:var(--accent-soft);color:var(--accent);font-weight:600; }
   /* BODY below header */
   .app-body { display: flex; flex: 1; overflow: hidden; }
   .dsgvo-badge {
@@ -510,6 +513,9 @@
     </div>
     <div id="unternehmenLabel" style="font-size:10px;color:var(--text3);white-space:nowrap;margin-right:2px;padding:2px 8px;border:1px solid var(--border);border-radius:20px">–</div>
     <div id="standortLabel" style="font-size:11px;color:var(--text3);white-space:nowrap;margin-right:4px">–</div>
+    <button id="btnMeins" onclick="openMeins()" title="Meins" style="width:32px;height:32px;border-radius:50%;border:1.5px solid var(--border);background:var(--surface2);cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--text2);transition:all .15s;flex-shrink:0;font-size:13px;font-weight:700;display:none"
+      onmouseover="this.style.background='var(--accent-soft)';this.style.borderColor='var(--accent)';this.style.color='var(--accent)'"
+      onmouseout="this.style.background='var(--surface2)';this.style.borderColor='var(--border)';this.style.color='var(--text2)'">M</button>
     <button onclick="openUserManagement()" title="Benutzerverwaltung" style="position:relative;width:32px;height:32px;border-radius:50%;border:1.5px solid var(--border);background:var(--surface2);cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--text2);transition:all .15s;flex-shrink:0" onmouseover="this.style.background='var(--accent-soft)';this.style.borderColor='var(--accent)';this.style.color='var(--accent)'" onmouseout="this.style.background='var(--surface2)';this.style.borderColor='var(--border)';this.style.color='var(--text2)'">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
         <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
@@ -780,6 +786,46 @@
   </div>
 </div>
 
+<!-- MEINS – Vollbild Modal -->
+<div id="meinsModal" style="display:none;position:fixed;inset:0;background:var(--bg);z-index:2000;flex-direction:column">
+
+  <!-- Header -->
+  <div style="display:flex;align-items:center;gap:12px;padding:14px 20px;border-bottom:1px solid var(--border);background:var(--surface);flex-shrink:0">
+    <div style="width:34px;height:34px;border-radius:50%;background:var(--accent);display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;color:#fff" id="meinsAvatar">M</div>
+    <div style="flex:1">
+      <div style="font-size:15px;font-weight:700;color:var(--text)" id="meinsName">Mein Bereich</div>
+      <div style="font-size:11px;color:var(--text3)" id="meinsRolle">–</div>
+    </div>
+    <button onclick="closeMeins()" style="padding:6px 16px;border:1.5px solid var(--border);border-radius:8px;background:var(--surface2);color:var(--text2);font-size:12px;cursor:pointer">✕ Schließen</button>
+  </div>
+
+  <!-- Body -->
+  <div style="display:flex;flex:1;overflow:hidden">
+
+    <!-- Sidebar -->
+    <div style="width:200px;flex-shrink:0;border-right:1px solid var(--border);background:var(--surface);padding:12px 8px;display:flex;flex-direction:column;gap:4px">
+      <button onclick="meinsTab('dienste')" id="meinsTab_dienste"
+        style="display:flex;align-items:center;gap:10px;padding:10px 12px;border:none;border-radius:10px;background:var(--accent);color:#fff;font-size:12px;font-weight:600;cursor:pointer;text-align:left;width:100%">
+        📅 Meine Dienste
+      </button>
+      <button onclick="meinsTab('urlaub')" id="meinsTab_urlaub"
+        style="display:flex;align-items:center;gap:10px;padding:10px 12px;border:none;border-radius:10px;background:transparent;color:var(--text2);font-size:12px;cursor:pointer;text-align:left;width:100%">
+        🏖️ Mein Urlaub
+      </button>
+      <button onclick="meinsTab('buchungen')" id="meinsTab_buchungen"
+        style="display:flex;align-items:center;gap:10px;padding:10px 12px;border:none;border-radius:10px;background:transparent;color:var(--text2);font-size:12px;cursor:pointer;text-align:left;width:100%">
+        ⏱️ Meine Buchungen
+      </button>
+    </div>
+
+    <!-- Content -->
+    <div style="flex:1;overflow-y:auto;padding:20px" id="meinsContent">
+      <div style="color:var(--text3);font-size:12px">Lädt…</div>
+    </div>
+
+  </div>
+</div>
+
 <!-- Stundenübersicht Modal -->
 <div class="modal-overlay" id="stundenModal" onclick="if(event.target===this)closeModal('stundenModal')">
   <div class="modal modal-wide" style="max-height:90vh;display:flex;flex-direction:column;width:700px">
@@ -807,6 +853,46 @@
       <button class="btn btn-secondary btn-sm" onclick="stundenExportExcel()">📥 Excel</button>
       <button class="btn btn-secondary btn-sm" onclick="stundenExportPDF()">📄 PDF</button>
       <button class="btn btn-secondary btn-sm" onclick="window.print()">🖨️ Drucken</button>
+    </div>
+  </div>
+</div>
+
+<!-- MEINS – Vollbild Modal -->
+<div id="meinsModal" style="display:none;position:fixed;inset:0;background:var(--bg);z-index:2000;flex-direction:column">
+
+  <!-- Header -->
+  <div style="display:flex;align-items:center;gap:12px;padding:14px 20px;background:var(--surface);border-bottom:1px solid var(--border);flex-shrink:0">
+    <div style="width:36px;height:36px;border-radius:50%;background:var(--accent);display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;color:#fff" id="meinsAvatar">M</div>
+    <div style="flex:1">
+      <div style="font-size:15px;font-weight:700;color:var(--text)" id="meinsName">Mein Bereich</div>
+      <div style="font-size:11px;color:var(--text3)" id="meinsRole">–</div>
+    </div>
+    <button onclick="closeMeins()" style="padding:6px 16px;border:1.5px solid var(--border);border-radius:8px;background:var(--surface);color:var(--text2);font-size:12px;cursor:pointer">✕ Schließen</button>
+  </div>
+
+  <!-- Body -->
+  <div style="display:flex;flex:1;overflow:hidden">
+
+    <!-- Sidebar -->
+    <div style="width:200px;flex-shrink:0;background:var(--surface);border-right:1px solid var(--border);padding:12px 0;overflow-y:auto">
+      <div style="font-size:9px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;padding:0 16px;margin-bottom:8px">Mein Bereich</div>
+      <div class="meins-nav-item" id="meinsNav_dienste" onclick="meinsTab('dienste')">
+        📅 Meine Dienste
+      </div>
+      <div class="meins-nav-item" id="meinsNav_urlaub" onclick="meinsTab('urlaub')">
+        🌴 Mein Urlaub
+      </div>
+      <div class="meins-nav-item" id="meinsNav_zeit" onclick="meinsTab('zeit')">
+        ⏱️ Meine Buchungen
+      </div>
+      <div class="meins-nav-item" id="meinsNav_tausch" onclick="meinsTab('tausch')">
+        🔄 Tausch
+      </div>
+    </div>
+
+    <!-- Content -->
+    <div style="flex:1;overflow-y:auto;padding:20px" id="meinsContent">
+      <div style="color:var(--text3);font-size:13px">Lädt…</div>
     </div>
   </div>
 </div>
@@ -1118,9 +1204,21 @@
           <div id="euFreitagBox" style="display:flex;gap:6px;flex-wrap:wrap"></div>
         </div>
 
-        <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:8px">
-          <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text);cursor:pointer">
-            <input type="checkbox" id="euRbErlaubt" checked style="width:15px;height:15px;cursor:pointer"> Rufbereitschaft erlaubt
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
+          <div>
+            <div style="font-size:10px;color:var(--text3);margin-bottom:3px">Urlaubstage/Jahr</div>
+            <input type="number" id="euUrlaubJahr" value="30" min="0" max="60" style="width:100%;padding:7px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:12px;background:var(--surface);color:var(--text)">
+          </div>
+          <div>
+            <div style="font-size:10px;color:var(--text3);margin-bottom:3px">Resturlaub Vorjahr</div>
+            <input type="number" id="euUrlaubVorjahr" value="0" min="0" max="60" style="width:100%;padding:7px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:12px;background:var(--surface);color:var(--text)">
+          </div>
+        </div>
+
+        <div style="margin-bottom:8px">
+          <div style="font-size:10px;color:var(--text3);margin-bottom:3px">Stundenlohn (€)</div>
+          <input type="number" id="euStundenlohn" value="0" min="0" step="0.01" style="width:100%;padding:7px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:12px;background:var(--surface);color:var(--text)">
+        </div>
           </label>
           <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text);cursor:pointer">
             <input type="checkbox" id="euFzaVorUrlaub" style="width:15px;height:15px;cursor:pointer"> FZA vor Urlaub erlaubt
@@ -3338,6 +3436,372 @@ async function deleteUser(userId){
 }
 
 
+// ─── MEINS ───────────────────────────────────────────────────────────────────
+
+let _meinsStaffId = null;
+let _meinsTab = 'dienste';
+let _meinsStaff = null;
+
+async function openMeins(){
+  const modal = document.getElementById('meinsModal');
+  modal.style.display = 'flex';
+
+  // Eigenen Staff-Datensatz laden
+  const { data: { session } } = await sb.auth.getSession();
+  if(!session){ showToast('Nicht eingeloggt'); return; }
+
+  const { data: profile } = await sb.from('user_profiles').select('*')
+    .eq('user_id', session.user.id).single();
+
+  const staffName = profile ? `${profile.vorname||''} ${profile.name||''}`.trim() : '';
+  const staffRes = await sb.from('staff').select('*')
+    .eq('unternehmen_id', currentUnternehmenId).eq('name', staffName);
+  _meinsStaff = (staffRes.data && staffRes.data.length) ? staffRes.data[0] : null;
+  _meinsStaffId = _meinsStaff ? _meinsStaff.id : null;
+
+  // Header befüllen
+  document.getElementById('meinsName').textContent = staffName || session.user.email;
+  document.getElementById('meinsRolle').textContent = (_meinsStaff && _meinsStaff.role) || currentUserRole || '–';
+  document.getElementById('meinsAvatar').textContent = (staffName[0]||'M').toUpperCase();
+
+  meinsTab('dienste');
+}
+
+function closeMeins(){
+  document.getElementById('meinsModal').style.display = 'none';
+}
+
+function meinsTab(tab){
+  _meinsTab = tab;
+  ['dienste','urlaub','buchungen'].forEach(t => {
+    const btn = document.getElementById('meinsTab_' + t);
+    if(!btn) return;
+    btn.style.background = t === tab ? 'var(--accent)' : 'transparent';
+    btn.style.color = t === tab ? '#fff' : 'var(--text2)';
+    btn.style.fontWeight = t === tab ? '600' : '400';
+  });
+  const content = document.getElementById('meinsContent');
+  content.innerHTML = '<div style="color:var(--text3);font-size:12px;padding:20px">Lädt…</div>';
+  if(tab === 'dienste') renderMeineDienste();
+  if(tab === 'urlaub') renderMeinUrlaub();
+  if(tab === 'buchungen') renderMeineBuchungen();
+}
+
+// ── MEINE DIENSTE ─────────────────────────────────────────────────────────────
+
+function renderMeineDienste(){
+  const content = document.getElementById('meinsContent');
+  if(!_meinsStaffId){ content.innerHTML = '<div style="color:var(--red);font-size:12px">Kein Mitarbeiter-Datensatz gefunden</div>'; return; }
+
+  const days = daysInMonth(currentYear, currentMonth);
+  const hols = holidaysForYear(currentYear);
+  const rows = [];
+
+  for(let d=1; d<=days; d++){
+    const dt = new Date(currentYear, currentMonth, d);
+    const dateStr = fmtDate(dt);
+    const dow = dt.getDay();
+    const isWE = dow===0||dow===6;
+    const isHol = !!hols[dateStr];
+    const entry = state.entries && state.entries[`${_meinsStaffId}_${dateStr}`];
+    const shift = entry ? entry.shift : null;
+    if(!shift) continue;
+
+    const gd = _gruppenDienste.find(x=>x.kuerzel===shift);
+    const sm = SHIFT_MAP[shift] || SHIFT_MAP[shift==='RB'?'RU':shift];
+    const label = gd ? gd.label : (sm ? sm.label : shift);
+    const farbe = gd ? gd.farbe : '#0071e3';
+    const beginn = gd ? gd.beginn : '';
+    const ende = gd ? gd.ende : '';
+    const isFrei = shift === 'FREI';
+
+    const wochentag = ['So','Mo','Di','Mi','Do','Fr','Sa'][dow];
+    const bgColor = isFrei ? 'var(--surface2)' : (isWE||isHol) ? 'rgba(0,113,227,0.06)' : 'var(--surface)';
+    const holName = hols[dateStr] || '';
+
+    rows.push(`
+      <div style="display:grid;grid-template-columns:36px 90px 1fr 120px;gap:8px;align-items:center;padding:10px 12px;background:${bgColor};border:1px solid var(--border);border-radius:10px">
+        <div style="font-size:11px;color:var(--text3);text-align:center">${wochentag}<br><span style="font-size:13px;font-weight:600;color:var(--text)">${d}</span></div>
+        <div>
+          ${isFrei
+            ? `<span style="font-size:12px;color:var(--text3)">✕ Frei${holName?' · '+holName:''}</span>`
+            : `<span style="padding:3px 10px;border-radius:20px;font-size:12px;font-weight:600;color:#fff;background:${farbe}">${shift}</span>`
+          }
+        </div>
+        <div style="font-size:12px;color:var(--text)">${isFrei ? '' : label}${holName&&!isFrei?' <span style="font-size:10px;color:var(--text3)">· '+holName+'</span>':''}</div>
+        <div style="font-size:11px;color:var(--text3)">${beginn&&ende&&!isFrei ? beginn+' – '+ende : ''}</div>
+      </div>`);
+  }
+
+  // Tausch-Button
+  content.innerHTML = `
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+      <div>
+        <div style="font-size:16px;font-weight:700;color:var(--text)">${MONTH_NAMES[currentMonth]} ${currentYear}</div>
+        <div style="font-size:11px;color:var(--text3)">${rows.length} Einträge</div>
+      </div>
+      <button onclick="openTauschAntrag()" style="padding:8px 16px;border:1.5px solid var(--accent);border-radius:8px;background:var(--accent-soft);color:var(--accent);font-size:12px;font-weight:600;cursor:pointer">🔄 Tausch vorschlagen</button>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:6px">${rows.join('')||'<div style="color:var(--text3);font-size:12px">Keine Einträge für diesen Monat</div>'}</div>`;
+}
+
+// ── MEIN URLAUB ───────────────────────────────────────────────────────────────
+
+async function renderMeinUrlaub(){
+  const content = document.getElementById('meinsContent');
+  if(!_meinsStaffId){ content.innerHTML = '<div style="color:var(--red);font-size:12px">Kein Mitarbeiter-Datensatz gefunden</div>'; return; }
+
+  // Urlaubs-Daten laden
+  const { data: antraege } = await sb.from('urlaubsantraege')
+    .select('*').eq('staff_id', _meinsStaffId).order('von_datum', {ascending:false});
+
+  const jahr = currentYear;
+  const urlaubJahr = (_meinsStaff && _meinsStaff.urlaubstage_jahr) || 30;
+  const urlaubVorjahr = (_meinsStaff && _meinsStaff.urlaubstage_vorjahr) || 0;
+  const gesamtTage = urlaubJahr + urlaubVorjahr;
+
+  // Genehmigte Tage berechnen
+  const genehmigt = (antraege||[])
+    .filter(a => a.status==='genehmigt' && new Date(a.von_datum).getFullYear()===jahr)
+    .reduce((sum,a) => sum+a.tage, 0);
+  const restTage = gesamtTage - genehmigt;
+
+  // Vorjahr-Warnung
+  const jetzt = new Date();
+  const vorjahrWarnung = urlaubVorjahr > 0 && jetzt.getMonth() < 3; // vor Ende März
+
+  const statusBadge = s => {
+    const map = {offen:'🕐 Ausstehend', genehmigt:'✅ Genehmigt', abgelehnt:'❌ Abgelehnt'};
+    const col = {offen:'var(--orange)', genehmigt:'var(--green)', abgelehnt:'var(--red)'};
+    return `<span style="font-size:10px;font-weight:600;color:${col[s]||'var(--text3)'}">${map[s]||s}</span>`;
+  };
+
+  const antraegeHtml = (antraege||[]).length ? (antraege||[]).map(a => `
+    <div style="padding:12px 14px;background:var(--surface);border:1px solid var(--border);border-radius:10px">
+      <div style="display:flex;align-items:center;gap:8px">
+        <div style="flex:1">
+          <div style="font-size:13px;font-weight:600;color:var(--text)">${new Date(a.von_datum+'T12:00:00').toLocaleDateString('de-DE',{day:'numeric',month:'long'})} – ${new Date(a.bis_datum+'T12:00:00').toLocaleDateString('de-DE',{day:'numeric',month:'long',year:'numeric'})}</div>
+          <div style="font-size:11px;color:var(--text3)">${a.tage} Tag${a.tage!==1?'e':''} ${a.notiz?'· '+a.notiz:''}</div>
+        </div>
+        ${statusBadge(a.status)}
+      </div>
+      ${a.ablehnungsgrund?`<div style="margin-top:6px;font-size:11px;color:var(--red)">Grund: ${a.ablehnungsgrund}</div>`:''}
+    </div>`).join('') : '<div style="font-size:12px;color:var(--text3)">Keine Anträge vorhanden</div>';
+
+  content.innerHTML = `
+    <!-- Übersicht -->
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:20px">
+      <div style="background:var(--accent-soft);border:1.5px solid var(--accent);border-radius:12px;padding:14px;text-align:center">
+        <div style="font-size:28px;font-weight:700;color:var(--accent)">${restTage}</div>
+        <div style="font-size:11px;color:var(--accent)">Resturlaub ${jahr}</div>
+      </div>
+      <div style="background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:14px;text-align:center">
+        <div style="font-size:28px;font-weight:700;color:var(--text)">${genehmigt}</div>
+        <div style="font-size:11px;color:var(--text3)">Genommen ${jahr}</div>
+      </div>
+      <div style="background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:14px;text-align:center">
+        <div style="font-size:28px;font-weight:700;color:var(--text)">${gesamtTage}</div>
+        <div style="font-size:11px;color:var(--text3)">Gesamt (inkl. ${urlaubVorjahr} Vorjahr)</div>
+      </div>
+    </div>
+
+    ${vorjahrWarnung ? `
+    <div style="padding:10px 14px;background:rgba(255,159,10,.12);border:1px solid rgba(255,159,10,.3);border-radius:8px;margin-bottom:16px;font-size:12px;color:#7a4a00">
+      ⚠️ Du hast noch <strong>${urlaubVorjahr} Urlaubstage aus ${jahr-1}</strong> – diese verfallen am 31. März ${jahr}!
+    </div>` : ''}
+
+    <!-- Neuer Antrag -->
+    <div style="margin-bottom:20px">
+      <button onclick="openUrlaubsantrag()" style="width:100%;padding:12px;border:2px dashed var(--accent);border-radius:10px;background:var(--accent-soft);color:var(--accent);font-size:13px;font-weight:600;cursor:pointer">
+        + Urlaubsantrag stellen
+      </button>
+    </div>
+
+    <!-- Anträge Liste -->
+    <div style="font-size:13px;font-weight:600;color:var(--text);margin-bottom:10px">Meine Anträge</div>
+    <div style="display:flex;flex-direction:column;gap:8px">${antraegeHtml}</div>`;
+}
+
+async function openUrlaubsantrag(){
+  const von = prompt('Von (TT.MM.JJJJ):');
+  if(!von) return;
+  const bis = prompt('Bis (TT.MM.JJJJ):', von);
+  if(!bis) return;
+  const notiz = prompt('Notiz (optional, z.B. Familienurlaub):', '') || '';
+
+  // Datum parsen
+  const parseDE = s => { const [d,m,y]=s.split('.'); return `${y}-${m.padStart(2,'0')}-${d.padStart(2,'0')}`; };
+  const vonISO = parseDE(von);
+  const bisISO = parseDE(bis);
+
+  // Werktage zählen
+  let tage = 0;
+  const hols = holidaysForYear(parseInt(vonISO.slice(0,4)));
+  let cur = new Date(vonISO+'T12:00:00');
+  const bisDate = new Date(bisISO+'T12:00:00');
+  while(cur <= bisDate){
+    const dow = cur.getDay();
+    const ds = fmtDate(cur);
+    if(dow>=1 && dow<=5 && !hols[ds]) tage++;
+    cur.setDate(cur.getDate()+1);
+  }
+  if(tage<=0){ showToast('Keine Werktage im gewählten Zeitraum'); return; }
+  if(!confirm(`${tage} Urlaubstag${tage!==1?'e':''} beantragen (${von} – ${bis})?`)) return;
+
+  const { error } = await sb.from('urlaubsantraege').insert({
+    staff_id: _meinsStaffId,
+    von_datum: vonISO,
+    bis_datum: bisISO,
+    tage,
+    notiz,
+    status: 'offen'
+  });
+  if(error){ showToast('Fehler: '+error.message); return; }
+  showToast(`✅ Antrag für ${tage} Tage gestellt`);
+  renderMeinUrlaub();
+}
+
+// ── MEINE BUCHUNGEN ───────────────────────────────────────────────────────────
+
+async function renderMeineBuchungen(){
+  const content = document.getElementById('meinsContent');
+  if(!_meinsStaffId){ content.innerHTML = '<div style="color:var(--red);font-size:12px">Kein Mitarbeiter-Datensatz gefunden</div>'; return; }
+
+  const monatStr = `${currentYear}-${String(currentMonth+1).padStart(2,'0')}`;
+  const { data: buchungen } = await sb.from('zeiterfassung')
+    .select('*').eq('staff_id', _meinsStaffId)
+    .gte('datum', monatStr+'-01').lte('datum', monatStr+'-31')
+    .order('datum');
+
+  // Aktive Buchung prüfen
+  const aktiv = (buchungen||[]).find(b => b.start_zeit && !b.end_zeit);
+
+  const rows = (buchungen||[]).map(b => {
+    const start = b.start_zeit ? new Date(b.start_zeit).toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'}) : '–';
+    const ende = b.end_zeit ? new Date(b.end_zeit).toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'}) : '–';
+    const istMin = b.start_zeit && b.end_zeit
+      ? Math.round((new Date(b.end_zeit)-new Date(b.start_zeit))/60000) - (b.pause_minuten||0)
+      : null;
+    const istStd = istMin !== null ? `${Math.floor(istMin/60)}:${String(istMin%60).padStart(2,'0')}h` : '–';
+    const freigabe = b.freigabe_noetig && b.status!=='festgeschrieben';
+    const statusCol = b.status==='festgeschrieben' ? 'var(--green)' : freigabe ? 'var(--orange)' : 'var(--text3)';
+    const statusTxt = b.status==='festgeschrieben' ? '✅' : freigabe ? '⚠️' : '○';
+    const dt = new Date(b.datum+'T12:00:00');
+    const wt = ['So','Mo','Di','Mi','Do','Fr','Sa'][dt.getDay()];
+    return `
+      <div style="display:grid;grid-template-columns:60px 80px 80px 60px 60px 28px;gap:6px;align-items:center;padding:10px 12px;background:var(--surface);border:1px solid var(--border);border-radius:10px${freigabe?';border-color:var(--orange)':''}">
+        <div style="font-size:11px;color:var(--text3)">${wt} ${dt.getDate()}.${dt.getMonth()+1}.</div>
+        <div style="font-size:12px;font-weight:500">${start}</div>
+        <div style="font-size:12px;font-weight:500">${ende}</div>
+        <div style="font-size:11px;color:var(--text3)">${b.pause_minuten||0} Min</div>
+        <div style="font-size:12px;font-weight:600;color:var(--text)">${istStd}</div>
+        <div style="font-size:14px;color:${statusCol};text-align:center" title="${b.status}">${statusTxt}</div>
+      </div>`;
+  }).join('');
+
+  content.innerHTML = `
+    <!-- Start/Stop Button -->
+    <div style="margin-bottom:20px">
+      ${aktiv ? `
+        <button onclick="stopBuchung('${aktiv.id}')"
+          style="width:100%;padding:16px;border:none;border-radius:12px;background:var(--red);color:#fff;font-size:15px;font-weight:700;cursor:pointer">
+          ⏹ Dienst beenden · Gestartet ${new Date(aktiv.start_zeit).toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'})} Uhr
+        </button>` : `
+        <button onclick="startBuchung()"
+          style="width:100%;padding:16px;border:none;border-radius:12px;background:var(--green);color:#fff;font-size:15px;font-weight:700;cursor:pointer">
+          ▶ Dienst starten
+        </button>`}
+    </div>
+
+    <!-- Tabellen-Header -->
+    <div style="display:grid;grid-template-columns:60px 80px 80px 60px 60px 28px;gap:6px;padding:0 12px;margin-bottom:4px">
+      ${['Datum','Start','Ende','Pause','Netto',''].map(h=>`<div style="font-size:10px;color:var(--text3);font-weight:600">${h}</div>`).join('')}
+    </div>
+
+    <!-- Buchungen -->
+    <div style="display:flex;flex-direction:column;gap:6px">
+      ${rows || '<div style="font-size:12px;color:var(--text3)">Keine Buchungen in diesem Monat</div>'}
+    </div>`;
+}
+
+async function startBuchung(){
+  if(!_meinsStaffId) return;
+  const heute = fmtDate(new Date());
+  const entry = state.entries && state.entries[`${_meinsStaffId}_${heute}`];
+  const geplantStart = entry ? (_gruppenDienste.find(d=>d.kuerzel===entry.shift)&&_gruppenDienste.find(d=>d.kuerzel===entry.shift).beginn) || null : null;
+  const geplantEnde  = entry ? (_gruppenDienste.find(d=>d.kuerzel===entry.shift)&&_gruppenDienste.find(d=>d.kuerzel===entry.shift).ende)   || null : null;
+
+  const jetzt = new Date();
+  // Freigabe prüfen: Start ≥ 6 Min früher als geplant?
+  let freigabe = false;
+  let freigabeGrund = '';
+  if(geplantStart){
+    const [h,m] = geplantStart.split(':').map(Number);
+    const planMinutes = h*60+m;
+    const istMinutes  = jetzt.getHours()*60+jetzt.getMinutes();
+    const diff = planMinutes - istMinutes; // positiv = früher
+    if(diff >= 6){ freigabe=true; freigabeGrund=`Start ${diff} Min früher als geplant (${geplantStart})`; }
+  }
+
+  const { error } = await sb.from('zeiterfassung').upsert({
+    staff_id: _meinsStaffId,
+    datum: heute,
+    start_zeit: jetzt.toISOString(),
+    geplanter_start: geplantStart,
+    geplantes_ende: geplantEnde,
+    status: 'offen',
+    freigabe_noetig: freigabe,
+    freigabe_grund: freigabeGrund,
+    unternehmen_id: currentUnternehmenId
+  }, {onConflict:'staff_id,datum'});
+
+  if(error){ showToast('Fehler: '+error.message); return; }
+  showToast(freigabe ? `▶ Gestartet – ⚠️ Freigabe nötig (${freigabeGrund})` : '▶ Dienst gestartet');
+  renderMeineBuchungen();
+}
+
+async function stopBuchung(buchungId){
+  const jetzt = new Date();
+  const { data: buch } = await sb.from('zeiterfassung').select('*').eq('id',buchungId).single();
+  if(!buch) return;
+
+  // Freigabe prüfen: Ende > 15 Min früher oder später als geplant?
+  let freigabe = buch.freigabe_noetig || false;
+  let freigabeGrund = buch.freigabe_grund || '';
+  if(buch.geplantes_ende){
+    const [h,m] = buch.geplantes_ende.split(':').map(Number);
+    const planMinutes = h*60+m;
+    const istMinutes  = jetzt.getHours()*60+jetzt.getMinutes();
+    const diff = Math.abs(planMinutes - istMinutes);
+    if(diff > 15){
+      freigabe = true;
+      const richtung = istMinutes > planMinutes ? 'später' : 'früher';
+      freigabeGrund += (freigabeGrund?', ':'') + `Ende ${diff} Min ${richtung} als geplant (${buch.geplantes_ende})`;
+    }
+  }
+
+  // Pause automatisch berechnen (gesetzlich)
+  const dauMin = Math.round((jetzt - new Date(buch.start_zeit)) / 60000);
+  const autoPause = dauMin > 540 ? 45 : dauMin > 360 ? 30 : 0;
+
+  await sb.from('zeiterfassung').update({
+    end_zeit: jetzt.toISOString(),
+    pause_minuten: autoPause,
+    freigabe_noetig: freigabe,
+    freigabe_grund: freigabeGrund,
+    status: freigabe ? 'freigabe_noetig' : 'offen'
+  }).eq('id', buchungId);
+
+  showToast(freigabe ? `⏹ Beendet – ⚠️ Freigabe nötig: ${freigabeGrund}` : '⏹ Dienst beendet');
+  renderMeineBuchungen();
+}
+
+// ── TAUSCH ────────────────────────────────────────────────────────────────────
+
+async function openTauschAntrag(){
+  showToast('Tausch-Funktion folgt in Kürze');
+}
+
 // ─── STUNDENÜBERSICHT ────────────────────────────────────────────────────────
 
 let _stundenTab = 'planer';
@@ -3687,6 +4151,9 @@ async function loadUserRole(){
   const { data, error } = await sb.from('user_roles').select('role').eq('user_id', currentUserId).single();
   if(data){
     currentUserRole = data.role;
+  // Meins-Button für alle eingeloggten User anzeigen
+  const btnMeins = document.getElementById('btnMeins');
+  if(btnMeins) btnMeins.style.display = 'flex';
   } else {
     // Fallback via Edge Function
     const result = await callManageRoles('getOwn');
@@ -3712,8 +4179,9 @@ function applyRolePermissions(){
   const btnEintrag = document.querySelector('button[onclick="openAddEntry()"]');
   if(btnEintrag) btnEintrag.style.display = readOnly.includes(currentUserRole) ? 'none' : '';
 
-  // + Personal Button ausblenden
-  const btnPersonal = document.querySelector('button[onclick="openAddStaff()"]');
+  // Meins Button: für alle eingeloggten User sichtbar
+  const btnMeins = document.getElementById('btnMeins');
+  if(btnMeins) btnMeins.style.display = 'flex';
   if(btnPersonal) btnPersonal.style.display = noUsers.includes(currentUserRole) ? 'none' : '';
 
   // KI-Button ausblenden für readOnly
@@ -3815,6 +4283,9 @@ function loadEuRules(s){
   document.getElementById('euRbErlaubt').checked     = (s && s.rb_erlaubt) !== false;
   document.getElementById('euFzaVorUrlaub').checked  = (s && s.fza_vor_urlaub) || false;
   document.getElementById('euFzaNachUrlaub').checked = (s && s.fza_nach_urlaub) || false;
+  document.getElementById('euUrlaubJahr').value      = (s && s.urlaubstage_jahr) || 30;
+  document.getElementById('euUrlaubVorjahr').value   = (s && s.urlaubstage_vorjahr) || 0;
+  document.getElementById('euStundenlohn').value     = (s && s.stundenlohn) || 0;
 }
 
 function addEuQualifikation(){
@@ -3883,6 +4354,9 @@ async function saveEditUser(){
     rb_erlaubt:      document.getElementById('euRbErlaubt').checked,
     fza_vor_urlaub:  document.getElementById('euFzaVorUrlaub').checked,
     fza_nach_urlaub: document.getElementById('euFzaNachUrlaub').checked,
+    urlaubstage_jahr:    parseInt(document.getElementById('euUrlaubJahr').value)||30,
+    urlaubstage_vorjahr: parseInt(document.getElementById('euUrlaubVorjahr').value)||0,
+    stundenlohn:         parseFloat(document.getElementById('euStundenlohn').value)||0,
     // Vertragliche Arbeitstage: angehakt = Arbeitstag → feste_freitage = NICHT angehakte Tage
     feste_freitage: [1,2,3,4,5,6,7].filter(v =>
       !document.querySelector(`.eu-freitag-cb[value="${v}"]:checked`)
