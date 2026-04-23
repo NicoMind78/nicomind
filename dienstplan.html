@@ -2447,27 +2447,26 @@ async function runKIPlanner(){
     (istFesterFreitag(s,d) && !getWish(s.id,ds(d)));
 
   const kannArbeiten = (s, d, schicht) => {
-    if(plan[s.id][ds(d)]) return false;           // schon verplant
-    if(isBlocked(s,d)) return false;               // gesperrt
+    const _dbg = schicht==='FS' && s.dienste_erlaubt && s.dienste_erlaubt.includes('FS') && d<=5;
+    if(plan[s.id][ds(d)]){ if(_dbg) console.log(`FS d${d} ${s.name}: schon verplant als ${plan[s.id][ds(d)]}`); return false; }
+    if(isBlocked(s,d)){ if(_dbg) console.log(`FS d${d} ${s.name}: geblockt`); return false; }
     const erlaubt = (s.dienste_erlaubt && s.dienste_erlaubt.length > 0) ? s.dienste_erlaubt : PLANBAR;
-    if(!erlaubt.includes(schicht)) return false;
+    if(!erlaubt.includes(schicht)){ if(_dbg) console.log(`FS d${d} ${s.name}: nicht erlaubt ${JSON.stringify(erlaubt)}`); return false; }
     if((getDienstConfig(schicht).typ||'normal')==='bereitschaft' && s.rb_erlaubt===false) return false;
-    if(folgeTage[s.id] >= Math.min(maxTageFolge,grMaxTage)) return false;
+    if(folgeTage[s.id] >= Math.min(maxTageFolge,grMaxTage)){ if(_dbg) console.log(`FS d${d} ${s.name}: maxTage=${folgeTage[s.id]}`); return false; }
     const std = getStunden(schicht);
     const moSoll = monatssoll[s.id]||1;
-    if(istStunden[s.id]+std > moSoll+stdToleranz) return false;
-    if(std > maxStdTag) return false;
-
-    // HART: Tages-Maximum für diesen Dienst prüfen
+    if(istStunden[s.id]+std > moSoll+stdToleranz){ if(_dbg) console.log(`FS d${d} ${s.name}: stunden ${istStunden[s.id].toFixed(1)}+${std} > ${moSoll.toFixed(1)}+${stdToleranz}`); return false; }
+    if(std > maxStdTag){ if(_dbg) console.log(`FS d${d} ${s.name}: std ${std} > max ${maxStdTag}`); return false; }
     const cfg = getDienstConfig(schicht);
     const isFrei = isFreiTag(d);
     const maxH = isFrei
       ? (cfg.max_we != null ? cfg.max_we : (cfg.max_tag != null ? cfg.max_tag : 99))
       : (cfg.max_tag != null ? cfg.max_tag : 99);
-    if(maxH === 0) return false;
+    if(maxH === 0){ if(_dbg) console.log(`FS d${d} ${s.name}: maxH=0`); return false; }
     const bereitsGeplant = Object.values(plan).filter(p => p[ds(d)] === schicht).length;
-    if(bereitsGeplant >= maxH) return false;
-
+    if(bereitsGeplant >= maxH){ if(_dbg) console.log(`FS d${d} ${s.name}: bereitsGeplant ${bereitsGeplant} >= maxH ${maxH}`); return false; }
+    if(_dbg) console.log(`FS d${d} ${s.name}: OK ✓`);
     return true;
   };
 
@@ -2858,15 +2857,24 @@ function kiAcceptAll(){ _kiProposal.forEach((_,i)=>{ _kiProposal[i].status='acce
 function kiRejectAll(){ _kiProposal.forEach((_,i)=>{ _kiProposal[i].status='rejected'; }); showKIPreview(); }
 
 function kiApplyAccepted(){
-  let count=0;
-  _kiProposal.forEach(p=>{
-    if(p.status==='accepted'){
-      state.entries[`${p.staffId}_${p.dateStr}`]={ shift:p.shift, info:'' };
-      count++;
-    }
+  const accepted = _kiProposal.filter(p=>p.status==='accepted');
+  if(!accepted.length){ showToast('Keine akzeptierten Einträge'); return; }
+
+  // Alle Einträge des aktuellen Monats für diese Gruppe zuerst löschen
+  const monthPrefix = `${currentYear}-${String(currentMonth+1).padStart(2,'0')}`;
+  Object.keys(state.entries||{}).forEach(key=>{
+    if(key.includes('_'+monthPrefix)) delete state.entries[key];
   });
+
+  // Akzeptierte Einträge schreiben
+  let count=0;
+  accepted.forEach(p=>{
+    state.entries[`${p.staffId}_${p.dateStr}`]={ shift:p.shift, info:'' };
+    count++;
+  });
+
   saveData(); closeModal('kiPreviewModal'); render();
-  showToast(`${count} Einträge übernommen ✓`);
+  showToast(`✅ ${count} Einträge übernommen – Monat neu geplant`);
 }
 
 // ─── WÜNSCHE ───
