@@ -2693,6 +2693,7 @@ async function runKIPlanner(){
       const w = getWish(s.id, dateStr);
       const hatOrangeTermin = (w && w.prioritaet === 'wichtig');
       const hatWunschDienst = (w && w.prioritaet === 'wunsch_dienst' && w.dienst && w.dienst !== 'frei');
+      const _dbgFS = s.dienste_erlaubt && s.dienste_erlaubt.includes('FS') && d<=5;
 
       for(const cfg of werktagsDienste){
         // Max hart – WE und Werktag getrennt
@@ -2717,6 +2718,7 @@ async function runKIPlanner(){
 
         if(sc > bestScore){ bestScore=sc; bestSchicht=cfg.kuerzel; }
       }
+      if(_dbgFS) console.log(`Phase4 d${d} ${s.name}: bestSchicht=${bestSchicht} score=${bestScore.toFixed(1)} tCount=${JSON.stringify(tCount)}`);
       if(bestSchicht){
         setEntry(s.id, d, bestSchicht);
         tCount[bestSchicht] = (tCount[bestSchicht]||0) + 1;
