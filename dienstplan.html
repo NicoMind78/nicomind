@@ -2649,6 +2649,17 @@ async function runKIPlanner(){
     }
   }
 
+  // WE-Tage: alle MAs ohne Eintrag auf FREI setzen → folgeTage reset
+  for(let d=1; d<=days; d++){
+    if(!isFreiTag(d)) continue;
+    staff.forEach(s=>{
+      if(!plan[s.id][ds(d)]){
+        plan[s.id][ds(d)] = 'FREI';
+        folgeTage[s.id] = 0;
+      }
+    });
+  }
+
   // ─── PHASE 4: Werktage auffüllen nach Stunden ───────────────────────────
   const werktagsDienste = gDienste.filter(d=>(d.typ||'normal')!=='bereitschaft').sort((a,b)=>(a.position || 10)-(b.position || 10));
 
