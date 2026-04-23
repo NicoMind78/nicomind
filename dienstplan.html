@@ -1101,6 +1101,17 @@
           </div>
         </div>
 
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
+          <div>
+            <div style="font-size:10px;color:var(--text3);margin-bottom:3px">Urlaubstage/Jahr</div>
+            <input type="number" id="inviteUrlaubstage" value="30" min="0" max="60" style="width:100%;padding:7px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:12px;background:var(--surface);color:var(--text)">
+          </div>
+          <div>
+            <div style="font-size:10px;color:var(--text3);margin-bottom:3px">Stundenlohn (€)</div>
+            <input type="number" id="inviteStundenlohn" value="0" min="0" max="200" step="0.01" style="width:100%;padding:7px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:12px;background:var(--surface);color:var(--text)">
+          </div>
+        </div>
+
         <!-- Zeile 5: Checkboxen Auto -->
         <div style="display:flex;gap:24px;align-items:center;margin-bottom:12px">
           <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text);cursor:pointer">
@@ -1173,6 +1184,17 @@
         <div>
           <div style="font-size:10px;color:var(--text3);margin-bottom:3px">Wöchtl. Arbeitszeit (h)</div>
           <input type="number" id="euSoll" min="0" max="60" step="0.5" style="width:100%;padding:7px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:12px;background:var(--surface);color:var(--text)">
+        </div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
+        <div>
+          <div style="font-size:10px;color:var(--text3);margin-bottom:3px">Urlaubstage/Jahr</div>
+          <input type="number" id="euUrlaubstage" value="30" min="0" max="60" style="width:100%;padding:7px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:12px;background:var(--surface);color:var(--text)">
+        </div>
+        <div>
+          <div style="font-size:10px;color:var(--text3);margin-bottom:3px">Stundenlohn (€)</div>
+          <input type="number" id="euStundenlohn" value="0" min="0" max="200" step="0.01" style="width:100%;padding:7px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:12px;background:var(--surface);color:var(--text)">
         </div>
       </div>
 
@@ -3204,6 +3226,8 @@ async function inviteUser(){
   const handy    = document.getElementById('inviteHandy').value.trim();
   const kostenstelle = document.getElementById('inviteKostenstelle').value.trim();
   const soll     = parseFloat(document.getElementById('inviteSoll').value)||38.5;
+  const urlaubstageInvite = parseInt(document.getElementById('inviteUrlaubstage').value)||30;
+  const stundenlohnInvite = parseFloat(document.getElementById('inviteStundenlohn').value)||0;
   const auto1    = document.getElementById('inviteAuto1').checked;
   const poolAuto = document.getElementById('invitePoolAuto').checked;
   const standortIds = [...document.querySelectorAll('.inv-standort-cb:checked')].map(c=>c.value);
@@ -3225,7 +3249,8 @@ async function inviteUser(){
       id: nextId,
       name: fullName,
       role: position || 'Mitarbeiter',
-      soll, color, notes: '', rules: {},
+      soll, urlaubstage_jahr: urlaubstageInvite, stundenlohn: stundenlohnInvite,
+      color, notes: '', rules: {},
       unternehmen_id: currentUnternehmenId,
       standort_id: standortIds[0] || null,
       gruppe_id: gruppeIds[0] || null,
@@ -4212,8 +4237,10 @@ let _editUserId   = null;
 async function openEditUser(userId){
   _editUserId  = userId;
   _editStaffId = null;
-  const { data: profile } = await sb.from('user_profiles').select('*').eq('user_id', userId).single();
-  document.getElementById('editUserSub').textContent = profile ? `${profile.vorname||''} ${profile.name||''}`.trim() : userId.substring(0,12)+'…';
+  const profileRes = await sb.from('user_profiles').select('*').eq('user_id', userId).single();
+  const profile = profileRes.data;
+  const displayName = profile ? `${profile.vorname||''} ${profile.name||''}`.trim() : userId.substring(0,12)+'…';
+  document.getElementById('editUserSub').textContent = displayName;
   document.getElementById('euName').value        = (profile && profile.name) || '';
   document.getElementById('euVorname').value     = (profile && profile.vorname) || '';
   document.getElementById('euHandy').value       = (profile && profile.handy) || '';
@@ -4221,7 +4248,6 @@ async function openEditUser(userId){
   document.getElementById('euSoll').value        = (profile && profile.soll) || 38.5;
   document.getElementById('euAuto1').checked     = (profile && profile.auto1) || false;
   document.getElementById('euPoolAuto').checked  = (profile && profile.pool_auto) || false;
-  // Position
   const sel = document.getElementById('euPosition');
   const pos = (profile && profile.position) || '';
   if(pos && !sel.querySelector(`option[value="${pos}"]`)){
@@ -4229,13 +4255,13 @@ async function openEditUser(userId){
   }
   sel.value = pos;
   renderEuCheckboxes((profile && profile.standort_ids)||[], (profile && profile.gruppe_ids)||[]);
-
-  // Individuelle Planungsregeln laden – Staff per Name suchen (Fallback: null)
+  // Staff-Datensatz für Planungsregeln, Urlaubstage und Stundenlohn
   const staffName = `${(profile && profile.vorname)||''} ${(profile && profile.name)||''}`.trim();
   const staffRes = await sb.from('staff').select('*').eq('unternehmen_id', currentUnternehmenId).eq('name', staffName);
   const staffData = (staffRes.data && staffRes.data.length) ? staffRes.data[0] : null;
+  document.getElementById('euUrlaubstage').value = (staffData && staffData.urlaubstage_jahr) || 30;
+  document.getElementById('euStundenlohn').value = (staffData && staffData.stundenlohn) || 0;
   loadEuRules(staffData);
-
   openModal('editUserModal');
 }
 
@@ -4253,6 +4279,8 @@ async function openEditStaffOnly(staffId){
   document.getElementById('euSoll').value        = s.soll || 38.5;
   document.getElementById('euAuto1').checked     = false;
   document.getElementById('euPoolAuto').checked  = false;
+  document.getElementById('euUrlaubstage').value = s.urlaubstage_jahr || 30;
+  document.getElementById('euStundenlohn').value = s.stundenlohn || 0;
   const sel = document.getElementById('euPosition');
   sel.value = s.role || '';
   renderEuCheckboxes(s.standort_ids||[], s.gruppe_ids||[]);
@@ -4341,6 +4369,8 @@ async function saveEditUser(){
   const soll        = parseFloat(document.getElementById('euSoll').value)||38.5;
   const auto1       = document.getElementById('euAuto1').checked;
   const poolAuto    = document.getElementById('euPoolAuto').checked;
+  const urlaubstage = parseInt(document.getElementById('euUrlaubstage').value)||30;
+  const stundenlohn = parseFloat(document.getElementById('euStundenlohn').value)||0;
   const standortIds = [...document.querySelectorAll('.eu-standort-cb:checked')].map(c=>c.value);
   const gruppeIds   = [...document.querySelectorAll('.eu-gruppe-cb:checked')].map(c=>c.value);
   const fullName    = `${vorname} ${name}`.trim();
@@ -4372,6 +4402,7 @@ async function saveEditUser(){
     if(error){ showToast('Fehler: ' + error.message); return; }
     await sb.from('staff').update({
       name: fullName, role: position, soll,
+      urlaubstage_jahr: urlaubstage, stundenlohn,
       standort_id: standortIds[0]||null, gruppe_id: gruppeIds[0]||null,
       standort_ids: standortIds, gruppe_ids: gruppeIds,
       ...staffRules
@@ -4381,6 +4412,7 @@ async function saveEditUser(){
   if(_editStaffId){
     const { error } = await sb.from('staff').update({
       name: fullName, role: position, soll,
+      urlaubstage_jahr: urlaubstage, stundenlohn,
       standort_id: standortIds[0]||null, gruppe_id: gruppeIds[0]||null,
       standort_ids: standortIds, gruppe_ids: gruppeIds,
       ...staffRules
