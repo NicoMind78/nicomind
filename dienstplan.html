@@ -4237,8 +4237,8 @@ let _editUserId   = null;
 async function openEditUser(userId){
   _editUserId  = userId;
   _editStaffId = null;
-  const profileRes = await sb.from('user_profiles').select('*').eq('user_id', userId).single();
-  const profile = profileRes.data;
+  const profileRes = await sb.from('user_profiles').select('*').eq('user_id', userId).maybeSingle();
+  const profile = profileRes.data || null;
   const displayName = profile ? `${profile.vorname||''} ${profile.name||''}`.trim() : userId.substring(0,12)+'…';
   document.getElementById('editUserSub').textContent = displayName;
   document.getElementById('euName').value        = (profile && profile.name) || '';
@@ -4257,8 +4257,11 @@ async function openEditUser(userId){
   renderEuCheckboxes((profile && profile.standort_ids)||[], (profile && profile.gruppe_ids)||[]);
   // Staff-Datensatz für Planungsregeln, Urlaubstage und Stundenlohn
   const staffName = `${(profile && profile.vorname)||''} ${(profile && profile.name)||''}`.trim();
-  const staffRes = await sb.from('staff').select('*').eq('unternehmen_id', currentUnternehmenId).eq('name', staffName);
-  const staffData = (staffRes.data && staffRes.data.length) ? staffRes.data[0] : null;
+  let staffData = null;
+  if(staffName){
+    const staffRes = await sb.from('staff').select('*').eq('unternehmen_id', currentUnternehmenId).eq('name', staffName);
+    staffData = (staffRes.data && staffRes.data.length) ? staffRes.data[0] : null;
+  }
   document.getElementById('euUrlaubstage').value = (staffData && staffData.urlaubstage_jahr) || 30;
   document.getElementById('euStundenlohn').value = (staffData && staffData.stundenlohn) || 0;
   loadEuRules(staffData);
