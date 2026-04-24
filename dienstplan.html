@@ -509,6 +509,10 @@
         <div class="settings-menu-item" id="menuUnternehmensrahmen" onclick="openUnternehmensrahmenModal()">⚖️ Unternehmensrahmen</div>
         <div class="settings-menu-item" onclick="openGruppenrahmenModal()">📋 Gruppen-Vorgaben</div>
         <div class="settings-menu-item" onclick="openStundenModal()">📊 Stundenübersicht</div>
+        <div style="height:1px;background:var(--border);margin:4px 0"></div>
+        <div class="settings-menu-item" id="menuAdminZeit" onclick="openAdminZeiterfassung()">⏱️ Zeiterfassung verwalten</div>
+        <div class="settings-menu-item" id="menuAdminUrlaub" onclick="openAdminUrlaub()">🏖️ Urlaubsanträge</div>
+        <div style="height:1px;background:var(--border);margin:4px 0"></div>
         <div class="settings-menu-item" onclick="showToast('Datenschutz & TOM folgt bald')">🔒 Datenschutz & TOM</div>
       </div>
     </div>
@@ -906,6 +910,61 @@
 
     <!-- Heute geplant -->
     <div id="stempelGeplantInfo" style="padding:10px 16px;background:var(--surface2);border-top:1px solid var(--border);font-size:11px;color:var(--text3);text-align:center"></div>
+  </div>
+</div>
+
+<!-- Admin Zeiterfassung Modal -->
+<div class="modal-overlay" id="adminZeitModal" onclick="if(event.target===this)closeModal('adminZeitModal')">
+  <div class="modal modal-wide" style="max-height:90vh;display:flex;flex-direction:column;width:720px">
+    <div class="modal-title">⏱️ Zeiterfassung verwalten</div>
+    <div class="modal-sub" id="adminZeitSub">Alle Buchungen der Gruppe</div>
+
+    <!-- Filter -->
+    <div style="display:flex;gap:8px;margin:10px 0;flex-wrap:wrap">
+      <select id="adminZeitMonat" onchange="loadAdminZeit()" style="padding:6px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:12px;background:var(--surface);color:var(--text)">
+      </select>
+      <select id="adminZeitFilter" onchange="loadAdminZeit()" style="padding:6px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:12px;background:var(--surface);color:var(--text)">
+        <option value="alle">Alle Buchungen</option>
+        <option value="freigabe">⚠️ Freigabe nötig</option>
+        <option value="offen">Offen</option>
+        <option value="festgeschrieben">✅ Festgeschrieben</option>
+      </select>
+    </div>
+
+    <div style="overflow-y:auto;flex:1" id="adminZeitBody">
+      <div style="color:var(--text3);font-size:12px;padding:20px">Lädt…</div>
+    </div>
+
+    <div class="modal-actions">
+      <button class="btn btn-secondary" onclick="closeModal('adminZeitModal')">Schließen</button>
+      <button class="btn btn-primary" onclick="allesFestschreiben()">✅ Alle freigegebenen festschreiben</button>
+    </div>
+  </div>
+</div>
+
+<!-- Admin Urlaub Modal -->
+<div class="modal-overlay" id="adminUrlaubModal" onclick="if(event.target===this)closeModal('adminUrlaubModal')">
+  <div class="modal modal-wide" style="max-height:90vh;display:flex;flex-direction:column;width:680px">
+    <div class="modal-title">🏖️ Urlaubsanträge</div>
+    <div class="modal-sub" id="adminUrlaubSub">Alle Anträge der Gruppe</div>
+
+    <!-- Filter -->
+    <div style="display:flex;gap:8px;margin:10px 0">
+      <select id="adminUrlaubFilter" onchange="loadAdminUrlaub()" style="padding:6px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:12px;background:var(--surface);color:var(--text)">
+        <option value="offen">🕐 Ausstehend</option>
+        <option value="alle">Alle</option>
+        <option value="genehmigt">✅ Genehmigt</option>
+        <option value="abgelehnt">❌ Abgelehnt</option>
+      </select>
+    </div>
+
+    <div style="overflow-y:auto;flex:1" id="adminUrlaubBody">
+      <div style="color:var(--text3);font-size:12px;padding:20px">Lädt…</div>
+    </div>
+
+    <div class="modal-actions">
+      <button class="btn btn-secondary" onclick="closeModal('adminUrlaubModal')">Schließen</button>
+    </div>
   </div>
 </div>
 
@@ -3499,6 +3558,210 @@ async function deleteUser(userId){
 }
 
 
+// ─── ADMIN ZEITERFASSUNG ─────────────────────────────────────────────────────
+
+async function openAdminZeiterfassung(){
+  document.getElementById('settingsMenu').style.display = 'none';
+  // Monat-Selector befüllen
+  const sel = document.getElementById('adminZeitMonat');
+  sel.innerHTML = '';
+  for(let i=0; i<12; i++){
+    const m = (currentMonth - i + 12) % 12;
+    const y = currentYear - (currentMonth - i < 0 ? 1 : 0);
+    const opt = document.createElement('option');
+    opt.value = `${y}-${String(m+1).padStart(2,'0')}`;
+    opt.textContent = `${MONTH_NAMES[m]} ${y}`;
+    if(i===0) opt.selected = true;
+    sel.appendChild(opt);
+  }
+  openModal('adminZeitModal');
+  loadAdminZeit();
+}
+
+async function loadAdminZeit(){
+  const body = document.getElementById('adminZeitBody');
+  body.innerHTML = '<div style="color:var(--text3);font-size:12px;padding:20px">Lädt…</div>';
+  const monat = document.getElementById('adminZeitMonat').value;
+  const filter = document.getElementById('adminZeitFilter').value;
+
+  // Alle Staff der Gruppe laden
+  const staffIds = state.staff.map(s=>s.id);
+  if(!staffIds.length){ body.innerHTML = '<div style="color:var(--text3);padding:20px">Keine Mitarbeiter</div>'; return; }
+
+  let query = sb.from('zeiterfassung').select('*')
+    .gte('datum', monat+'-01').lte('datum', monat+'-31')
+    .in('staff_id', staffIds).order('datum').order('staff_id');
+
+  if(filter === 'freigabe') query = query.eq('freigabe_noetig', true).neq('status','festgeschrieben');
+  else if(filter === 'offen') query = query.eq('status','offen');
+  else if(filter === 'festgeschrieben') query = query.eq('status','festgeschrieben');
+
+  const { data: buchungen } = await query;
+  if(!buchungen || !buchungen.length){
+    body.innerHTML = '<div style="color:var(--text3);font-size:12px;padding:20px">Keine Buchungen gefunden</div>';
+    return;
+  }
+
+  const rows = buchungen.map(b => {
+    const s = state.staff.find(x=>x.id===b.staff_id);
+    const name = s ? s.name : `Staff ${b.staff_id}`;
+    const dt = new Date(b.datum+'T12:00:00');
+    const wt = ['So','Mo','Di','Mi','Do','Fr','Sa'][dt.getDay()];
+    const start = b.start_zeit ? new Date(b.start_zeit).toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'}) : '–';
+    const ende  = b.end_zeit   ? new Date(b.end_zeit).toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'}) : '–';
+    const dauMin = b.start_zeit && b.end_zeit
+      ? Math.round((new Date(b.end_zeit)-new Date(b.start_zeit))/60000) - (b.pause_minuten||0) : null;
+    const netto = dauMin !== null ? `${Math.floor(dauMin/60)}:${String(dauMin%60).padStart(2,'0')}h` : '–';
+    const freigabe = b.freigabe_noetig && b.status !== 'festgeschrieben';
+    const fest = b.status === 'festgeschrieben';
+
+    const statusBadge = fest
+      ? `<span style="font-size:10px;font-weight:600;color:var(--green)">✅ Fest</span>`
+      : freigabe
+      ? `<span style="font-size:10px;font-weight:600;color:var(--orange)">⚠️ Freigabe</span>`
+      : `<span style="font-size:10px;color:var(--text3)">○ Offen</span>`;
+
+    return `
+      <div style="display:grid;grid-template-columns:100px 70px 65px 65px 50px 55px 1fr 70px;gap:6px;align-items:center;
+        padding:10px 12px;background:${freigabe?'rgba(255,159,10,.06)':'var(--surface)'};
+        border:1px solid ${freigabe?'rgba(255,159,10,.3)':'var(--border)'};border-radius:10px">
+        <div style="font-size:12px;font-weight:500">${name}</div>
+        <div style="font-size:11px;color:var(--text3)">${wt} ${dt.getDate()}.${dt.getMonth()+1}.</div>
+        <div style="font-size:12px">${start}</div>
+        <div style="font-size:12px">${ende}</div>
+        <div style="font-size:11px;color:var(--text3)">${b.pause_minuten||0}m</div>
+        <div style="font-size:12px;font-weight:600">${netto}</div>
+        <div style="font-size:10px;color:var(--orange)">${freigabe?(b.freigabe_grund||''):'&nbsp;'}</div>
+        <div style="display:flex;gap:4px;align-items:center">
+          ${statusBadge}
+          ${!fest && freigabe ? `<button onclick="zeitFreigeben('${b.id}')" style="padding:2px 8px;border:none;border-radius:5px;background:var(--green);color:#fff;font-size:10px;font-weight:600;cursor:pointer">✓</button>` : ''}
+          ${!fest ? `<button onclick="zeitFestschreiben('${b.id}')" style="padding:2px 6px;border:1px solid var(--border);border-radius:5px;background:var(--surface2);color:var(--text2);font-size:10px;cursor:pointer" title="Festschreiben">🔒</button>` : ''}
+        </div>
+      </div>`;
+  }).join('');
+
+  const headerCols = ['Mitarbeiter','Datum','Start','Ende','Pause','Netto','Freigabegrund','Aktion'];
+  body.innerHTML = `
+    <div style="display:grid;grid-template-columns:100px 70px 65px 65px 50px 55px 1fr 70px;gap:6px;padding:0 12px;margin-bottom:6px">
+      ${headerCols.map(h=>`<div style="font-size:10px;color:var(--text3);font-weight:600">${h}</div>`).join('')}
+    </div>
+    <div style="display:flex;flex-direction:column;gap:6px">${rows}</div>`;
+}
+
+async function zeitFreigeben(id){
+  await sb.from('zeiterfassung').update({freigabe_noetig:false, status:'offen'}).eq('id',id);
+  showToast('✅ Freigegeben');
+  loadAdminZeit();
+}
+
+async function zeitFestschreiben(id){
+  const { data: { session } } = await sb.auth.getSession();
+  await sb.from('zeiterfassung').update({
+    status: 'festgeschrieben',
+    festgeschrieben_von: session && session.user && session.user.id,
+    festgeschrieben_am: new Date().toISOString()
+  }).eq('id', id);
+  showToast('🔒 Festgeschrieben');
+  loadAdminZeit();
+}
+
+async function allesFestschreiben(){
+  if(!confirm('Alle freigegebenen Buchungen festschreiben?')) return;
+  const monat = document.getElementById('adminZeitMonat').value;
+  const staffIds = state.staff.map(s=>s.id);
+  const { data: { session } } = await sb.auth.getSession();
+  await sb.from('zeiterfassung').update({
+    status: 'festgeschrieben',
+    festgeschrieben_von: session && session.user && session.user.id,
+    festgeschrieben_am: new Date().toISOString()
+  })
+  .gte('datum', monat+'-01').lte('datum', monat+'-31')
+  .in('staff_id', staffIds)
+  .eq('freigabe_noetig', false)
+  .neq('status','festgeschrieben');
+  showToast('✅ Alle festgeschrieben');
+  loadAdminZeit();
+}
+
+// ─── ADMIN URLAUB ─────────────────────────────────────────────────────────────
+
+async function openAdminUrlaub(){
+  document.getElementById('settingsMenu').style.display = 'none';
+  openModal('adminUrlaubModal');
+  loadAdminUrlaub();
+}
+
+async function loadAdminUrlaub(){
+  const body = document.getElementById('adminUrlaubBody');
+  body.innerHTML = '<div style="color:var(--text3);font-size:12px;padding:20px">Lädt…</div>';
+  const filter = document.getElementById('adminUrlaubFilter').value;
+  const staffIds = state.staff.map(s=>s.id);
+  if(!staffIds.length){ body.innerHTML = '<div style="color:var(--text3);padding:20px">Keine Mitarbeiter</div>'; return; }
+
+  let query = sb.from('urlaubsantraege').select('*')
+    .in('staff_id', staffIds).order('created_at', {ascending:false});
+  if(filter !== 'alle') query = query.eq('status', filter);
+
+  const { data: antraege } = await query;
+  if(!antraege || !antraege.length){
+    body.innerHTML = '<div style="color:var(--text3);font-size:12px;padding:20px">Keine Anträge</div>';
+    return;
+  }
+
+  const cards = antraege.map(a => {
+    const s = state.staff.find(x=>x.id===a.staff_id);
+    const name = s ? s.name : `Staff ${a.staff_id}`;
+    const von = new Date(a.von_datum+'T12:00:00').toLocaleDateString('de-DE',{day:'numeric',month:'short'});
+    const bis = new Date(a.bis_datum+'T12:00:00').toLocaleDateString('de-DE',{day:'numeric',month:'short',year:'numeric'});
+    const statusCol = {offen:'var(--orange)', genehmigt:'var(--green)', abgelehnt:'var(--red)'};
+    const statusTxt = {offen:'🕐 Ausstehend', genehmigt:'✅ Genehmigt', abgelehnt:'❌ Abgelehnt'};
+
+    return `
+      <div style="padding:12px 14px;background:var(--surface);border:1px solid var(--border);border-radius:10px">
+        <div style="display:flex;align-items:center;gap:10px">
+          <div style="width:32px;height:32px;border-radius:50%;background:${s?s.color:'var(--accent-soft)'};display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:#fff;flex-shrink:0">
+            ${name[0].toUpperCase()}
+          </div>
+          <div style="flex:1">
+            <div style="font-size:13px;font-weight:600;color:var(--text)">${name}</div>
+            <div style="font-size:11px;color:var(--text3)">${von} – ${bis} · ${a.tage} Tag${a.tage!==1?'e':''}${a.notiz?' · '+a.notiz:''}</div>
+          </div>
+          <span style="font-size:11px;font-weight:600;color:${statusCol[a.status]||'var(--text3)'}">${statusTxt[a.status]||a.status}</span>
+        </div>
+        ${a.status==='offen' ? `
+        <div style="display:flex;gap:8px;margin-top:10px">
+          <button onclick="urlaubEntscheiden('${a.id}','genehmigt')"
+            style="flex:1;padding:8px;border:none;border-radius:8px;background:#34c759;color:#fff;font-size:12px;font-weight:600;cursor:pointer">
+            ✅ Genehmigen
+          </button>
+          <button onclick="urlaubEntscheiden('${a.id}','abgelehnt')"
+            style="flex:1;padding:8px;border:none;border-radius:8px;background:#ff3b30;color:#fff;font-size:12px;font-weight:600;cursor:pointer">
+            ❌ Ablehnen
+          </button>
+        </div>` : a.ablehnungsgrund ? `<div style="margin-top:6px;font-size:11px;color:var(--red)">Grund: ${a.ablehnungsgrund}</div>` : ''}
+      </div>`;
+  }).join('');
+
+  body.innerHTML = `<div style="display:flex;flex-direction:column;gap:8px">${cards}</div>`;
+}
+
+async function urlaubEntscheiden(id, status){
+  let grund = '';
+  if(status === 'abgelehnt'){
+    grund = prompt('Ablehnungsgrund (wird dem MA angezeigt):');
+    if(grund === null) return;
+  }
+  const { data: { session } } = await sb.auth.getSession();
+  await sb.from('urlaubsantraege').update({
+    status,
+    ablehnungsgrund: grund || null,
+    entschieden_von: session && session.user && session.user.id,
+    entschieden_am: new Date().toISOString()
+  }).eq('id', id);
+  showToast(status === 'genehmigt' ? '✅ Urlaub genehmigt' : '❌ Urlaub abgelehnt');
+  loadAdminUrlaub();
+}
+
 // ─── STEMPELUHR ──────────────────────────────────────────────────────────────
 
 let _stempelInterval = null;
@@ -4465,8 +4728,12 @@ function applyRolePermissions(){
   if(btnStempel) btnStempel.style.display = 'flex';
   if(btnPersonal) btnPersonal.style.display = noUsers.includes(currentUserRole) ? 'none' : '';
 
-  // KI-Button ausblenden für readOnly
-  const btnKI = document.querySelector('button[onclick="openKIModal()"]');
+  // Admin-Menü: nur für Owner/Admin/Perso
+  const adminRoles = ['owner','master_admin','admin','personal'];
+  const menuAdminZeit = document.getElementById('menuAdminZeit');
+  const menuAdminUrlaub = document.getElementById('menuAdminUrlaub');
+  if(menuAdminZeit) menuAdminZeit.style.display = adminRoles.includes(currentUserRole) ? '' : 'none';
+  if(menuAdminUrlaub) menuAdminUrlaub.style.display = adminRoles.includes(currentUserRole) ? '' : 'none';
   if(btnKI) btnKI.style.display = readOnly.includes(currentUserRole) ? 'none' : '';
 
   // Unternehmen-Menü: nur Owner/Master Admin – die zwischen Unternehmen wechseln dürfen
