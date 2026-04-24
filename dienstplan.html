@@ -241,7 +241,7 @@
   .modal-overlay {
     position: fixed; inset: 0; background: rgba(0,0,0,.38);
     backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px);
-    z-index: 100; display: flex; align-items: center; justify-content: center;
+    z-index: 2100; display: flex; align-items: center; justify-content: center;
     opacity: 0; pointer-events: none; transition: opacity .2s;
   }
   .modal-overlay.open { opacity: 1; pointer-events: all; }
@@ -830,6 +830,9 @@
     <!-- Sidebar -->
     <div style="width:200px;flex-shrink:0;background:var(--surface);border-right:1px solid var(--border);padding:12px 0;overflow-y:auto">
       <div style="font-size:9px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;padding:0 16px;margin-bottom:8px">Mein Bereich</div>
+      <div class="meins-nav-item" id="meinsNav_daten" onclick="meinsTab('daten')">
+        👤 Meine Daten
+      </div>
       <div class="meins-nav-item" id="meinsNav_dienste" onclick="meinsTab('dienste')">
         📅 Meine Dienste
       </div>
@@ -915,7 +918,7 @@
 
 <!-- Urlaubsantrag Bestätigen Modal -->
 <div class="modal-overlay" id="urlaubBestaetigenModal" onclick="if(event.target===this)closeModal('urlaubBestaetigenModal')"
-  style="align-items:center;justify-content:center">
+  style="align-items:center;justify-content:center;z-index:3000">
   <div style="width:340px;border-radius:20px;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,.25)">
 
     <!-- Hintergrund mit Sonne -->
@@ -4055,7 +4058,7 @@ async function openMeins(){
   document.getElementById('meinsRolle').textContent = (_meinsStaff && _meinsStaff.role) || currentUserRole || '–';
   document.getElementById('meinsAvatar').textContent = (staffName[0]||'M').toUpperCase();
 
-  meinsTab('dienste');
+  meinsTab('daten');
 }
 
 function closeMeins(){
@@ -4064,18 +4067,79 @@ function closeMeins(){
 
 function meinsTab(tab){
   _meinsTab = tab;
-  ['dienste','urlaub','buchungen'].forEach(t => {
-    const btn = document.getElementById('meinsTab_' + t);
-    if(!btn) return;
-    btn.style.background = t === tab ? 'var(--accent)' : 'transparent';
-    btn.style.color = t === tab ? '#fff' : 'var(--text2)';
-    btn.style.fontWeight = t === tab ? '600' : '400';
+  ['daten','dienste','urlaub','buchungen','zeit','tausch'].forEach(t => {
+    const nav = document.getElementById('meinsNav_' + t);
+    if(!nav) return;
+    nav.style.background = t === tab ? 'var(--accent-soft)' : 'transparent';
+    nav.style.color = t === tab ? 'var(--accent)' : 'var(--text2)';
+    nav.style.fontWeight = t === tab ? '600' : '400';
   });
   const content = document.getElementById('meinsContent');
   content.innerHTML = '<div style="color:var(--text3);font-size:12px;padding:20px">Lädt…</div>';
-  if(tab === 'dienste') renderMeineDienste();
-  if(tab === 'urlaub') renderMeinUrlaub();
-  if(tab === 'buchungen') renderMeineBuchungen();
+  if(tab === 'daten')    renderMeineDaten();
+  if(tab === 'dienste')  renderMeineDienste();
+  if(tab === 'urlaub')   renderMeinUrlaub();
+  if(tab === 'buchungen' || tab === 'zeit') renderMeineBuchungen();
+  if(tab === 'tausch')   document.getElementById('meinsContent').innerHTML = '<div style="color:var(--text3);font-size:12px;padding:20px">Tausch-Funktion folgt in Kürze</div>';
+}
+
+// ── MEINE DATEN ───────────────────────────────────────────────────────────────
+
+async function renderMeineDaten(){
+  const content = document.getElementById('meinsContent');
+  if(!_meinsStaff){ content.innerHTML = '<div style="color:var(--red);font-size:12px;padding:20px">Kein Mitarbeiter-Datensatz gefunden</div>'; return; }
+  const s = _meinsStaff;
+
+  // User-Profil laden
+  const { data: { session } } = await sb.auth.getSession();
+  const { data: profile } = session ? await sb.from('user_profiles').select('*').eq('user_id', session.user.id).maybeSingle() : {data:null};
+
+  content.innerHTML = `
+    <div style="max-width:480px">
+      <!-- Avatar -->
+      <div style="display:flex;align-items:center;gap:14px;margin-bottom:20px">
+        <div style="width:56px;height:56px;border-radius:50%;background:${s.color||'var(--accent)'};display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:700;color:#fff;flex-shrink:0">
+          ${(s.name||'?')[0].toUpperCase()}
+        </div>
+        <div>
+          <div style="font-size:17px;font-weight:700;color:var(--text)">${s.name||'–'}</div>
+          <div style="font-size:12px;color:var(--text3)">${s.role||'–'}</div>
+        </div>
+      </div>
+
+      <!-- Stammdaten -->
+      <div style="background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:14px;margin-bottom:12px">
+        <div style="font-size:11px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px">Stammdaten</div>
+        ${[
+          ['Funktion', s.role||'–'],
+          ['Wöchentl. Arbeitszeit', `${s.soll||0} Stunden`],
+          ['Urlaubstage/Jahr', `${s.urlaubstage_jahr||30} Tage`],
+          ['E-Mail', (session && session.user && session.user.email)||'–'],
+          ['Handy', (profile && profile.handy)||'–'],
+          ['Kostenstelle', (profile && profile.kostenstelle)||'–'],
+        ].map(([label, val]) => `
+          <div style="display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid var(--border)">
+            <span style="font-size:12px;color:var(--text3)">${label}</span>
+            <span style="font-size:12px;font-weight:500;color:var(--text)">${val}</span>
+          </div>`).join('')}
+      </div>
+
+      <!-- Gruppenzugehörigkeit -->
+      <div style="background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:14px">
+        <div style="font-size:11px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px">Standort & Gruppe</div>
+        ${(s.gruppe_ids||[]).map(gId => {
+          const g = allGruppen.find(x=>x.id===gId);
+          const st = g ? allStandorte.find(x=>x.id===g.standort_id) : null;
+          return g ? `<div style="padding:7px 0;border-bottom:1px solid var(--border);font-size:12px;color:var(--text)">
+            <span style="color:var(--text3)">${st?st.name+' · ':''}</span>${g.name}
+          </div>` : '';
+        }).join('') || '<div style="font-size:12px;color:var(--text3)">Keine Gruppe zugewiesen</div>'}
+      </div>
+
+      <div style="margin-top:12px;font-size:11px;color:var(--text3);text-align:center">
+        Für Änderungen bitte Admin kontaktieren
+      </div>
+    </div>`;
 }
 
 // ── MEINE DIENSTE ─────────────────────────────────────────────────────────────
