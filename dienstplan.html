@@ -4127,30 +4127,49 @@ async function renderMeinUrlaub(){
   const vorjahrWarnung = urlaubVorjahr > 0 && jetzt.getMonth() < 3 && jahr === currentYear;
 
   // ── Jahreskalender ──────────────────────────────────────────────────────────
+  // Selektion für Urlaubsantrag
+  if(!window._urlaubSel) window._urlaubSel = {von:null, bis:null};
+  const sel = window._urlaubSel;
+
   const kalender = MONTH_NAMES.map((mName, mIdx) => {
     const tage = daysInMonth(jahr, mIdx);
     const chips = [];
     for(let d=1; d<=tage; d++){
       const dt = new Date(jahr, mIdx, d);
-      const ds = fmtDate(dt);
+      const ds2 = fmtDate(dt);
       const dow = dt.getDay();
       const isWE = dow===0||dow===6;
-      const isFt = !!hols[ds];
-      const isUrlaub = urlaubTage.has(ds);
-      const isOffen  = urlaubOffen.has(ds);
+      const isFt = !!hols[ds2];
+      const isUrlaub = urlaubTage.has(ds2);
+      const isOffen  = urlaubOffen.has(ds2);
 
-      let bg='var(--surface2)', border='var(--border)', color='var(--text3)', title='';
-      if(isUrlaub){ bg='#34c759'; border='#28a745'; color='#fff'; title='Urlaub (genehmigt)'; }
-      else if(isOffen){ bg='rgba(255,214,10,.25)'; border='#cc9a00'; color='#7a5a00'; title='Urlaub (ausstehend)'; }
-      else if(isFt){ bg='rgba(142,142,147,.15)'; border='rgba(142,142,147,.3)'; color='var(--text3)'; title=hols[ds]; }
-      else if(isWE){ bg='var(--surface)'; border='var(--border)'; color='var(--text3)'; }
+      // Selektion
+      const isSel = sel.von && sel.bis && ds2 >= sel.von && ds2 <= sel.bis;
+      const isVon = sel.von === ds2;
+      const isBis = sel.bis === ds2;
 
-      chips.push(`<div title="${title||ds}" style="width:22px;height:22px;border-radius:5px;background:${bg};border:1px solid ${border};display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:${isUrlaub?'700':'400'};color:${color};flex-shrink:0;cursor:default">${d}</div>`);
+      let bg, border, color, fw='400', cursor='pointer', title2='';
+      if(isUrlaub){       bg='#34c759';                    border='#28a745';                    color='#fff';          fw='700'; cursor='default'; title2='Urlaub genehmigt'; }
+      else if(isOffen){   bg='rgba(255,214,10,.25)';       border='#cc9a00';                    color='#7a5a00';       title2='Urlaub ausstehend'; }
+      else if(isSel||isVon||isBis){ bg='rgba(0,113,227,.18)'; border='var(--accent)';           color='var(--accent)'; fw='700'; }
+      else if(isFt){      bg='rgba(255,149,0,.12)';        border='rgba(255,149,0,.35)';        color='#7a4a00';       cursor='default'; title2=hols[ds2]; }
+      else if(isWE){      bg='rgba(142,142,147,.1)';       border='rgba(142,142,147,.25)';      color='var(--text3)';  cursor='default'; }
+      else {              bg='var(--surface)';              border='var(--border)';              color='var(--text)'; }
+
+      const clickable = !isUrlaub && !isOffen && !isFt && !isWE;
+      chips.push(`<div
+        title="${title2||ds2}"
+        onclick="${clickable?`urlaubKalenderKlick('${ds2}')`:''}"
+        style="width:28px;height:28px;border-radius:6px;background:${bg};border:1px solid ${border};
+               display:flex;align-items:center;justify-content:center;font-size:10px;
+               font-weight:${fw};color:${color};flex-shrink:0;cursor:${cursor};
+               ${isVon||isBis?'box-shadow:0 0 0 2px var(--accent);':''}"
+      >${d}</div>`);
     }
     return `
-      <div style="display:flex;align-items:flex-start;gap:8px;margin-bottom:6px">
-        <div style="width:64px;font-size:11px;font-weight:600;color:var(--text2);padding-top:4px;flex-shrink:0;text-align:right">${mName}</div>
-        <div style="display:flex;flex-wrap:nowrap;gap:2px;overflow-x:auto;padding-bottom:2px">${chips.join('')}</div>
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
+        <div style="width:72px;font-size:11px;font-weight:600;color:var(--text2);flex-shrink:0;text-align:right">${mName}</div>
+        <div style="display:flex;flex-wrap:nowrap;gap:2px">${chips.join('')}</div>
       </div>`;
   }).join('');
 
@@ -4195,25 +4214,80 @@ async function renderMeinUrlaub(){
     <!-- Jahreskalender -->
     <div style="background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:14px;margin-bottom:16px">
       <div style="display:flex;align-items:center;margin-bottom:12px">
-        <button onclick="window._urlaubJahrAnzeige=${jahr-1};renderMeinUrlaub()" style="width:28px;height:28px;border:1px solid var(--border);border-radius:7px;background:var(--surface);cursor:pointer;font-size:14px;display:flex;align-items:center;justify-content:center">‹</button>
+        <button onclick="window._urlaubJahrAnzeige=${jahr-1};window._urlaubSel={von:null,bis:null};renderMeinUrlaub()" style="width:28px;height:28px;border:1px solid var(--border);border-radius:7px;background:var(--surface);cursor:pointer;font-size:14px;display:flex;align-items:center;justify-content:center">‹</button>
         <div style="flex:1;text-align:center;font-size:14px;font-weight:700;color:var(--text)">${jahr}</div>
-        <button onclick="window._urlaubJahrAnzeige=${jahr+1};renderMeinUrlaub()" style="width:28px;height:28px;border:1px solid var(--border);border-radius:7px;background:var(--surface);cursor:pointer;font-size:14px;display:flex;align-items:center;justify-content:center">›</button>
+        <button onclick="window._urlaubJahrAnzeige=${jahr+1};window._urlaubSel={von:null,bis:null};renderMeinUrlaub()" style="width:28px;height:28px;border:1px solid var(--border);border-radius:7px;background:var(--surface);cursor:pointer;font-size:14px;display:flex;align-items:center;justify-content:center">›</button>
       </div>
       <!-- Legende -->
-      <div style="display:flex;gap:10px;margin-bottom:10px;flex-wrap:wrap">
-        <div style="display:flex;align-items:center;gap:4px"><div style="width:12px;height:12px;border-radius:3px;background:#34c759"></div><span style="font-size:9px;color:var(--text3)">Urlaub genehmigt</span></div>
+      <div style="display:flex;gap:12px;margin-bottom:10px;flex-wrap:wrap">
+        <div style="display:flex;align-items:center;gap:4px"><div style="width:12px;height:12px;border-radius:3px;background:#34c759"></div><span style="font-size:9px;color:var(--text3)">Genehmigt</span></div>
         <div style="display:flex;align-items:center;gap:4px"><div style="width:12px;height:12px;border-radius:3px;background:rgba(255,214,10,.25);border:1px solid #cc9a00"></div><span style="font-size:9px;color:var(--text3)">Ausstehend</span></div>
-        <div style="display:flex;align-items:center;gap:4px"><div style="width:12px;height:12px;border-radius:3px;background:rgba(142,142,147,.15);border:1px solid rgba(142,142,147,.3)"></div><span style="font-size:9px;color:var(--text3)">Feiertag</span></div>
+        <div style="display:flex;align-items:center;gap:4px"><div style="width:12px;height:12px;border-radius:3px;background:rgba(255,149,0,.12);border:1px solid rgba(255,149,0,.35)"></div><span style="font-size:9px;color:var(--text3)">Feiertag</span></div>
+        <div style="display:flex;align-items:center;gap:4px"><div style="width:12px;height:12px;border-radius:3px;background:rgba(142,142,147,.1);border:1px solid rgba(142,142,147,.25)"></div><span style="font-size:9px;color:var(--text3)">Wochenende</span></div>
       </div>
+      <!-- Kalender -->
       <div style="overflow-x:auto">${kalender}</div>
+
+      <!-- Selektion Info + Bestätigen -->
+      <div id="urlaubSelInfo" style="margin-top:10px;padding:10px 12px;background:var(--accent-soft);border:1.5px solid var(--accent);border-radius:8px;display:${window._urlaubSel&&window._urlaubSel.von?'flex':'none'};align-items:center;gap:10px">
+        <div style="flex:1;font-size:12px;color:var(--accent);font-weight:600" id="urlaubSelText"></div>
+        <button onclick="urlaubSelBestaetigen()" style="padding:6px 14px;border:none;border-radius:7px;background:var(--accent);color:#fff;font-size:12px;font-weight:600;cursor:pointer">✅ Beantragen</button>
+        <button onclick="window._urlaubSel={von:null,bis:null};renderMeinUrlaub()" style="padding:6px 10px;border:1px solid var(--border);border-radius:7px;background:var(--surface);color:var(--text2);font-size:12px;cursor:pointer">✕</button>
+      </div>
     </div>
 
-    <!-- Antrag stellen -->
-    <button onclick="openUrlaubsantrag()" style="width:100%;padding:10px;border:2px dashed var(--accent);border-radius:10px;background:var(--accent-soft);color:var(--accent);font-size:12px;font-weight:600;cursor:pointer;margin-bottom:14px">+ Urlaubsantrag stellen</button>
+    <!-- Antrag stellen Button -->
+    <button onclick="window._urlaubSel={von:null,bis:null};renderMeinUrlaub();document.getElementById('urlaubSelInfo').style.display='flex'" class="btn btn-secondary btn-sm" style="margin-bottom:14px;width:100%">+ Urlaubsantrag im Kalender wählen</button>
 
     <!-- Anträge -->
     <div style="font-size:12px;font-weight:600;color:var(--text);margin-bottom:8px">Meine Anträge ${jahr}</div>
     <div style="display:flex;flex-direction:column;gap:6px">${antraegeHtml}</div>`;
+}
+
+function urlaubKalenderKlick(ds){
+  if(!window._urlaubSel) window._urlaubSel = {von:null, bis:null};
+  const sel = window._urlaubSel;
+
+  if(!sel.von || (sel.von && sel.bis)){
+    // Neuer Start
+    sel.von = ds; sel.bis = null;
+  } else if(ds < sel.von){
+    // Klick vor Start → neuer Start
+    sel.von = ds; sel.bis = null;
+  } else {
+    // Ende setzen
+    sel.bis = ds;
+  }
+  renderMeinUrlaub();
+}
+
+async function urlaubSelBestaetigen(){
+  const sel = window._urlaubSel;
+  if(!sel || !sel.von || !sel.bis) return;
+  const hols = holidaysForYear(parseInt(sel.von.slice(0,4)));
+
+  // Werktage zählen
+  let tage = 0;
+  let cur = new Date(sel.von+'T12:00:00');
+  const bis = new Date(sel.bis+'T12:00:00');
+  while(cur <= bis){
+    const dow = cur.getDay();
+    const ds = fmtDate(cur);
+    if(dow>=1 && dow<=5 && !hols[ds]) tage++;
+    cur.setDate(cur.getDate()+1);
+  }
+  if(tage<=0){ showToast('Keine Werktage im gewählten Zeitraum'); return; }
+  if(!confirm(`${tage} Urlaubstag${tage!==1?'e':''} beantragen?\n${sel.von} – ${sel.bis}`)) return;
+
+  const { error } = await sb.from('urlaubsantraege').insert({
+    staff_id: _meinsStaffId,
+    von_datum: sel.von, bis_datum: sel.bis,
+    tage, status: 'offen'
+  });
+  if(error){ showToast('Fehler: '+error.message); return; }
+  window._urlaubSel = {von:null, bis:null};
+  showToast(`✅ ${tage} Urlaubstag${tage!==1?'e':''} beantragt`);
+  renderMeinUrlaub();
 }
 
 async function openUrlaubsantrag(){
