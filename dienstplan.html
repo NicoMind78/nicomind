@@ -4358,14 +4358,40 @@ async function saveEditUser(){
       user_id: _editUserId, name, vorname, position, handy, kostenstelle,
       soll, auto1, pool_auto: poolAuto, standort_ids: standortIds, gruppe_ids: gruppeIds
     });
-    if(error){ showToast('Fehler: ' + error.message); return; }
-    await sb.from('staff').update({
-      name: fullName, role: position, soll,
-      urlaubstage_jahr: urlaubstage, stundenlohn,
-      standort_id: standortIds[0]||null, gruppe_id: gruppeIds[0]||null,
-      standort_ids: standortIds, gruppe_ids: gruppeIds,
-      ...staffRules
-    }).eq('name', document.getElementById('editUserSub').textContent);
+    if(error){ showToast('Fehler Profil: ' + error.message); return; }
+
+    // Staff-Eintrag suchen und updaten, oder neu anlegen
+    const oldName = document.getElementById('editUserSub').textContent;
+    const { data: existingStaff } = await sb.from('staff').select('id')
+      .eq('unternehmen_id', currentUnternehmenId)
+      .or(`name.eq.${fullName},name.eq.${oldName}`)
+      .maybeSingle();
+
+    if(existingStaff){
+      await sb.from('staff').update({
+        name: fullName, role: position, soll,
+        urlaubstage_jahr: urlaubstage, stundenlohn,
+        standort_id: standortIds[0]||null, gruppe_id: gruppeIds[0]||null,
+        standort_ids: standortIds, gruppe_ids: gruppeIds,
+        unternehmen_id: currentUnternehmenId,
+        ...staffRules
+      }).eq('id', existingStaff.id);
+    } else {
+      // Neuen Staff-Eintrag anlegen
+      const { data: maxId } = await sb.from('staff').select('id').order('id',{ascending:false}).limit(1);
+      const nextId = ((maxId && maxId[0] && maxId[0].id) || 0) + 1;
+      const colors = ['#0071e3','#32d74b','#ff9f0a','#bf5af2','#ff375f','#5ac8fa'];
+      await sb.from('staff').insert({
+        id: nextId, name: fullName, role: position, soll,
+        urlaubstage_jahr: urlaubstage, stundenlohn,
+        color: colors[Math.floor(Math.random()*colors.length)],
+        notes: '', rules: {},
+        unternehmen_id: currentUnternehmenId,
+        standort_id: standortIds[0]||null, gruppe_id: gruppeIds[0]||null,
+        standort_ids: standortIds, gruppe_ids: gruppeIds,
+        ...staffRules
+      });
+    }
   }
 
   if(_editStaffId){
