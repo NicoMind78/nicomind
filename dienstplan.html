@@ -4093,75 +4093,127 @@ async function renderMeinUrlaub(){
   const content = document.getElementById('meinsContent');
   if(!_meinsStaffId){ content.innerHTML = '<div style="color:var(--red);font-size:12px">Kein Mitarbeiter-Datensatz gefunden</div>'; return; }
 
+  // Jahr aus State oder aktuell
+  if(!window._urlaubJahrAnzeige) window._urlaubJahrAnzeige = currentYear;
+  const jahr = window._urlaubJahrAnzeige;
+
   // Urlaubs-Daten laden
   const { data: antraege } = await sb.from('urlaubsantraege')
     .select('*').eq('staff_id', _meinsStaffId).order('von_datum', {ascending:false});
 
-  const jahr = currentYear;
   const urlaubJahr = (_meinsStaff && _meinsStaff.urlaubstage_jahr) || 30;
   const urlaubVorjahr = (_meinsStaff && _meinsStaff.urlaubstage_vorjahr) || 0;
   const gesamtTage = urlaubJahr + urlaubVorjahr;
 
-  // Genehmigte Tage berechnen
-  const genehmigt = (antraege||[])
-    .filter(a => a.status==='genehmigt' && new Date(a.von_datum).getFullYear()===jahr)
-    .reduce((sum,a) => sum+a.tage, 0);
+  // Genehmigte Urlaubstage als Set
+  const urlaubTage = new Set();
+  const urlaubOffen = new Set();
+  (antraege||[]).forEach(a => {
+    if(new Date(a.von_datum).getFullYear() !== jahr) return;
+    let cur = new Date(a.von_datum+'T12:00:00');
+    const bis = new Date(a.bis_datum+'T12:00:00');
+    while(cur <= bis){
+      const ds = fmtDate(cur);
+      if(a.status === 'genehmigt') urlaubTage.add(ds);
+      else if(a.status === 'offen') urlaubOffen.add(ds);
+      cur.setDate(cur.getDate()+1);
+    }
+  });
+
+  const genehmigt = urlaubTage.size;
   const restTage = gesamtTage - genehmigt;
-
-  // Vorjahr-Warnung
+  const hols = holidaysForYear(jahr);
   const jetzt = new Date();
-  const vorjahrWarnung = urlaubVorjahr > 0 && jetzt.getMonth() < 3; // vor Ende März
+  const vorjahrWarnung = urlaubVorjahr > 0 && jetzt.getMonth() < 3 && jahr === currentYear;
 
+  // ── Jahreskalender ──────────────────────────────────────────────────────────
+  const kalender = MONTH_NAMES.map((mName, mIdx) => {
+    const tage = daysInMonth(jahr, mIdx);
+    const chips = [];
+    for(let d=1; d<=tage; d++){
+      const dt = new Date(jahr, mIdx, d);
+      const ds = fmtDate(dt);
+      const dow = dt.getDay();
+      const isWE = dow===0||dow===6;
+      const isFt = !!hols[ds];
+      const isUrlaub = urlaubTage.has(ds);
+      const isOffen  = urlaubOffen.has(ds);
+
+      let bg='var(--surface2)', border='var(--border)', color='var(--text3)', title='';
+      if(isUrlaub){ bg='#34c759'; border='#28a745'; color='#fff'; title='Urlaub (genehmigt)'; }
+      else if(isOffen){ bg='rgba(255,214,10,.25)'; border='#cc9a00'; color='#7a5a00'; title='Urlaub (ausstehend)'; }
+      else if(isFt){ bg='rgba(142,142,147,.15)'; border='rgba(142,142,147,.3)'; color='var(--text3)'; title=hols[ds]; }
+      else if(isWE){ bg='var(--surface)'; border='var(--border)'; color='var(--text3)'; }
+
+      chips.push(`<div title="${title||ds}" style="width:22px;height:22px;border-radius:5px;background:${bg};border:1px solid ${border};display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:${isUrlaub?'700':'400'};color:${color};flex-shrink:0;cursor:default">${d}</div>`);
+    }
+    return `
+      <div style="display:flex;align-items:flex-start;gap:8px;margin-bottom:6px">
+        <div style="width:64px;font-size:11px;font-weight:600;color:var(--text2);padding-top:4px;flex-shrink:0;text-align:right">${mName}</div>
+        <div style="display:flex;flex-wrap:nowrap;gap:2px;overflow-x:auto;padding-bottom:2px">${chips.join('')}</div>
+      </div>`;
+  }).join('');
+
+  // ── Anträge Liste ────────────────────────────────────────────────────────────
   const statusBadge = s => {
     const map = {offen:'🕐 Ausstehend', genehmigt:'✅ Genehmigt', abgelehnt:'❌ Abgelehnt'};
     const col = {offen:'var(--orange)', genehmigt:'var(--green)', abgelehnt:'var(--red)'};
     return `<span style="font-size:10px;font-weight:600;color:${col[s]||'var(--text3)'}">${map[s]||s}</span>`;
   };
-
-  const antraegeHtml = (antraege||[]).length ? (antraege||[]).map(a => `
-    <div style="padding:12px 14px;background:var(--surface);border:1px solid var(--border);border-radius:10px">
+  const dieseJahrAntraege = (antraege||[]).filter(a=>new Date(a.von_datum).getFullYear()===jahr);
+  const antraegeHtml = dieseJahrAntraege.length ? dieseJahrAntraege.map(a => `
+    <div style="padding:10px 12px;background:var(--surface);border:1px solid var(--border);border-radius:10px">
       <div style="display:flex;align-items:center;gap:8px">
         <div style="flex:1">
-          <div style="font-size:13px;font-weight:600;color:var(--text)">${new Date(a.von_datum+'T12:00:00').toLocaleDateString('de-DE',{day:'numeric',month:'long'})} – ${new Date(a.bis_datum+'T12:00:00').toLocaleDateString('de-DE',{day:'numeric',month:'long',year:'numeric'})}</div>
-          <div style="font-size:11px;color:var(--text3)">${a.tage} Tag${a.tage!==1?'e':''} ${a.notiz?'· '+a.notiz:''}</div>
+          <div style="font-size:12px;font-weight:600;color:var(--text)">${new Date(a.von_datum+'T12:00:00').toLocaleDateString('de-DE',{day:'numeric',month:'long'})} – ${new Date(a.bis_datum+'T12:00:00').toLocaleDateString('de-DE',{day:'numeric',month:'long',year:'numeric'})}</div>
+          <div style="font-size:10px;color:var(--text3)">${a.tage} Tag${a.tage!==1?'e':''}${a.notiz?' · '+a.notiz:''}</div>
         </div>
         ${statusBadge(a.status)}
       </div>
-      ${a.ablehnungsgrund?`<div style="margin-top:6px;font-size:11px;color:var(--red)">Grund: ${a.ablehnungsgrund}</div>`:''}
-    </div>`).join('') : '<div style="font-size:12px;color:var(--text3)">Keine Anträge vorhanden</div>';
+      ${a.ablehnungsgrund?`<div style="margin-top:4px;font-size:10px;color:var(--red)">Grund: ${a.ablehnungsgrund}</div>`:''}
+    </div>`).join('') : `<div style="font-size:12px;color:var(--text3)">Keine Anträge für ${jahr}</div>`;
 
   content.innerHTML = `
-    <!-- Übersicht -->
-    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:20px">
-      <div style="background:var(--accent-soft);border:1.5px solid var(--accent);border-radius:12px;padding:14px;text-align:center">
-        <div style="font-size:28px;font-weight:700;color:var(--accent)">${restTage}</div>
-        <div style="font-size:11px;color:var(--accent)">Resturlaub ${jahr}</div>
+    <!-- Statistik -->
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:16px">
+      <div style="background:var(--accent-soft);border:1.5px solid var(--accent);border-radius:12px;padding:12px;text-align:center">
+        <div style="font-size:26px;font-weight:700;color:var(--accent)">${restTage}</div>
+        <div style="font-size:10px;color:var(--accent)">Resturlaub</div>
       </div>
-      <div style="background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:14px;text-align:center">
-        <div style="font-size:28px;font-weight:700;color:var(--text)">${genehmigt}</div>
-        <div style="font-size:11px;color:var(--text3)">Genommen ${jahr}</div>
+      <div style="background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:12px;text-align:center">
+        <div style="font-size:26px;font-weight:700;color:var(--text)">${genehmigt}</div>
+        <div style="font-size:10px;color:var(--text3)">Genommen</div>
       </div>
-      <div style="background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:14px;text-align:center">
-        <div style="font-size:28px;font-weight:700;color:var(--text)">${gesamtTage}</div>
-        <div style="font-size:11px;color:var(--text3)">Gesamt (inkl. ${urlaubVorjahr} Vorjahr)</div>
+      <div style="background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:12px;text-align:center">
+        <div style="font-size:26px;font-weight:700;color:var(--text)">${gesamtTage}</div>
+        <div style="font-size:10px;color:var(--text3)">Gesamt</div>
       </div>
     </div>
 
-    ${vorjahrWarnung ? `
-    <div style="padding:10px 14px;background:rgba(255,159,10,.12);border:1px solid rgba(255,159,10,.3);border-radius:8px;margin-bottom:16px;font-size:12px;color:#7a4a00">
-      ⚠️ Du hast noch <strong>${urlaubVorjahr} Urlaubstage aus ${jahr-1}</strong> – diese verfallen am 31. März ${jahr}!
-    </div>` : ''}
+    ${vorjahrWarnung ? `<div style="padding:8px 12px;background:rgba(255,159,10,.12);border:1px solid rgba(255,159,10,.3);border-radius:8px;margin-bottom:12px;font-size:11px;color:#7a4a00">⚠️ ${urlaubVorjahr} Urlaubstage aus ${jahr-1} verfallen am 31. März ${jahr}!</div>` : ''}
 
-    <!-- Neuer Antrag -->
-    <div style="margin-bottom:20px">
-      <button onclick="openUrlaubsantrag()" style="width:100%;padding:12px;border:2px dashed var(--accent);border-radius:10px;background:var(--accent-soft);color:var(--accent);font-size:13px;font-weight:600;cursor:pointer">
-        + Urlaubsantrag stellen
-      </button>
+    <!-- Jahreskalender -->
+    <div style="background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:14px;margin-bottom:16px">
+      <div style="display:flex;align-items:center;margin-bottom:12px">
+        <button onclick="window._urlaubJahrAnzeige=${jahr-1};renderMeinUrlaub()" style="width:28px;height:28px;border:1px solid var(--border);border-radius:7px;background:var(--surface);cursor:pointer;font-size:14px;display:flex;align-items:center;justify-content:center">‹</button>
+        <div style="flex:1;text-align:center;font-size:14px;font-weight:700;color:var(--text)">${jahr}</div>
+        <button onclick="window._urlaubJahrAnzeige=${jahr+1};renderMeinUrlaub()" style="width:28px;height:28px;border:1px solid var(--border);border-radius:7px;background:var(--surface);cursor:pointer;font-size:14px;display:flex;align-items:center;justify-content:center">›</button>
+      </div>
+      <!-- Legende -->
+      <div style="display:flex;gap:10px;margin-bottom:10px;flex-wrap:wrap">
+        <div style="display:flex;align-items:center;gap:4px"><div style="width:12px;height:12px;border-radius:3px;background:#34c759"></div><span style="font-size:9px;color:var(--text3)">Urlaub genehmigt</span></div>
+        <div style="display:flex;align-items:center;gap:4px"><div style="width:12px;height:12px;border-radius:3px;background:rgba(255,214,10,.25);border:1px solid #cc9a00"></div><span style="font-size:9px;color:var(--text3)">Ausstehend</span></div>
+        <div style="display:flex;align-items:center;gap:4px"><div style="width:12px;height:12px;border-radius:3px;background:rgba(142,142,147,.15);border:1px solid rgba(142,142,147,.3)"></div><span style="font-size:9px;color:var(--text3)">Feiertag</span></div>
+      </div>
+      <div style="overflow-x:auto">${kalender}</div>
     </div>
 
-    <!-- Anträge Liste -->
-    <div style="font-size:13px;font-weight:600;color:var(--text);margin-bottom:10px">Meine Anträge</div>
-    <div style="display:flex;flex-direction:column;gap:8px">${antraegeHtml}</div>`;
+    <!-- Antrag stellen -->
+    <button onclick="openUrlaubsantrag()" style="width:100%;padding:10px;border:2px dashed var(--accent);border-radius:10px;background:var(--accent-soft);color:var(--accent);font-size:12px;font-weight:600;cursor:pointer;margin-bottom:14px">+ Urlaubsantrag stellen</button>
+
+    <!-- Anträge -->
+    <div style="font-size:12px;font-weight:600;color:var(--text);margin-bottom:8px">Meine Anträge ${jahr}</div>
+    <div style="display:flex;flex-direction:column;gap:6px">${antraegeHtml}</div>`;
 }
 
 async function openUrlaubsantrag(){
