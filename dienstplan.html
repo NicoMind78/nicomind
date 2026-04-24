@@ -476,6 +476,10 @@
     0%,100% { transform:scale(1);   opacity:.8; }
     50%     { transform:scale(1.18);opacity:.25; }
   }
+  @keyframes stempelPuls {
+    0%,100% { opacity:1; }
+    50%     { opacity:.2; }
+  }
 </style>
 </head>
 <body>
@@ -522,25 +526,16 @@
       onmouseout="this.style.background='var(--surface2)';this.style.borderColor='var(--border)';this.style.color='var(--text2)'">M</button>
 
     <!-- Stempeluhr Button -->
-    <div id="btnStempel" onclick="openStempelModal()" title="Stempeluhr" style="display:none;position:relative;width:40px;height:40px;cursor:pointer;flex-shrink:0" >
-      <svg width="40" height="40" viewBox="0 0 40 40">
-        <!-- Hintergrund-Ring -->
-        <circle cx="20" cy="20" r="17" fill="var(--surface2)" stroke="var(--border)" stroke-width="1.5"/>
-        <!-- Aktiv-Ring (grün, pulsierend) -->
-        <circle id="stempelRingAktiv" cx="20" cy="20" r="17" fill="none" stroke="#32d74b" stroke-width="2.5"
-          stroke-dasharray="107" stroke-dashoffset="107" style="transition:stroke-dashoffset .5s;transform:rotate(-90deg);transform-origin:20px 20px"/>
-        <!-- Inaktiv: Uhr-Icon -->
-        <g id="stempelIconUhr" fill="none" stroke="var(--text2)" stroke-width="1.5" stroke-linecap="round">
-          <circle cx="20" cy="20" r="8"/>
-          <polyline points="20,14 20,20 24,20"/>
-        </g>
-        <!-- Aktiv: Zeit-Text -->
-        <text id="stempelZeitText" x="20" y="21" text-anchor="middle" dominant-baseline="middle"
-          font-size="7" font-weight="700" fill="#32d74b" font-family="-apple-system,sans-serif"
-          style="display:none">00:00</text>
-      </svg>
-      <!-- Puls-Ring -->
-      <div id="stempelPuls" style="display:none;position:absolute;inset:-4px;border-radius:50%;border:2px solid #32d74b;animation:puls 1.5s infinite;pointer-events:none"></div>
+    <div id="btnStempel" onclick="openStempelModal()" title="Stempeluhr"
+      style="display:none;position:relative;width:32px;height:32px;cursor:pointer;flex-shrink:0">
+      <!-- Basis-Kreis wie andere Top-Bar Buttons -->
+      <div style="position:absolute;inset:0;border-radius:50%;background:var(--surface2);border:1.5px solid var(--border);display:flex;align-items:center;justify-content:center">
+        <svg id="stempelIconUhr" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--text2)" stroke-width="2" stroke-linecap="round">
+          <circle cx="12" cy="12" r="9"/><polyline points="12,7 12,12 15,12"/>
+        </svg>
+      </div>
+      <!-- Pulsierender grüner Ring – gleiche Größe, nur Opacity pulsiert -->
+      <div id="stempelPuls" style="display:none;position:absolute;inset:0;border-radius:50%;border:2px solid #34c759;animation:stempelPuls 1.8s ease-in-out infinite;pointer-events:none"></div>
     </div>
     <button onclick="openUserManagement()" title="Benutzerverwaltung" style="position:relative;width:32px;height:32px;border-radius:50%;border:1.5px solid var(--border);background:var(--surface2);cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--text2);transition:all .15s;flex-shrink:0" onmouseover="this.style.background='var(--accent-soft)';this.style.borderColor='var(--accent)';this.style.color='var(--accent)'" onmouseout="this.style.background='var(--surface2)';this.style.borderColor='var(--border)';this.style.color='var(--text2)'">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -3526,27 +3521,21 @@ async function initStempel(){
 }
 
 function stempelSetAktiv(aktiv){
-  const btn = document.getElementById('btnStempel');
+  const btn  = document.getElementById('btnStempel');
   const puls = document.getElementById('stempelPuls');
-  const ring = document.getElementById('stempelRingAktiv');
   const uhr  = document.getElementById('stempelIconUhr');
-  const zeit = document.getElementById('stempelZeitText');
   if(!btn) return;
 
   if(aktiv){
     btn.style.display = 'flex';
     if(puls) puls.style.display = 'block';
-    if(ring) ring.style.stroke = '#34c759';
-    if(uhr)  uhr.style.display = 'none';
-    if(zeit) zeit.style.display = 'block';
+    if(uhr) uhr.setAttribute('stroke','#34c759');
     if(_stempelInterval) clearInterval(_stempelInterval);
     _stempelInterval = setInterval(stempelTick, 1000);
     stempelTick();
   } else {
     if(puls) puls.style.display = 'none';
-    if(ring) ring.style.strokeDashoffset = '107';
-    if(uhr)  uhr.style.display = 'block';
-    if(zeit) zeit.style.display = 'none';
+    if(uhr) uhr.setAttribute('stroke','var(--text2)');
     if(_stempelInterval){ clearInterval(_stempelInterval); _stempelInterval = null; }
     _stempelAktivSeit = null;
     _stempelBuchungId = null;
@@ -3559,21 +3548,10 @@ function stempelTick(){
   const h = Math.floor(diff/3600);
   const m = Math.floor((diff%3600)/60);
   const s = diff%60;
-  const zeitStr = h > 0
-    ? `${h}:${String(m).padStart(2,'0')}`
-    : `${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
-  const zeitEl = document.getElementById('stempelZeitText');
-  if(zeitEl) zeitEl.textContent = zeitStr;
-  // Modal Update
+  // Nur Modal-Anzeige updaten
   const modalZeit = document.getElementById('stempelModalZeit');
   if(modalZeit) modalZeit.textContent =
     `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
-  // Ring füllen (max 8h = 28800s)
-  const ring = document.getElementById('stempelRingAktiv');
-  if(ring){
-    const pct = Math.min(diff/28800, 1);
-    ring.style.strokeDashoffset = 107 - (107*pct);
-  }
 }
 
 async function openStempelModal(){
