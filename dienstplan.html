@@ -500,7 +500,7 @@
     <div id="settingsMenu" style="display:none;position:absolute;top:57px;left:0;width:240px;background:var(--surface);border:1px solid var(--border);border-radius:12px;box-shadow:0 8px 32px rgba(0,0,0,.12);z-index:100;overflow:hidden">
       <div style="padding:14px 16px;border-bottom:1px solid var(--border);background:var(--surface2)">
         <div style="font-size:12px;font-weight:600;color:var(--text)" id="settingsUserName">–</div>
-        <div style="font-size:10px;color:var(--text3);margin-top:2px" id="settingsUserRole">–</div>
+        <div style="font-size:11px;color:var(--text3);margin-top:2px" id="settingsUserRole">–</div>
       </div>
       <div style="padding:6px 0">
         <div class="settings-menu-item" onclick="openUserManagement()">👥 Benutzerverwaltung</div>
@@ -523,7 +523,7 @@
          onmousedown="sliderDragStart(event)" ontouchstart="sliderTouchStart(event)">
       <div id="monthSliderTrack" style="display:flex;align-items:center;height:100%;position:absolute;top:0;left:0"></div>
     </div>
-    <div id="unternehmenLabel" style="font-size:10px;color:var(--text3);white-space:nowrap;margin-right:2px;padding:2px 8px;border:1px solid var(--border);border-radius:20px">–</div>
+    <div id="unternehmenLabel" style="font-size:11px;color:var(--text3);white-space:nowrap;margin-right:2px;padding:2px 8px;border:1px solid var(--border);border-radius:20px">–</div>
     <div id="standortLabel" style="font-size:11px;color:var(--text3);white-space:nowrap;margin-right:4px">–</div>
     <button id="btnMeins" onclick="openMeins()" title="Meins" style="width:32px;height:32px;border-radius:50%;border:1.5px solid var(--border);background:var(--surface2);cursor:pointer;display:none;align-items:center;justify-content:center;color:var(--text2);transition:all .15s;flex-shrink:0;font-size:13px;font-weight:700"
       onmouseover="this.style.background='var(--accent-soft)';this.style.borderColor='var(--accent)';this.style.color='var(--accent)'"
@@ -732,18 +732,18 @@
       <div style="background:var(--surface2);border-radius:10px;padding:14px;margin-bottom:10px">
 
         <div style="margin-bottom:10px">
-          <div style="font-size:10px;color:var(--text3);margin-bottom:6px">Erlaubte Dienste</div>
+          <div style="font-size:11px;color:var(--text3);margin-bottom:6px">Erlaubte Dienste</div>
           <div id="esDiensteErlaubtBox" style="display:flex;flex-wrap:wrap;gap:6px"></div>
         </div>
 
         <div id="esMaxWeMonatBox" style="margin-bottom:10px">
-          <div style="font-size:10px;color:var(--text3);margin-bottom:3px">Max. Wochenenden/Monat</div>
+          <div style="font-size:11px;color:var(--text3);margin-bottom:3px">Max. Wochenenden/Monat</div>
           <input type="number" id="esMaxWeMonat" value="2" min="0" max="5" style="width:100%;padding:7px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:12px;background:var(--surface);color:var(--text)">
         </div>
 
         <div style="display:flex;flex-direction:column;gap:8px">
           <div id="esNachRbBox">
-            <div style="font-size:10px;color:var(--text3);margin-bottom:3px">Tag nach RB?</div>
+            <div style="font-size:11px;color:var(--text3);margin-bottom:3px">Tag nach RB?</div>
             <select id="esNachRb" style="width:100%;padding:7px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:12px;background:var(--surface);color:var(--text)">
               <option value="frei">Frei</option>
               <option value="spaet">Spätdienst</option>
@@ -751,7 +751,7 @@
             </select>
           </div>
           <div>
-            <div style="font-size:10px;color:var(--text3);margin-bottom:3px">Notizen (intern, nicht für KI)</div>
+            <div style="font-size:11px;color:var(--text3);margin-bottom:3px">Notizen (intern, nicht für KI)</div>
             <textarea id="esNotizen" rows="2" placeholder="z.B. chronische Erkrankung beachten…" style="width:100%;padding:7px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:12px;background:var(--surface);color:var(--text);resize:vertical"></textarea>
           </div>
         </div>
@@ -913,6 +913,55 @@
   </div>
 </div>
 
+<!-- Urlaubsantrag Bestätigen Modal -->
+<div class="modal-overlay" id="urlaubBestaetigenModal" onclick="if(event.target===this)closeModal('urlaubBestaetigenModal')"
+  style="align-items:center;justify-content:center">
+  <div style="width:340px;border-radius:20px;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,.25)">
+
+    <!-- Hintergrund mit Sonne -->
+    <div style="height:180px;position:relative;overflow:hidden;display:flex;align-items:center;justify-content:center;
+      background:linear-gradient(160deg,#ff9500 0%,#ffcc00 40%,#34aadc 100%)">
+      <!-- Dekorative Sonne -->
+      <svg style="position:absolute;top:-20px;right:-20px;opacity:.25" width="180" height="180" viewBox="0 0 100 100">
+        <circle cx="50" cy="50" r="30" fill="#fff"/>
+        <line x1="50" y1="5"  x2="50" y2="18" stroke="#fff" stroke-width="4" stroke-linecap="round"/>
+        <line x1="50" y1="82" x2="50" y2="95" stroke="#fff" stroke-width="4" stroke-linecap="round"/>
+        <line x1="5"  y1="50" x2="18" y2="50" stroke="#fff" stroke-width="4" stroke-linecap="round"/>
+        <line x1="82" y1="50" x2="95" y2="50" stroke="#fff" stroke-width="4" stroke-linecap="round"/>
+        <line x1="19" y1="19" x2="28" y2="28" stroke="#fff" stroke-width="4" stroke-linecap="round"/>
+        <line x1="72" y1="72" x2="81" y2="81" stroke="#fff" stroke-width="4" stroke-linecap="round"/>
+        <line x1="81" y1="19" x2="72" y2="28" stroke="#fff" stroke-width="4" stroke-linecap="round"/>
+        <line x1="28" y1="72" x2="19" y2="81" stroke="#fff" stroke-width="4" stroke-linecap="round"/>
+      </svg>
+      <!-- Wellen unten -->
+      <svg style="position:absolute;bottom:0;left:0;right:0" viewBox="0 0 340 40" preserveAspectRatio="none">
+        <path d="M0,20 Q85,0 170,20 Q255,40 340,20 L340,40 L0,40 Z" fill="white" opacity=".15"/>
+        <path d="M0,30 Q85,10 170,30 Q255,50 340,30 L340,40 L0,40 Z" fill="white" opacity=".2"/>
+      </svg>
+      <!-- Text -->
+      <div style="text-align:center;z-index:1;padding:0 20px">
+        <div style="font-size:36px;margin-bottom:4px">🌴</div>
+        <div style="font-size:13px;font-weight:700;color:#fff;letter-spacing:.5px">URLAUBSANTRAG</div>
+        <div id="urlaubBestaetigenZeitraum" style="font-size:12px;color:rgba(255,255,255,.85);margin-top:4px"></div>
+      </div>
+    </div>
+
+    <!-- Info -->
+    <div style="background:var(--surface);padding:20px">
+      <div style="text-align:center;margin-bottom:16px">
+        <div id="urlaubBestaetigenInfo" style="font-size:14px;font-weight:600;color:var(--text)"></div>
+        <div style="font-size:12px;color:var(--text3);margin-top:4px">Möchtest du diesen Zeitraum als Urlaub beantragen?</div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+        <button onclick="closeModal('urlaubBestaetigenModal')"
+          class="btn btn-secondary">Abbrechen</button>
+        <button onclick="urlaubSelBestaetigen()"
+          class="btn btn-primary">🌴 Beantragen</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- Admin Zeiterfassung Modal -->
 <div class="modal-overlay" id="adminZeitModal" onclick="if(event.target===this)closeModal('adminZeitModal')">
   <div class="modal modal-wide" style="max-height:90vh;display:flex;flex-direction:column;width:720px">
@@ -1018,14 +1067,14 @@
 
     <!-- Dienst-Auswahl (nur bei Grün sichtbar) -->
     <div id="wishDienstBox" style="display:none;margin-bottom:10px">
-      <div style="font-size:10px;color:var(--text3);margin-bottom:4px">Welchen Dienst / Frei?</div>
+      <div style="font-size:11px;color:var(--text3);margin-bottom:4px">Welchen Dienst / Frei?</div>
       <select id="wishDienstWahl" style="width:100%;padding:8px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:12px;background:var(--surface);color:var(--text)">
         <option value="frei">✕ Frei</option>
       </select>
     </div>
 
     <div style="margin-bottom:12px">
-      <div style="font-size:10px;color:var(--text3);margin-bottom:4px">Notiz (optional)</div>
+      <div style="font-size:11px;color:var(--text3);margin-bottom:4px">Notiz (optional)</div>
       <input type="text" id="wishNotiz" placeholder="z.B. Arzttermin, Urlaub gebucht…" maxlength="80"
         style="width:100%;padding:8px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:12px;background:var(--surface);color:var(--text)">
     </div>
@@ -1062,16 +1111,16 @@
         <div style="font-size:11px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px">Neues Unternehmen anlegen</div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
           <div>
-            <div style="font-size:10px;color:var(--text3);margin-bottom:3px">Name *</div>
+            <div style="font-size:11px;color:var(--text3);margin-bottom:3px">Name *</div>
             <input type="text" id="newUnternehmenName" placeholder="z.B. Pflegedienst Müller GmbH" style="width:100%;padding:7px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:12px;background:var(--surface);color:var(--text)">
           </div>
           <div>
-            <div style="font-size:10px;color:var(--text3);margin-bottom:3px">Kontakt</div>
+            <div style="font-size:11px;color:var(--text3);margin-bottom:3px">Kontakt</div>
             <input type="text" id="newUnternehmenKontakt" placeholder="E-Mail oder Telefon" style="width:100%;padding:7px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:12px;background:var(--surface);color:var(--text)">
           </div>
         </div>
         <div style="margin-bottom:10px">
-          <div style="font-size:10px;color:var(--text3);margin-bottom:3px">Adresse</div>
+          <div style="font-size:11px;color:var(--text3);margin-bottom:3px">Adresse</div>
           <input type="text" id="newUnternehmenAdresse" placeholder="Straße, PLZ Ort" style="width:100%;padding:7px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:12px;background:var(--surface);color:var(--text)">
         </div>
         <button class="btn btn-primary btn-sm" onclick="createUnternehmen()" style="width:100%">+ Unternehmen anlegen</button>
@@ -1124,15 +1173,15 @@
         <!-- Zeile 1: E-Mail, Passwort, Rechte -->
         <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:8px">
           <div>
-            <div style="font-size:10px;color:var(--text3);margin-bottom:3px">E-Mail <span style="color:var(--text3);font-weight:400">(optional)</span></div>
+            <div style="font-size:11px;color:var(--text3);margin-bottom:3px">E-Mail <span style="color:var(--text3);font-weight:400">(optional)</span></div>
             <input type="email" id="inviteEmail" placeholder="Später hinzufügbar" style="width:100%;padding:7px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:12px;background:var(--surface);color:var(--text)">
           </div>
           <div>
-            <div style="font-size:10px;color:var(--text3);margin-bottom:3px">Passwort <span style="color:var(--text3);font-weight:400">(optional)</span></div>
+            <div style="font-size:11px;color:var(--text3);margin-bottom:3px">Passwort <span style="color:var(--text3);font-weight:400">(optional)</span></div>
             <input type="password" id="invitePassword" placeholder="Später hinzufügbar" style="width:100%;padding:7px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:12px;background:var(--surface);color:var(--text)">
           </div>
           <div>
-            <div style="font-size:10px;color:var(--text3);margin-bottom:3px">Rechte *</div>
+            <div style="font-size:11px;color:var(--text3);margin-bottom:3px">Rechte *</div>
             <select id="inviteRole" style="width:100%;padding:7px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:12px;background:var(--surface);color:var(--text)">
               <option value="mitarbeiter">Mitarbeiter</option>
               <option value="planer">Planer</option>
@@ -1147,15 +1196,15 @@
         <!-- Zeile 2: Name, Vorname, Funktion -->
         <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:8px">
           <div>
-            <div style="font-size:10px;color:var(--text3);margin-bottom:3px">Name</div>
+            <div style="font-size:11px;color:var(--text3);margin-bottom:3px">Name</div>
             <input type="text" id="inviteName" placeholder="Nachname" style="width:100%;padding:7px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:12px;background:var(--surface);color:var(--text)">
           </div>
           <div>
-            <div style="font-size:10px;color:var(--text3);margin-bottom:3px">Vorname</div>
+            <div style="font-size:11px;color:var(--text3);margin-bottom:3px">Vorname</div>
             <input type="text" id="inviteVorname" placeholder="Vorname" style="width:100%;padding:7px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:12px;background:var(--surface);color:var(--text)">
           </div>
           <div>
-            <div style="font-size:10px;color:var(--text3);margin-bottom:3px">Funktion</div>
+            <div style="font-size:11px;color:var(--text3);margin-bottom:3px">Funktion</div>
             <div style="display:flex;gap:4px">
               <select id="invitePosition" style="flex:1;padding:7px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:12px;background:var(--surface);color:var(--text)">
                 <option value="">– wählen –</option>
@@ -1173,39 +1222,39 @@
 
         <!-- Zeile 3: Standorte (Checkboxen) -->
         <div style="margin-bottom:8px">
-          <div style="font-size:10px;color:var(--text3);margin-bottom:6px">Standort(e)</div>
+          <div style="font-size:11px;color:var(--text3);margin-bottom:6px">Standort(e)</div>
           <div id="inviteStandortCheckboxes" style="display:flex;flex-wrap:wrap;gap:8px"></div>
         </div>
 
         <!-- Zeile 3b: Gruppen (Checkboxen, gefiltert) -->
         <div style="margin-bottom:8px">
-          <div style="font-size:10px;color:var(--text3);margin-bottom:6px">Gruppe(n)</div>
+          <div style="font-size:11px;color:var(--text3);margin-bottom:6px">Gruppe(n)</div>
           <div id="inviteGruppeCheckboxes" style="display:flex;flex-wrap:wrap;gap:8px"></div>
         </div>
 
         <!-- Zeile 4: Handy, Kostenstelle, Wöchentliche Arbeitszeit -->
         <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:8px">
           <div>
-            <div style="font-size:10px;color:var(--text3);margin-bottom:3px">Handy</div>
+            <div style="font-size:11px;color:var(--text3);margin-bottom:3px">Handy</div>
             <input type="tel" id="inviteHandy" placeholder="+49 ..." style="width:100%;padding:7px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:12px;background:var(--surface);color:var(--text)">
           </div>
           <div>
-            <div style="font-size:10px;color:var(--text3);margin-bottom:3px">Kostenstelle</div>
+            <div style="font-size:11px;color:var(--text3);margin-bottom:3px">Kostenstelle</div>
             <input type="text" id="inviteKostenstelle" placeholder="z.B. 1234" style="width:100%;padding:7px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:12px;background:var(--surface);color:var(--text)">
           </div>
           <div>
-            <div style="font-size:10px;color:var(--text3);margin-bottom:3px">Wöchtl. Arbeitszeit (h)</div>
+            <div style="font-size:11px;color:var(--text3);margin-bottom:3px">Wöchtl. Arbeitszeit (h)</div>
             <input type="number" id="inviteSoll" placeholder="z.B. 38.5" min="0" max="60" step="0.5" style="width:100%;padding:7px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:12px;background:var(--surface);color:var(--text)">
           </div>
         </div>
 
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
           <div>
-            <div style="font-size:10px;color:var(--text3);margin-bottom:3px">Urlaubstage/Jahr</div>
+            <div style="font-size:11px;color:var(--text3);margin-bottom:3px">Urlaubstage/Jahr</div>
             <input type="number" id="inviteUrlaubstage" value="30" min="0" max="60" style="width:100%;padding:7px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:12px;background:var(--surface);color:var(--text)">
           </div>
           <div>
-            <div style="font-size:10px;color:var(--text3);margin-bottom:3px">Stundenlohn (€)</div>
+            <div style="font-size:11px;color:var(--text3);margin-bottom:3px">Stundenlohn (€)</div>
             <input type="number" id="inviteStundenlohn" value="0" min="0" max="200" step="0.01" style="width:100%;padding:7px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:12px;background:var(--surface);color:var(--text)">
           </div>
         </div>
@@ -1246,15 +1295,15 @@
 
       <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:8px">
         <div>
-          <div style="font-size:10px;color:var(--text3);margin-bottom:3px">Name</div>
+          <div style="font-size:11px;color:var(--text3);margin-bottom:3px">Name</div>
           <input type="text" id="euName" style="width:100%;padding:7px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:12px;background:var(--surface);color:var(--text)">
         </div>
         <div>
-          <div style="font-size:10px;color:var(--text3);margin-bottom:3px">Vorname</div>
+          <div style="font-size:11px;color:var(--text3);margin-bottom:3px">Vorname</div>
           <input type="text" id="euVorname" style="width:100%;padding:7px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:12px;background:var(--surface);color:var(--text)">
         </div>
         <div>
-          <div style="font-size:10px;color:var(--text3);margin-bottom:3px">Position</div>
+          <div style="font-size:11px;color:var(--text3);margin-bottom:3px">Position</div>
           <div style="display:flex;gap:4px">
             <select id="euPosition" style="flex:1;padding:7px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:12px;background:var(--surface);color:var(--text)">
               <option value="">– wählen –</option>
@@ -1272,36 +1321,36 @@
 
       <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:8px">
         <div>
-          <div style="font-size:10px;color:var(--text3);margin-bottom:3px">Handy</div>
+          <div style="font-size:11px;color:var(--text3);margin-bottom:3px">Handy</div>
           <input type="tel" id="euHandy" style="width:100%;padding:7px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:12px;background:var(--surface);color:var(--text)">
         </div>
         <div>
-          <div style="font-size:10px;color:var(--text3);margin-bottom:3px">Kostenstelle</div>
+          <div style="font-size:11px;color:var(--text3);margin-bottom:3px">Kostenstelle</div>
           <input type="text" id="euKostenstelle" style="width:100%;padding:7px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:12px;background:var(--surface);color:var(--text)">
         </div>
         <div>
-          <div style="font-size:10px;color:var(--text3);margin-bottom:3px">Wöchtl. Arbeitszeit (h)</div>
+          <div style="font-size:11px;color:var(--text3);margin-bottom:3px">Wöchtl. Arbeitszeit (h)</div>
           <input type="number" id="euSoll" min="0" max="60" step="0.5" style="width:100%;padding:7px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:12px;background:var(--surface);color:var(--text)">
         </div>
       </div>
 
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
         <div>
-          <div style="font-size:10px;color:var(--text3);margin-bottom:3px">Urlaubstage/Jahr</div>
+          <div style="font-size:11px;color:var(--text3);margin-bottom:3px">Urlaubstage/Jahr</div>
           <input type="number" id="euUrlaubstage" value="30" min="0" max="60" style="width:100%;padding:7px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:12px;background:var(--surface);color:var(--text)">
         </div>
         <div>
-          <div style="font-size:10px;color:var(--text3);margin-bottom:3px">Stundenlohn (€)</div>
+          <div style="font-size:11px;color:var(--text3);margin-bottom:3px">Stundenlohn (€)</div>
           <input type="number" id="euStundenlohn" value="0" min="0" max="200" step="0.01" style="width:100%;padding:7px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:12px;background:var(--surface);color:var(--text)">
         </div>
       </div>
 
       <div style="margin-bottom:8px">
-        <div style="font-size:10px;color:var(--text3);margin-bottom:6px">Standort(e)</div>
+        <div style="font-size:11px;color:var(--text3);margin-bottom:6px">Standort(e)</div>
         <div id="euStandortCheckboxes" style="display:flex;flex-wrap:wrap;gap:8px"></div>
       </div>
       <div style="margin-bottom:8px">
-        <div style="font-size:10px;color:var(--text3);margin-bottom:6px">Gruppe(n)</div>
+        <div style="font-size:11px;color:var(--text3);margin-bottom:6px">Gruppe(n)</div>
         <div id="euGruppeCheckboxes" style="display:flex;flex-wrap:wrap;gap:8px"></div>
       </div>
 
@@ -1319,18 +1368,18 @@
         <div style="font-size:11px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:12px">🗓️ Individuelle Planungsregeln</div>
 
         <div style="margin-bottom:8px">
-          <div style="font-size:10px;color:var(--text3);margin-bottom:6px">Vertragliche Arbeitstage</div>
+          <div style="font-size:11px;color:var(--text3);margin-bottom:6px">Vertragliche Arbeitstage</div>
           <div style="font-size:9px;color:var(--text3);margin-bottom:6px">Bei Wunsch, Feiertag oder Tausch trotzdem planbar</div>
           <div id="euFreitagBox" style="display:flex;gap:6px;flex-wrap:wrap"></div>
         </div>
 
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
           <div>
-            <div style="font-size:10px;color:var(--text3);margin-bottom:3px">Urlaubstage/Jahr</div>
+            <div style="font-size:11px;color:var(--text3);margin-bottom:3px">Urlaubstage/Jahr</div>
             <input type="number" id="euUrlaubJahr" value="30" min="0" max="60" style="width:100%;padding:7px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:12px;background:var(--surface);color:var(--text)">
           </div>
           <div>
-            <div style="font-size:10px;color:var(--text3);margin-bottom:3px">Resturlaub Vorjahr</div>
+            <div style="font-size:11px;color:var(--text3);margin-bottom:3px">Resturlaub Vorjahr</div>
             <input type="number" id="euUrlaubVorjahr" value="0" min="0" max="60" style="width:100%;padding:7px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:12px;background:var(--surface);color:var(--text)">
           </div>
         </div>
@@ -1348,7 +1397,7 @@
         </div>
 
         <div>
-          <div style="font-size:10px;color:var(--text3);margin-bottom:4px">Qualifikationen</div>
+          <div style="font-size:11px;color:var(--text3);margin-bottom:4px">Qualifikationen</div>
           <div style="display:flex;gap:4px;align-items:center;flex-wrap:wrap">
             <label style="display:flex;align-items:center;gap:4px;font-size:12px;padding:4px 10px;border:1.5px solid var(--border);border-radius:8px;cursor:pointer;background:var(--surface)">
               <input type="checkbox" id="euQualiWunde" style="cursor:pointer"> Wundversorgung
@@ -1378,21 +1427,21 @@
         <div style="font-size:11px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:12px">⏱️ Arbeitszeitgesetz</div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px">
           <div>
-            <div style="font-size:10px;color:var(--text3);margin-bottom:3px">Max. Stunden/Tag</div>
+            <div style="font-size:11px;color:var(--text3);margin-bottom:3px">Max. Stunden/Tag</div>
             <input type="number" id="ur_max_std_tag" value="10" min="6" max="12" step="0.5" style="width:100%;padding:7px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:12px;background:var(--surface);color:var(--text)">
           </div>
           <div>
-            <div style="font-size:10px;color:var(--text3);margin-bottom:3px">Max. Std./Woche Ø</div>
+            <div style="font-size:11px;color:var(--text3);margin-bottom:3px">Max. Std./Woche Ø</div>
             <input type="number" id="ur_max_std_woche" value="56" min="40" max="60" style="width:100%;padding:7px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:12px;background:var(--surface);color:var(--text)">
           </div>
         </div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
           <div>
-            <div style="font-size:10px;color:var(--text3);margin-bottom:3px">Max. aufeinanderfolgende Tage</div>
+            <div style="font-size:11px;color:var(--text3);margin-bottom:3px">Max. aufeinanderfolgende Tage</div>
             <input type="number" id="ur_max_tage_folge" value="8" min="4" max="14" style="width:100%;padding:7px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:12px;background:var(--surface);color:var(--text)">
           </div>
           <div>
-            <div style="font-size:10px;color:var(--text3);margin-bottom:3px">Toleranz Stunden/Monat (±h)</div>
+            <div style="font-size:11px;color:var(--text3);margin-bottom:3px">Toleranz Stunden/Monat (±h)</div>
             <input type="number" id="ur_stunden_toleranz" value="8" min="0" max="40" step="0.5" style="width:100%;padding:7px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:12px;background:var(--surface);color:var(--text)">
             <div style="font-size:9px;color:var(--text3);margin-top:2px">KI plant nicht über Monatssoll + X Stunden</div>
           </div>
@@ -1401,7 +1450,7 @@
         <!-- Pausenregelung Info -->
         <div style="background:var(--accent-soft);border:1px solid var(--accent);border-radius:8px;padding:10px 12px;margin-top:10px">
           <div style="font-size:11px;font-weight:600;color:var(--accent);margin-bottom:6px">⏸️ Gesetzliche Pausenregelung (fest)</div>
-          <div style="font-size:10px;color:var(--text2);line-height:1.6">
+          <div style="font-size:11px;color:var(--text2);line-height:1.6">
             • 0–6 Std.: Keine Pause vorgeschrieben<br>
             • 6–9 Std.: Mind. <strong>30 Min.</strong> Pause<br>
             • &gt;9 Std.: Mind. <strong>45 Min.</strong> Pause<br>
@@ -1414,11 +1463,11 @@
       <div style="background:var(--surface2);border-radius:10px;padding:14px;margin-bottom:12px">
         <div style="font-size:11px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px">📄 Betriebsvereinbarung / Tarifvertrag</div>
         <div style="margin-bottom:8px">
-          <div style="font-size:10px;color:var(--text3);margin-bottom:3px">Betriebsvereinbarung (Freitext)</div>
+          <div style="font-size:11px;color:var(--text3);margin-bottom:3px">Betriebsvereinbarung (Freitext)</div>
           <textarea id="ur_betriebsvereinbarung" rows="3" placeholder="z.B. Spätdienst endet spätestens 22:00 Uhr. Keine Doppelbesetzung Rufbereitschaft..." style="width:100%;padding:7px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:12px;background:var(--surface);color:var(--text);resize:vertical"></textarea>
         </div>
         <div>
-          <div style="font-size:10px;color:var(--text3);margin-bottom:3px">Tarifvertrag (Freitext)</div>
+          <div style="font-size:11px;color:var(--text3);margin-bottom:3px">Tarifvertrag (Freitext)</div>
           <textarea id="ur_tarifvertrag" rows="3" placeholder="z.B. TVöD Pflege: 30 Urlaubstage, Jahressonderzahlung im November..." style="width:100%;padding:7px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:12px;background:var(--surface);color:var(--text);resize:vertical"></textarea>
         </div>
       </div>
@@ -1466,9 +1515,9 @@
       <div style="background:var(--surface2);border-radius:10px;padding:14px;margin-bottom:12px">
         <div style="font-size:11px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:12px">📅 Planungsregeln</div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
-          <div><div style="font-size:10px;color:var(--text3);margin-bottom:3px">Max. aufeinanderfolgende Tage</div>
+          <div><div style="font-size:11px;color:var(--text3);margin-bottom:3px">Max. aufeinanderfolgende Tage</div>
             <input type="number" id="gr_max_tage_folge" value="8" min="4" max="14" style="width:100%;padding:7px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:12px;background:var(--surface);color:var(--text)"></div>
-          <div><div style="font-size:10px;color:var(--text3);margin-bottom:3px">RB-Rhythmus (min. Tage Abstand)</div>
+          <div><div style="font-size:11px;color:var(--text3);margin-bottom:3px">RB-Rhythmus (min. Tage Abstand)</div>
             <input type="number" id="gr_rb_rhythmus" value="7" min="1" max="30" style="width:100%;padding:7px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:12px;background:var(--surface);color:var(--text)"></div>
         </div>
         <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text);cursor:pointer">
@@ -2267,7 +2316,7 @@ function openEditStaff(staffId){
         const disabled = isRb && !rbErlaubt;
         const checked  = !disabled && (erlaubt.length ? erlaubt.includes(kuerzel) : true);
         return `<label style="display:flex;align-items:center;gap:4px;font-size:12px;padding:4px 10px;border:1.5px solid ${disabled?'var(--border)':'var(--border)'};border-radius:8px;cursor:${disabled?'default':'pointer'};background:var(--surface);${disabled?'opacity:0.4;pointer-events:none;':''}">
-          <input type="checkbox" class="es-dienst-cb" value="${kuerzel}" ${checked?'checked':''} ${disabled?'disabled':''} style="cursor:${disabled?'default':'pointer'}"> ${kuerzel} <span style="font-size:10px;color:var(--text3);margin-left:2px">${label}${disabled?' (nicht erlaubt)':''}</span>
+          <input type="checkbox" class="es-dienst-cb" value="${kuerzel}" ${checked?'checked':''} ${disabled?'disabled':''} style="cursor:${disabled?'default':'pointer'}"> ${kuerzel} <span style="font-size:11px;color:var(--text3);margin-left:2px">${label}${disabled?' (nicht erlaubt)':''}</span>
         </label>`;
       }).join('');
 
@@ -2430,7 +2479,7 @@ function renderMonthSlider(){
       padding: 0 8px;
       white-space:nowrap;
     " onclick="sliderClickMonth(${i})">${MONTH_NAMES[m]}<br>
-    <span style="font-size:10px;font-weight:400;color:var(--text3);opacity:${isActive?'.5':'0'}">${y}</span>
+    <span style="font-size:11px;font-weight:400;color:var(--text3);opacity:${isActive?'.5':'0'}">${y}</span>
     </div>`;
   }).join('');
   // Center on active slot
@@ -2504,7 +2553,7 @@ async function openKIModal(){
   if(konflikte.length){
     preview.innerHTML += `<div style="margin-top:8px;padding:8px;background:rgba(255,159,10,.12);border:1px solid rgba(255,159,10,.3);border-radius:6px;color:#b35a00">
       <div style="font-weight:600;margin-bottom:4px">⚠️ Konflikte erkannt:</div>
-      ${konflikte.map(k=>`<div style="font-size:10px;margin-top:2px">${k}</div>`).join('')}
+      ${konflikte.map(k=>`<div style="font-size:11px;margin-top:2px">${k}</div>`).join('')}
     </div>`;
   }
 
@@ -3495,7 +3544,7 @@ async function loadUserList(){
         <div style="width:32px;height:32px;border-radius:50%;background:var(--accent-soft);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:var(--accent);flex-shrink:0">${(displayName[0]||'?').toUpperCase()}</div>
         <div style="flex:1;min-width:0">
           <div style="font-size:12px;font-weight:500;color:var(--text)">${isMe?'👤 ':''}${displayName}</div>
-          <div style="font-size:10px;color:var(--text3)">${subLabel} · 🔑 Login aktiv</div>
+          <div style="font-size:11px;color:var(--text3)">${subLabel} · 🔑 Login aktiv</div>
         </div>
         ${canEdit ? `
         <button onclick="openEditUser('${u.user_id}')" style="font-size:11px;padding:4px 8px;border:1px solid var(--border);border-radius:6px;background:var(--surface);color:var(--text2);cursor:pointer">✎</button>
@@ -3531,7 +3580,7 @@ async function loadUserList(){
         <div style="width:32px;height:32px;border-radius:50%;background:rgba(255,159,10,.15);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:#cc7a00;flex-shrink:0">${(s.name[0]||'?').toUpperCase()}</div>
         <div style="flex:1;min-width:0">
           <div style="font-size:12px;font-weight:500;color:var(--text)">${s.name}</div>
-          <div style="font-size:10px;color:var(--text3)">${s.role||'–'}${location?' · '+location:''} · ⏳ Kein Login</div>
+          <div style="font-size:11px;color:var(--text3)">${s.role||'–'}${location?' · '+location:''} · ⏳ Kein Login</div>
         </div>
         <button onclick="openEditStaffOnly(${s.id})" style="font-size:11px;padding:4px 8px;border:1px solid var(--border);border-radius:6px;background:var(--surface);color:var(--text2);cursor:pointer">✎</button>
         <button onclick="addLoginToStaff(${s.id},'${s.name}')" style="font-size:11px;padding:4px 8px;border:1px solid var(--accent);border-radius:6px;background:var(--accent-soft);color:var(--accent);cursor:pointer">+ Login</button>
@@ -3616,10 +3665,10 @@ async function loadAdminZeit(){
     const fest = b.status === 'festgeschrieben';
 
     const statusBadge = fest
-      ? `<span style="font-size:10px;font-weight:600;color:var(--green)">✅ Fest</span>`
+      ? `<span style="font-size:11px;font-weight:600;color:var(--green)">✅ Fest</span>`
       : freigabe
-      ? `<span style="font-size:10px;font-weight:600;color:var(--orange)">⚠️ Freigabe</span>`
-      : `<span style="font-size:10px;color:var(--text3)">○ Offen</span>`;
+      ? `<span style="font-size:11px;font-weight:600;color:var(--orange)">⚠️ Freigabe</span>`
+      : `<span style="font-size:11px;color:var(--text3)">○ Offen</span>`;
 
     return `
       <div style="display:grid;grid-template-columns:100px 70px 65px 65px 50px 55px 1fr 70px;gap:6px;align-items:center;
@@ -3631,11 +3680,11 @@ async function loadAdminZeit(){
         <div style="font-size:12px">${ende}</div>
         <div style="font-size:11px;color:var(--text3)">${b.pause_minuten||0}m</div>
         <div style="font-size:12px;font-weight:600">${netto}</div>
-        <div style="font-size:10px;color:var(--orange)">${freigabe?(b.freigabe_grund||''):'&nbsp;'}</div>
+        <div style="font-size:11px;color:var(--orange)">${freigabe?(b.freigabe_grund||''):'&nbsp;'}</div>
         <div style="display:flex;gap:4px;align-items:center">
           ${statusBadge}
-          ${!fest && freigabe ? `<button onclick="zeitFreigeben('${b.id}')" style="padding:2px 8px;border:none;border-radius:5px;background:var(--green);color:#fff;font-size:10px;font-weight:600;cursor:pointer">✓</button>` : ''}
-          ${!fest ? `<button onclick="zeitFestschreiben('${b.id}')" style="padding:2px 6px;border:1px solid var(--border);border-radius:5px;background:var(--surface2);color:var(--text2);font-size:10px;cursor:pointer" title="Festschreiben">🔒</button>` : ''}
+          ${!fest && freigabe ? `<button onclick="zeitFreigeben('${b.id}')" style="padding:2px 8px;border:none;border-radius:5px;background:var(--green);color:#fff;font-size:11px;font-weight:600;cursor:pointer">✓</button>` : ''}
+          ${!fest ? `<button onclick="zeitFestschreiben('${b.id}')" style="padding:2px 6px;border:1px solid var(--border);border-radius:5px;background:var(--surface2);color:var(--text2);font-size:11px;cursor:pointer" title="Festschreiben">🔒</button>` : ''}
         </div>
       </div>`;
   }).join('');
@@ -3643,7 +3692,7 @@ async function loadAdminZeit(){
   const headerCols = ['Mitarbeiter','Datum','Start','Ende','Pause','Netto','Freigabegrund','Aktion'];
   body.innerHTML = `
     <div style="display:grid;grid-template-columns:100px 70px 65px 65px 50px 55px 1fr 70px;gap:6px;padding:0 12px;margin-bottom:6px">
-      ${headerCols.map(h=>`<div style="font-size:10px;color:var(--text3);font-weight:600">${h}</div>`).join('')}
+      ${headerCols.map(h=>`<div style="font-size:11px;color:var(--text3);font-weight:600">${h}</div>`).join('')}
     </div>
     <div style="display:flex;flex-direction:column;gap:6px">${rows}</div>`;
 }
@@ -4070,7 +4119,7 @@ function renderMeineDienste(){
             : `<span style="padding:3px 10px;border-radius:20px;font-size:12px;font-weight:600;color:#fff;background:${farbe}">${shift}</span>`
           }
         </div>
-        <div style="font-size:12px;color:var(--text)">${isFrei ? '' : label}${holName&&!isFrei?' <span style="font-size:10px;color:var(--text3)">· '+holName+'</span>':''}</div>
+        <div style="font-size:12px;color:var(--text)">${isFrei ? '' : label}${holName&&!isFrei?' <span style="font-size:11px;color:var(--text3)">· '+holName+'</span>':''}</div>
         <div style="font-size:11px;color:var(--text3)">${beginn&&ende&&!isFrei ? beginn+' – '+ende : ''}</div>
       </div>`);
   }
@@ -4160,15 +4209,15 @@ async function renderMeinUrlaub(){
       chips.push(`<div
         title="${title2||ds2}"
         onclick="${clickable?`urlaubKalenderKlick('${ds2}')`:''}"
-        style="width:28px;height:28px;border-radius:6px;background:${bg};border:1px solid ${border};
-               display:flex;align-items:center;justify-content:center;font-size:10px;
+        style="width:36px;height:36px;border-radius:7px;background:${bg};border:1px solid ${border};
+               display:flex;align-items:center;justify-content:center;font-size:11px;
                font-weight:${fw};color:${color};flex-shrink:0;cursor:${cursor};
                ${isVon||isBis?'box-shadow:0 0 0 2px var(--accent);':''}"
       >${d}</div>`);
     }
     return `
       <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
-        <div style="width:72px;font-size:11px;font-weight:600;color:var(--text2);flex-shrink:0;text-align:right">${mName}</div>
+        <div style="width:80px;font-size:12px;font-weight:600;color:var(--text2);flex-shrink:0;text-align:right">${mName}</div>
         <div style="display:flex;flex-wrap:nowrap;gap:2px">${chips.join('')}</div>
       </div>`;
   }).join('');
@@ -4177,7 +4226,7 @@ async function renderMeinUrlaub(){
   const statusBadge = s => {
     const map = {offen:'🕐 Ausstehend', genehmigt:'✅ Genehmigt', abgelehnt:'❌ Abgelehnt'};
     const col = {offen:'var(--orange)', genehmigt:'var(--green)', abgelehnt:'var(--red)'};
-    return `<span style="font-size:10px;font-weight:600;color:${col[s]||'var(--text3)'}">${map[s]||s}</span>`;
+    return `<span style="font-size:11px;font-weight:600;color:${col[s]||'var(--text3)'}">${map[s]||s}</span>`;
   };
   const dieseJahrAntraege = (antraege||[]).filter(a=>new Date(a.von_datum).getFullYear()===jahr);
   const antraegeHtml = dieseJahrAntraege.length ? dieseJahrAntraege.map(a => `
@@ -4185,11 +4234,11 @@ async function renderMeinUrlaub(){
       <div style="display:flex;align-items:center;gap:8px">
         <div style="flex:1">
           <div style="font-size:12px;font-weight:600;color:var(--text)">${new Date(a.von_datum+'T12:00:00').toLocaleDateString('de-DE',{day:'numeric',month:'long'})} – ${new Date(a.bis_datum+'T12:00:00').toLocaleDateString('de-DE',{day:'numeric',month:'long',year:'numeric'})}</div>
-          <div style="font-size:10px;color:var(--text3)">${a.tage} Tag${a.tage!==1?'e':''}${a.notiz?' · '+a.notiz:''}</div>
+          <div style="font-size:11px;color:var(--text3)">${a.tage} Tag${a.tage!==1?'e':''}${a.notiz?' · '+a.notiz:''}</div>
         </div>
         ${statusBadge(a.status)}
       </div>
-      ${a.ablehnungsgrund?`<div style="margin-top:4px;font-size:10px;color:var(--red)">Grund: ${a.ablehnungsgrund}</div>`:''}
+      ${a.ablehnungsgrund?`<div style="margin-top:4px;font-size:11px;color:var(--red)">Grund: ${a.ablehnungsgrund}</div>`:''}
     </div>`).join('') : `<div style="font-size:12px;color:var(--text3)">Keine Anträge für ${jahr}</div>`;
 
   content.innerHTML = `
@@ -4197,15 +4246,15 @@ async function renderMeinUrlaub(){
     <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:16px">
       <div style="background:var(--accent-soft);border:1.5px solid var(--accent);border-radius:12px;padding:12px;text-align:center">
         <div style="font-size:26px;font-weight:700;color:var(--accent)">${restTage}</div>
-        <div style="font-size:10px;color:var(--accent)">Resturlaub</div>
+        <div style="font-size:11px;color:var(--accent)">Resturlaub</div>
       </div>
       <div style="background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:12px;text-align:center">
         <div style="font-size:26px;font-weight:700;color:var(--text)">${genehmigt}</div>
-        <div style="font-size:10px;color:var(--text3)">Genommen</div>
+        <div style="font-size:11px;color:var(--text3)">Genommen</div>
       </div>
       <div style="background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:12px;text-align:center">
         <div style="font-size:26px;font-weight:700;color:var(--text)">${gesamtTage}</div>
-        <div style="font-size:10px;color:var(--text3)">Gesamt</div>
+        <div style="font-size:11px;color:var(--text3)">Gesamt</div>
       </div>
     </div>
 
@@ -4228,20 +4277,70 @@ async function renderMeinUrlaub(){
       <!-- Kalender -->
       <div style="overflow-x:auto">${kalender}</div>
 
-      <!-- Selektion Info + Bestätigen -->
-      <div id="urlaubSelInfo" style="margin-top:10px;padding:10px 12px;background:var(--accent-soft);border:1.5px solid var(--accent);border-radius:8px;display:${window._urlaubSel&&window._urlaubSel.von?'flex':'none'};align-items:center;gap:10px">
-        <div style="flex:1;font-size:12px;color:var(--accent);font-weight:600" id="urlaubSelText"></div>
-        <button onclick="urlaubSelBestaetigen()" style="padding:6px 14px;border:none;border-radius:7px;background:var(--accent);color:#fff;font-size:12px;font-weight:600;cursor:pointer">✅ Beantragen</button>
-        <button onclick="window._urlaubSel={von:null,bis:null};renderMeinUrlaub()" style="padding:6px 10px;border:1px solid var(--border);border-radius:7px;background:var(--surface);color:var(--text2);font-size:12px;cursor:pointer">✕</button>
+      <!-- Urlaubsantrag Button -->
+      <div id="urlaubSelInfo" style="margin-top:10px;display:${window._urlaubSel&&window._urlaubSel.von&&window._urlaubSel.bis?'block':'none'}">
+        <button onclick="openUrlaubBestaetigenModal()" class="btn btn-secondary btn-sm" style="width:100%">
+          🏖️ Urlaubsantrag
+        </button>
       </div>
     </div>
-
-    <!-- Antrag stellen Button -->
-    <button onclick="window._urlaubSel={von:null,bis:null};renderMeinUrlaub();document.getElementById('urlaubSelInfo').style.display='flex'" class="btn btn-secondary btn-sm" style="margin-bottom:14px;width:100%">+ Urlaubsantrag im Kalender wählen</button>
 
     <!-- Anträge -->
     <div style="font-size:12px;font-weight:600;color:var(--text);margin-bottom:8px">Meine Anträge ${jahr}</div>
     <div style="display:flex;flex-direction:column;gap:6px">${antraegeHtml}</div>`;
+}
+
+function openUrlaubBestaetigenModal(){
+  const sel = window._urlaubSel;
+  if(!sel || !sel.von || !sel.bis){ showToast('Bitte erst Start- und Enddatum im Kalender wählen'); return; }
+  const hols = holidaysForYear(parseInt(sel.von.slice(0,4)));
+
+  // Werktage zählen
+  let tage = 0;
+  let cur = new Date(sel.von+'T12:00:00');
+  const bis = new Date(sel.bis+'T12:00:00');
+  while(cur <= bis){
+    const dow = cur.getDay();
+    const ds = fmtDate(cur);
+    if(dow>=1 && dow<=5 && !hols[ds]) tage++;
+    cur.setDate(cur.getDate()+1);
+  }
+
+  const vonDE = new Date(sel.von+'T12:00:00').toLocaleDateString('de-DE',{day:'numeric',month:'long'});
+  const bisDE = new Date(sel.bis+'T12:00:00').toLocaleDateString('de-DE',{day:'numeric',month:'long',year:'numeric'});
+
+  document.getElementById('urlaubBestaetigenZeitraum').textContent = `${vonDE} – ${bisDE}`;
+  document.getElementById('urlaubBestaetigenInfo').textContent = `${tage} Urlaubstag${tage!==1?'e':''}`;
+  openModal('urlaubBestaetigenModal');
+}
+
+async function urlaubSelBestaetigen(){
+  const sel = window._urlaubSel;
+  if(!sel || !sel.von || !sel.bis) return;
+  const hols = holidaysForYear(parseInt(sel.von.slice(0,4)));
+
+  let tage = 0;
+  let cur = new Date(sel.von+'T12:00:00');
+  const bis = new Date(sel.bis+'T12:00:00');
+  while(cur <= bis){
+    const dow = cur.getDay();
+    const ds = fmtDate(cur);
+    if(dow>=1 && dow<=5 && !hols[ds]) tage++;
+    cur.setDate(cur.getDate()+1);
+  }
+  if(tage<=0){ showToast('Keine Werktage im gewählten Zeitraum'); return; }
+
+  const { error } = await sb.from('urlaubsantraege').insert({
+    staff_id: _meinsStaffId,
+    von_datum: sel.von, bis_datum: sel.bis,
+    tage, status: 'offen'
+  });
+  if(error){ showToast('Fehler: '+error.message); return; }
+
+  closeModal('urlaubBestaetigenModal');
+  window._urlaubSel = {von:null, bis:null};
+  showToast(`✅ ${tage} Urlaubstag${tage!==1?'e':''} beantragt – warte auf Genehmigung`);
+  renderMeinUrlaub();
 }
 
 function urlaubKalenderKlick(ds){
@@ -4258,35 +4357,6 @@ function urlaubKalenderKlick(ds){
     // Ende setzen
     sel.bis = ds;
   }
-  renderMeinUrlaub();
-}
-
-async function urlaubSelBestaetigen(){
-  const sel = window._urlaubSel;
-  if(!sel || !sel.von || !sel.bis) return;
-  const hols = holidaysForYear(parseInt(sel.von.slice(0,4)));
-
-  // Werktage zählen
-  let tage = 0;
-  let cur = new Date(sel.von+'T12:00:00');
-  const bis = new Date(sel.bis+'T12:00:00');
-  while(cur <= bis){
-    const dow = cur.getDay();
-    const ds = fmtDate(cur);
-    if(dow>=1 && dow<=5 && !hols[ds]) tage++;
-    cur.setDate(cur.getDate()+1);
-  }
-  if(tage<=0){ showToast('Keine Werktage im gewählten Zeitraum'); return; }
-  if(!confirm(`${tage} Urlaubstag${tage!==1?'e':''} beantragen?\n${sel.von} – ${sel.bis}`)) return;
-
-  const { error } = await sb.from('urlaubsantraege').insert({
-    staff_id: _meinsStaffId,
-    von_datum: sel.von, bis_datum: sel.bis,
-    tage, status: 'offen'
-  });
-  if(error){ showToast('Fehler: '+error.message); return; }
-  window._urlaubSel = {von:null, bis:null};
-  showToast(`✅ ${tage} Urlaubstag${tage!==1?'e':''} beantragt`);
   renderMeinUrlaub();
 }
 
@@ -4383,7 +4453,7 @@ async function renderMeineBuchungen(){
 
     <!-- Tabellen-Header -->
     <div style="display:grid;grid-template-columns:60px 80px 80px 60px 60px 28px;gap:6px;padding:0 12px;margin-bottom:4px">
-      ${['Datum','Start','Ende','Pause','Netto',''].map(h=>`<div style="font-size:10px;color:var(--text3);font-weight:600">${h}</div>`).join('')}
+      ${['Datum','Start','Ende','Pause','Netto',''].map(h=>`<div style="font-size:11px;color:var(--text3);font-weight:600">${h}</div>`).join('')}
     </div>
 
     <!-- Buchungen -->
@@ -4660,13 +4730,13 @@ function renderStundenPlaner(body, maData){
     <table style="width:100%;border-collapse:collapse">
       <thead>
         <tr style="border-bottom:2px solid var(--border)">
-          <th style="padding:6px 10px;font-size:10px;color:var(--text3);font-weight:600;text-align:left">Mitarbeiter</th>
-          <th style="padding:6px 10px;font-size:10px;color:var(--text3);font-weight:600;text-align:right">Soll</th>
-          <th style="padding:6px 10px;font-size:10px;color:var(--text3);font-weight:600;text-align:right">Ist</th>
-          <th style="padding:6px 10px;font-size:10px;color:var(--text3);font-weight:600;text-align:right">±</th>
-          <th style="padding:6px 10px;font-size:10px;color:var(--text3);font-weight:600">Auslastung</th>
-          <th style="padding:6px 10px;font-size:10px;color:var(--text3);font-weight:600;text-align:center">WE</th>
-          <th style="padding:6px 10px;font-size:10px;color:var(--text3);font-weight:600;text-align:center">Bereitschaft</th>
+          <th style="padding:6px 10px;font-size:11px;color:var(--text3);font-weight:600;text-align:left">Mitarbeiter</th>
+          <th style="padding:6px 10px;font-size:11px;color:var(--text3);font-weight:600;text-align:right">Soll</th>
+          <th style="padding:6px 10px;font-size:11px;color:var(--text3);font-weight:600;text-align:right">Ist</th>
+          <th style="padding:6px 10px;font-size:11px;color:var(--text3);font-weight:600;text-align:right">±</th>
+          <th style="padding:6px 10px;font-size:11px;color:var(--text3);font-weight:600">Auslastung</th>
+          <th style="padding:6px 10px;font-size:11px;color:var(--text3);font-weight:600;text-align:center">WE</th>
+          <th style="padding:6px 10px;font-size:11px;color:var(--text3);font-weight:600;text-align:center">Bereitschaft</th>
         </tr>
       </thead>
       <tbody>${rows}</tbody>
@@ -4690,21 +4760,21 @@ function renderStundenPerso(body, maData){
         const betrag = z.typ === 'prozent'
           ? basisStd * s.stundenlohn * (z.wert/100)
           : basisStd * z.wert;
-        return `<div style="display:flex;justify-content:space-between;font-size:10px;color:var(--text3);padding:2px 0">
+        return `<div style="display:flex;justify-content:space-between;font-size:11px;color:var(--text3);padding:2px 0">
           <span>${z.bezeichnung} (${z.wert}${z.typ==='prozent'?'%':'€'})</span>
           <span>+${betrag.toFixed(2)}€</span>
         </div>`;
       }).filter(Boolean).join('');
       if(zRows) zuschlagZeilen = `
         <div style="border-top:1px solid var(--border);margin-top:8px;padding-top:8px">
-          <div style="font-size:10px;font-weight:600;color:var(--text2);margin-bottom:4px">Zuschläge</div>
+          <div style="font-size:11px;font-weight:600;color:var(--text2);margin-bottom:4px">Zuschläge</div>
           ${zRows}
         </div>`;
     }
 
     const dienstZeilen = Object.entries(dienste).map(([k,n]) => {
       const gd = _gruppenDienste.find(d=>d.kuerzel===k);
-      return `<span style="padding:2px 7px;border-radius:12px;font-size:10px;background:${(gd&&gd.farbe)||'#0071e3'}22;color:${(gd&&gd.farbe)||'#0071e3'};border:1px solid ${(gd&&gd.farbe)||'#0071e3'}44">${k}: ${n}x</span>`;
+      return `<span style="padding:2px 7px;border-radius:12px;font-size:11px;background:${(gd&&gd.farbe)||'#0071e3'}22;color:${(gd&&gd.farbe)||'#0071e3'};border:1px solid ${(gd&&gd.farbe)||'#0071e3'}44">${k}: ${n}x</span>`;
     }).join('');
 
     return `
@@ -4713,11 +4783,11 @@ function renderStundenPerso(body, maData){
           <div style="width:32px;height:32px;border-radius:50%;background:${s.color||'var(--accent-soft)'};display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:#fff;flex-shrink:0">${(s.name[0]||'?').toUpperCase()}</div>
           <div style="flex:1">
             <div style="font-size:13px;font-weight:600;color:var(--text)">${s.name}</div>
-            <div style="font-size:10px;color:var(--text3)">${s.role||'–'} · ${s.soll||0}h/Woche</div>
+            <div style="font-size:11px;color:var(--text3)">${s.role||'–'} · ${s.soll||0}h/Woche</div>
           </div>
           <div style="text-align:right">
             <div style="font-size:16px;font-weight:700;color:${diffColor}">${diffStr}</div>
-            <div style="font-size:10px;color:var(--text3)">${ist.toFixed(1)}h / ${soll.toFixed(1)}h</div>
+            <div style="font-size:11px;color:var(--text3)">${ist.toFixed(1)}h / ${soll.toFixed(1)}h</div>
           </div>
         </div>
 
@@ -4772,9 +4842,9 @@ function renderZuschlaege(){
     <div style="display:grid;grid-template-columns:1fr 80px 70px 70px 70px 28px;gap:6px;align-items:center;padding:6px 8px;background:var(--surface);border:1px solid var(--border);border-radius:8px">
       <div style="font-size:12px;font-weight:500;color:var(--text)">${z.bezeichnung}</div>
       <div style="font-size:11px;color:var(--text3);text-align:center">${z.wert}${z.typ==='prozent'?'%':'€'}</div>
-      <div style="font-size:10px;color:var(--text3);text-align:center">${z.von_uhrzeit||'–'} – ${z.bis_uhrzeit||'–'}</div>
-      <div style="font-size:10px;text-align:center">${z.gilt_we?'✅ WE':'–'}</div>
-      <div style="font-size:10px;text-align:center">${z.gilt_feiertag?'✅ Ft.':'–'}</div>
+      <div style="font-size:11px;color:var(--text3);text-align:center">${z.von_uhrzeit||'–'} – ${z.bis_uhrzeit||'–'}</div>
+      <div style="font-size:11px;text-align:center">${z.gilt_we?'✅ WE':'–'}</div>
+      <div style="font-size:11px;text-align:center">${z.gilt_feiertag?'✅ Ft.':'–'}</div>
       <button onclick="deleteZuschlag('${z.id}')" style="width:24px;height:24px;border:none;background:var(--red-soft);color:var(--red);border-radius:5px;cursor:pointer;font-size:12px">✕</button>
     </div>`).join('');
 }
@@ -5218,7 +5288,7 @@ function renderGruppenDienste(){
       <input type="number" value="${d.max_we != null ? d.max_we : 5}" min="0" max="30" onchange="updateGruppenDienst('${d.id}','max_we',this.value)"
         title="Max. Wochenende" style="width:100%;padding:4px 2px;border:1.5px solid var(--accent);border-radius:5px;font-size:11px;background:var(--accent-soft);color:var(--accent);text-align:center">
       <select onchange="updateGruppenDienst('${d.id}','typ',this.value)"
-        style="width:100%;padding:3px 2px;border:1px solid var(--border);border-radius:5px;font-size:10px;background:var(--surface);color:var(--text)">
+        style="width:100%;padding:3px 2px;border:1px solid var(--border);border-radius:5px;font-size:11px;background:var(--surface);color:var(--text)">
         <option value="normal" ${(d.typ||'normal')==='normal'?'selected':''}>Normal</option>
         <option value="bereitschaft" ${(d.typ||'normal')==='bereitschaft'?'selected':''}>Bereitschaft</option>
         <option value="sonder" ${(d.typ||'normal')==='sonder'?'selected':''}>Sonder</option>
@@ -5359,8 +5429,8 @@ function renderUnternehmenList(){
         <div style="padding:12px 14px;background:${isActive?'var(--accent-soft)':'var(--surface2)'};display:flex;align-items:center;gap:10px">
           <div style="flex:1">
             <div style="font-size:13px;font-weight:600;color:${isActive?'var(--accent)':'var(--text)'}">${u.name}${isActive?' ✓':''}</div>
-            ${u.adresse?`<div style="font-size:10px;color:var(--text3);margin-top:2px">${u.adresse}</div>`:''}
-            ${u.kontakt?`<div style="font-size:10px;color:var(--text3)">${u.kontakt}</div>`:''}
+            ${u.adresse?`<div style="font-size:11px;color:var(--text3);margin-top:2px">${u.adresse}</div>`:''}
+            ${u.kontakt?`<div style="font-size:11px;color:var(--text3)">${u.kontakt}</div>`:''}
           </div>
           <div style="display:flex;gap:6px">
             ${!isActive?`<button onclick="switchUnternehmen('${u.id}')" style="font-size:11px;padding:5px 10px;border:1px solid var(--accent);border-radius:6px;background:var(--accent-soft);color:var(--accent);cursor:pointer">Wechseln</button>`:''}
@@ -5371,12 +5441,12 @@ function renderUnternehmenList(){
         <!-- Edit Form (hidden by default) -->
         <div id="uEdit_${u.id}" style="display:none;padding:12px 14px;background:var(--surface);border-top:1px solid var(--border)">
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
-            <div><div style="font-size:10px;color:var(--text3);margin-bottom:3px">Name</div>
+            <div><div style="font-size:11px;color:var(--text3);margin-bottom:3px">Name</div>
               <input type="text" id="uName_${u.id}" value="${u.name}" style="width:100%;padding:6px 8px;border:1.5px solid var(--border);border-radius:6px;font-size:12px;background:var(--surface);color:var(--text)"></div>
-            <div><div style="font-size:10px;color:var(--text3);margin-bottom:3px">Kontakt</div>
+            <div><div style="font-size:11px;color:var(--text3);margin-bottom:3px">Kontakt</div>
               <input type="text" id="uKontakt_${u.id}" value="${u.kontakt||''}" style="width:100%;padding:6px 8px;border:1.5px solid var(--border);border-radius:6px;font-size:12px;background:var(--surface);color:var(--text)"></div>
           </div>
-          <div style="margin-bottom:8px"><div style="font-size:10px;color:var(--text3);margin-bottom:3px">Adresse</div>
+          <div style="margin-bottom:8px"><div style="font-size:11px;color:var(--text3);margin-bottom:3px">Adresse</div>
             <input type="text" id="uAdresse_${u.id}" value="${u.adresse||''}" style="width:100%;padding:6px 8px;border:1.5px solid var(--border);border-radius:6px;font-size:12px;background:var(--surface);color:var(--text)"></div>
           <div style="display:flex;gap:6px;justify-content:flex-end">
             <button onclick="editUnternehmen('${u.id}')" style="font-size:11px;padding:5px 10px;border:1px solid var(--border);border-radius:6px;background:var(--surface);color:var(--text2);cursor:pointer">Abbrechen</button>
@@ -5509,9 +5579,9 @@ function renderStandorteList(){
         <div style="padding:10px 14px;background:${isActiveS?'var(--accent-soft)':'var(--surface2)'};display:flex;align-items:center;gap:6px">
           <div style="font-size:13px;font-weight:600;color:${isActiveS?'var(--accent)':'var(--text)'};flex:1">${s.name}</div>
           ${canEdit?`
-            <button onclick="renameStandort('${s.id}','${s.name}')" style="font-size:10px;padding:3px 7px;border:1px solid var(--border);border-radius:6px;background:var(--surface);color:var(--text2);cursor:pointer">✎</button>
-            <button onclick="addGruppeToStandort('${s.id}')" style="font-size:10px;padding:3px 7px;border:1px solid var(--accent);border-radius:6px;background:var(--accent-soft);color:var(--accent);cursor:pointer">+ Gruppe</button>
-            <button onclick="deleteStandort('${s.id}','${s.name}')" style="font-size:10px;padding:3px 7px;border:1px solid var(--red);border-radius:6px;background:var(--red-soft);color:var(--red);cursor:pointer">✕</button>
+            <button onclick="renameStandort('${s.id}','${s.name}')" style="font-size:11px;padding:3px 7px;border:1px solid var(--border);border-radius:6px;background:var(--surface);color:var(--text2);cursor:pointer">✎</button>
+            <button onclick="addGruppeToStandort('${s.id}')" style="font-size:11px;padding:3px 7px;border:1px solid var(--accent);border-radius:6px;background:var(--accent-soft);color:var(--accent);cursor:pointer">+ Gruppe</button>
+            <button onclick="deleteStandort('${s.id}','${s.name}')" style="font-size:11px;padding:3px 7px;border:1px solid var(--red);border-radius:6px;background:var(--red-soft);color:var(--red);cursor:pointer">✕</button>
           `:''}
         </div>
         <div style="padding:8px 14px;display:flex;gap:6px;flex-wrap:wrap">
