@@ -472,6 +472,10 @@
   #monthSlider { -ms-overflow-style: none; scrollbar-width: none; }
   ::-webkit-scrollbar-track { background: transparent; }
   ::-webkit-scrollbar-thumb { background: rgba(0,0,0,.14); border-radius: 3px; }
+  @keyframes puls {
+    0%,100% { transform:scale(1);   opacity:.8; }
+    50%     { transform:scale(1.18);opacity:.25; }
+  }
 </style>
 </head>
 <body>
@@ -516,6 +520,28 @@
     <button id="btnMeins" onclick="openMeins()" title="Meins" style="width:32px;height:32px;border-radius:50%;border:1.5px solid var(--border);background:var(--surface2);cursor:pointer;display:none;align-items:center;justify-content:center;color:var(--text2);transition:all .15s;flex-shrink:0;font-size:13px;font-weight:700"
       onmouseover="this.style.background='var(--accent-soft)';this.style.borderColor='var(--accent)';this.style.color='var(--accent)'"
       onmouseout="this.style.background='var(--surface2)';this.style.borderColor='var(--border)';this.style.color='var(--text2)'">M</button>
+
+    <!-- Stempeluhr Button -->
+    <div id="btnStempel" onclick="openStempelModal()" title="Stempeluhr" style="display:none;position:relative;width:40px;height:40px;cursor:pointer;flex-shrink:0" >
+      <svg width="40" height="40" viewBox="0 0 40 40">
+        <!-- Hintergrund-Ring -->
+        <circle cx="20" cy="20" r="17" fill="var(--surface2)" stroke="var(--border)" stroke-width="1.5"/>
+        <!-- Aktiv-Ring (grün, pulsierend) -->
+        <circle id="stempelRingAktiv" cx="20" cy="20" r="17" fill="none" stroke="#32d74b" stroke-width="2.5"
+          stroke-dasharray="107" stroke-dashoffset="107" style="transition:stroke-dashoffset .5s;transform:rotate(-90deg);transform-origin:20px 20px"/>
+        <!-- Inaktiv: Uhr-Icon -->
+        <g id="stempelIconUhr" fill="none" stroke="var(--text2)" stroke-width="1.5" stroke-linecap="round">
+          <circle cx="20" cy="20" r="8"/>
+          <polyline points="20,14 20,20 24,20"/>
+        </g>
+        <!-- Aktiv: Zeit-Text -->
+        <text id="stempelZeitText" x="20" y="21" text-anchor="middle" dominant-baseline="middle"
+          font-size="7" font-weight="700" fill="#32d74b" font-family="-apple-system,sans-serif"
+          style="display:none">00:00</text>
+      </svg>
+      <!-- Puls-Ring -->
+      <div id="stempelPuls" style="display:none;position:absolute;inset:-4px;border-radius:50%;border:2px solid #32d74b;animation:puls 1.5s infinite;pointer-events:none"></div>
+    </div>
     <button onclick="openUserManagement()" title="Benutzerverwaltung" style="position:relative;width:32px;height:32px;border-radius:50%;border:1.5px solid var(--border);background:var(--surface2);cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--text2);transition:all .15s;flex-shrink:0" onmouseover="this.style.background='var(--accent-soft)';this.style.borderColor='var(--accent)';this.style.color='var(--accent)'" onmouseout="this.style.background='var(--surface2)';this.style.borderColor='var(--border)';this.style.color='var(--text2)'">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
         <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
@@ -823,6 +849,61 @@
     <div style="flex:1;overflow-y:auto;padding:20px" id="meinsContent">
       <div style="color:var(--text3);font-size:13px">Lädt…</div>
     </div>
+  </div>
+</div>
+
+<!-- Stempeluhr Modal -->
+<div class="modal-overlay" id="stempelModal" onclick="if(event.target===this)closeModal('stempelModal')"
+  style="align-items:center;justify-content:center">
+  <div style="width:320px;border-radius:20px;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,.25);position:relative">
+
+    <!-- Hintergrundbild: Stechuhr-Illustration -->
+    <div style="height:160px;background:linear-gradient(135deg,#1a1a2e 0%,#16213e 50%,#0f3460 100%);display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden">
+      <!-- Dekorative Uhr -->
+      <svg width="120" height="120" viewBox="0 0 120 120" opacity=".15" style="position:absolute">
+        <circle cx="60" cy="60" r="55" fill="none" stroke="white" stroke-width="3"/>
+        <circle cx="60" cy="60" r="45" fill="none" stroke="white" stroke-width="1"/>
+        <line x1="60" y1="20" x2="60" y2="60" stroke="white" stroke-width="3" stroke-linecap="round"/>
+        <line x1="60" y1="60" x2="85" y2="75" stroke="white" stroke-width="2" stroke-linecap="round"/>
+        <circle cx="60" cy="60" r="4" fill="white"/>
+      </svg>
+      <!-- Status & Zeit -->
+      <div style="text-align:center;z-index:1">
+        <div id="stempelModalStatus" style="font-size:12px;font-weight:600;color:rgba(255,255,255,.6);margin-bottom:4px;letter-spacing:1px;text-transform:uppercase">Nicht eingebucht</div>
+        <div id="stempelModalZeit" style="font-size:42px;font-weight:700;color:#fff;font-variant-numeric:tabular-nums;letter-spacing:-1px">– : – –</div>
+        <div id="stempelModalSeit" style="font-size:11px;color:rgba(255,255,255,.5);margin-top:2px"></div>
+      </div>
+    </div>
+
+    <!-- Buttons -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;background:var(--surface)">
+      <button onclick="stempelKommen()" id="btnStempelKommen"
+        style="padding:20px;border:none;background:transparent;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:6px;border-right:1px solid var(--border);transition:background .15s"
+        onmouseover="this.style.background='rgba(52,199,89,.1)'"
+        onmouseout="this.style.background='transparent'">
+        <div style="width:44px;height:44px;border-radius:50%;background:#34c759;display:flex;align-items:center;justify-content:center">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="20 6 9 17 4 12"/>
+          </svg>
+        </div>
+        <span style="font-size:13px;font-weight:600;color:#34c759">Kommen</span>
+      </button>
+
+      <button onclick="stempelGehen()" id="btnStempelGehen"
+        style="padding:20px;border:none;background:transparent;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:6px;transition:background .15s"
+        onmouseover="this.style.background='rgba(255,59,48,.1)'"
+        onmouseout="this.style.background='transparent'">
+        <div style="width:44px;height:44px;border-radius:50%;background:#ff3b30;display:flex;align-items:center;justify-content:center">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+          </svg>
+        </div>
+        <span style="font-size:13px;font-weight:600;color:#ff3b30">Gehen</span>
+      </button>
+    </div>
+
+    <!-- Heute geplant -->
+    <div id="stempelGeplantInfo" style="padding:10px 16px;background:var(--surface2);border-top:1px solid var(--border);font-size:11px;color:var(--text3);text-align:center"></div>
   </div>
 </div>
 
@@ -3416,6 +3497,239 @@ async function deleteUser(userId){
 }
 
 
+// ─── STEMPELUHR ──────────────────────────────────────────────────────────────
+
+let _stempelInterval = null;
+let _stempelAktivSeit = null;
+let _stempelBuchungId = null;
+
+async function initStempel(){
+  // Prüfen ob aktive Buchung existiert
+  if(!_meinsStaffId) return;
+  const heute = fmtDate(new Date());
+  const { data } = await sb.from('zeiterfassung')
+    .select('*').eq('staff_id', _meinsStaffId).eq('datum', heute).maybeSingle();
+  if(data && data.start_zeit && !data.end_zeit){
+    _stempelAktivSeit = new Date(data.start_zeit);
+    _stempelBuchungId = data.id;
+    stempelSetAktiv(true);
+  } else {
+    stempelSetAktiv(false);
+  }
+}
+
+function stempelSetAktiv(aktiv){
+  const btn = document.getElementById('btnStempel');
+  const puls = document.getElementById('stempelPuls');
+  const ring = document.getElementById('stempelRingAktiv');
+  const uhr  = document.getElementById('stempelIconUhr');
+  const zeit = document.getElementById('stempelZeitText');
+  if(!btn) return;
+
+  if(aktiv){
+    btn.style.display = 'flex';
+    if(puls) puls.style.display = 'block';
+    if(ring) ring.style.stroke = '#34c759';
+    if(uhr)  uhr.style.display = 'none';
+    if(zeit) zeit.style.display = 'block';
+    if(_stempelInterval) clearInterval(_stempelInterval);
+    _stempelInterval = setInterval(stempelTick, 1000);
+    stempelTick();
+  } else {
+    if(puls) puls.style.display = 'none';
+    if(ring) ring.style.strokeDashoffset = '107';
+    if(uhr)  uhr.style.display = 'block';
+    if(zeit) zeit.style.display = 'none';
+    if(_stempelInterval){ clearInterval(_stempelInterval); _stempelInterval = null; }
+    _stempelAktivSeit = null;
+    _stempelBuchungId = null;
+  }
+}
+
+function stempelTick(){
+  if(!_stempelAktivSeit) return;
+  const diff = Math.floor((new Date() - _stempelAktivSeit) / 1000);
+  const h = Math.floor(diff/3600);
+  const m = Math.floor((diff%3600)/60);
+  const s = diff%60;
+  const zeitStr = h > 0
+    ? `${h}:${String(m).padStart(2,'0')}`
+    : `${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+  const zeitEl = document.getElementById('stempelZeitText');
+  if(zeitEl) zeitEl.textContent = zeitStr;
+  // Modal Update
+  const modalZeit = document.getElementById('stempelModalZeit');
+  if(modalZeit) modalZeit.textContent =
+    `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+  // Ring füllen (max 8h = 28800s)
+  const ring = document.getElementById('stempelRingAktiv');
+  if(ring){
+    const pct = Math.min(diff/28800, 1);
+    ring.style.strokeDashoffset = 107 - (107*pct);
+  }
+}
+
+async function openStempelModal(){
+  // Staff laden falls nötig
+  if(!_meinsStaffId){
+    const { data: { session } } = await sb.auth.getSession();
+    if(session){
+      const { data: profile } = await sb.from('user_profiles').select('*')
+        .eq('user_id', session.user.id).maybeSingle();
+      if(profile){
+        const staffName = `${profile.vorname||''} ${profile.name||''}`.trim();
+        const staffRes = await sb.from('staff').select('*')
+          .eq('unternehmen_id', currentUnternehmenId).eq('name', staffName);
+        _meinsStaff  = (staffRes.data && staffRes.data.length) ? staffRes.data[0] : null;
+        _meinsStaffId = _meinsStaff ? _meinsStaff.id : null;
+      }
+    }
+  }
+
+  // Aktuelle Buchung laden
+  const heute = fmtDate(new Date());
+  let aktiveBuchung = null;
+  if(_meinsStaffId){
+    const { data } = await sb.from('zeiterfassung')
+      .select('*').eq('staff_id', _meinsStaffId).eq('datum', heute).maybeSingle();
+    aktiveBuchung = data;
+  }
+
+  const istEingebucht = aktiveBuchung && aktiveBuchung.start_zeit && !aktiveBuchung.end_zeit;
+  if(istEingebucht){
+    _stempelAktivSeit = new Date(aktiveBuchung.start_zeit);
+    _stempelBuchungId = aktiveBuchung.id;
+  }
+
+  // Modal befüllen
+  const statusEl = document.getElementById('stempelModalStatus');
+  const seitEl   = document.getElementById('stempelModalSeit');
+  const geplantEl = document.getElementById('stempelGeplantInfo');
+  const kommen   = document.getElementById('btnStempelKommen');
+  const gehen    = document.getElementById('btnStempelGehen');
+
+  if(statusEl) statusEl.textContent = istEingebucht ? '● EINGEBUCHT' : 'Nicht eingebucht';
+  if(statusEl) statusEl.style.color = istEingebucht ? '#34c759' : 'rgba(255,255,255,.5)';
+
+  if(istEingebucht && _stempelAktivSeit){
+    const seit = _stempelAktivSeit.toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'});
+    if(seitEl) seitEl.textContent = `seit ${seit} Uhr`;
+    stempelTick();
+  } else {
+    if(seitEl) seitEl.textContent = '';
+    const zeitEl = document.getElementById('stempelModalZeit');
+    if(zeitEl) zeitEl.textContent = '– : – –';
+  }
+
+  // Geplanter Dienst heute
+  if(_meinsStaffId){
+    const entry = state.entries && state.entries[`${_meinsStaffId}_${heute}`];
+    if(entry && entry.shift && entry.shift !== 'FREI'){
+      const gd = _gruppenDienste.find(d=>d.kuerzel===entry.shift);
+      const info = gd ? `${gd.label}: ${gd.beginn||''} – ${gd.ende||''}` : entry.shift;
+      if(geplantEl) geplantEl.textContent = `📅 Heute geplant: ${info}`;
+    } else {
+      if(geplantEl) geplantEl.textContent = 'Kein Dienst heute geplant';
+    }
+  }
+
+  // Buttons
+  if(kommen){
+    kommen.style.opacity = istEingebucht ? '.4' : '1';
+    kommen.disabled = istEingebucht;
+  }
+  if(gehen){
+    gehen.style.opacity = !istEingebucht ? '.4' : '1';
+    gehen.disabled = !istEingebucht;
+  }
+
+  openModal('stempelModal');
+}
+
+async function stempelKommen(){
+  if(!_meinsStaffId){ showToast('Kein Mitarbeiter-Datensatz'); return; }
+  const heute = fmtDate(new Date());
+  const jetzt = new Date();
+
+  // Geplante Zeiten ermitteln
+  const entry = state.entries && state.entries[`${_meinsStaffId}_${heute}`];
+  const gd = entry ? _gruppenDienste.find(d=>d.kuerzel===entry.shift) : null;
+  const geplantStart = gd ? gd.beginn : null;
+  const geplantEnde  = gd ? gd.ende  : null;
+
+  // Freigabe prüfen: Start ≥ 6 Min früher als geplant
+  let freigabe = false, freigabeGrund = '';
+  if(geplantStart){
+    const [h,m] = geplantStart.split(':').map(Number);
+    const planMin = h*60+m;
+    const istMin  = jetzt.getHours()*60+jetzt.getMinutes();
+    const diff = planMin - istMin;
+    if(diff >= 6){
+      freigabe = true;
+      freigabeGrund = `Start ${diff} Min früher als geplant (${geplantStart})`;
+    }
+  }
+
+  const { data, error } = await sb.from('zeiterfassung').upsert({
+    staff_id: _meinsStaffId, datum: heute,
+    start_zeit: jetzt.toISOString(),
+    geplanter_start: geplantStart, geplantes_ende: geplantEnde,
+    status: 'offen', freigabe_noetig: freigabe, freigabe_grund: freigabeGrund,
+    unternehmen_id: currentUnternehmenId
+  }, {onConflict:'staff_id,datum'}).select().single();
+
+  if(error){ showToast('Fehler: '+error.message); return; }
+  _stempelAktivSeit = jetzt;
+  _stempelBuchungId = data.id;
+  stempelSetAktiv(true);
+  closeModal('stempelModal');
+  showToast(freigabe ? `✅ Eingebucht – ⚠️ Freigabe nötig` : '✅ Eingebucht – Guten Dienst!');
+}
+
+async function stempelGehen(){
+  if(!_stempelBuchungId && _meinsStaffId){
+    // Buchung suchen
+    const { data } = await sb.from('zeiterfassung')
+      .select('id').eq('staff_id', _meinsStaffId)
+      .eq('datum', fmtDate(new Date())).maybeSingle();
+    if(data) _stempelBuchungId = data.id;
+  }
+  if(!_stempelBuchungId){ showToast('Keine aktive Buchung'); return; }
+
+  const jetzt = new Date();
+  const { data: buch } = await sb.from('zeiterfassung').select('*').eq('id',_stempelBuchungId).single();
+  if(!buch) return;
+
+  // Freigabe Ende prüfen: > 15 Min Abweichung
+  let freigabe = buch.freigabe_noetig || false;
+  let freigabeGrund = buch.freigabe_grund || '';
+  if(buch.geplantes_ende){
+    const [h,m] = buch.geplantes_ende.split(':').map(Number);
+    const planMin = h*60+m;
+    const istMin  = jetzt.getHours()*60+jetzt.getMinutes();
+    const diff = Math.abs(planMin-istMin);
+    if(diff > 15){
+      freigabe = true;
+      const richtung = istMin > planMin ? 'später' : 'früher';
+      freigabeGrund += (freigabeGrund?', ':'') + `Ende ${diff} Min ${richtung} (${buch.geplantes_ende})`;
+    }
+  }
+
+  // Pause automatisch
+  const dauMin = Math.round((jetzt-new Date(buch.start_zeit))/60000);
+  const autoPause = dauMin > 540 ? 45 : dauMin > 360 ? 30 : 0;
+
+  await sb.from('zeiterfassung').update({
+    end_zeit: jetzt.toISOString(), pause_minuten: autoPause,
+    freigabe_noetig: freigabe, freigabe_grund: freigabeGrund,
+    status: freigabe ? 'freigabe_noetig' : 'offen'
+  }).eq('id', _stempelBuchungId);
+
+  stempelSetAktiv(false);
+  closeModal('stempelModal');
+  showToast(freigabe ? `✅ Ausgebucht – ⚠️ Freigabe nötig` : '✅ Tschüss – gute Erholung!');
+}
+
 // ─── MEINS ───────────────────────────────────────────────────────────────────
 
 let _meinsStaffId = null;
@@ -4162,7 +4476,8 @@ function applyRolePermissions(){
   // Meins Button: für alle eingeloggten User sichtbar
   const btnMeins = document.getElementById('btnMeins');
   if(btnMeins){ btnMeins.style.display = 'flex'; btnMeins.style.alignItems = 'center'; btnMeins.style.justifyContent = 'center'; }
-  const btnPersonal = document.querySelector('button[onclick="openUserManagement()"]');
+  const btnStempel = document.getElementById('btnStempel');
+  if(btnStempel) btnStempel.style.display = 'flex';
   if(btnPersonal) btnPersonal.style.display = noUsers.includes(currentUserRole) ? 'none' : '';
 
   // KI-Button ausblenden für readOnly
