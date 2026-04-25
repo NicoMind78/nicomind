@@ -4380,9 +4380,10 @@ function openUrlaubBestaetigenModal(){
 
 async function urlaubSelBestaetigen(){
   const sel = window._urlaubSel;
-  if(!sel || !sel.von || !sel.bis) return;
-  const hols = holidaysForYear(parseInt(sel.von.slice(0,4)));
+  if(!sel || !sel.von || !sel.bis){ showToast('Bitte Zeitraum im Kalender wählen'); return; }
+  if(!_meinsStaffId){ showToast('Fehler: Kein Mitarbeiter-Datensatz – bitte Admin kontaktieren'); return; }
 
+  const hols = holidaysForYear(parseInt(sel.von.slice(0,4)));
   let tage = 0;
   let cur = new Date(sel.von+'T12:00:00');
   const bis = new Date(sel.bis+'T12:00:00');
@@ -4399,7 +4400,7 @@ async function urlaubSelBestaetigen(){
     von_datum: sel.von, bis_datum: sel.bis,
     tage, status: 'offen'
   });
-  if(error){ showToast('Fehler: '+error.message); return; }
+  if(error){ showToast('Fehler: '+error.message); console.error('Urlaub Fehler:', error); return; }
 
   closeModal('urlaubBestaetigenModal');
   window._urlaubSel = {von:null, bis:null};
