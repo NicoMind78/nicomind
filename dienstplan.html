@@ -4461,7 +4461,7 @@ async function urlaubSelBestaetigen(){
     von_datum: sel.von, bis_datum: sel.bis,
     tage, status: 'offen'
   });
-  if(error){ showToast('Fehler: '+error.message); console.error('Urlaub Fehler:', error); return; }
+  if(error){ showToast('Fehler: '+error.message); return; }
 
   closeModal('urlaubBestaetigenModal');
   window._urlaubSel = {von:null, bis:null};
@@ -4595,15 +4595,19 @@ async function saveNachtrag(){
   const istMin = (eh*60+em) - (sh*60+sm) - pause;
   const freigabe = Math.abs(istMin - _nachtragSollMin) > 15;
 
-  // Timezone-offset für korrekte TIMESTAMPTZ
+  // Zeit auf HH:MM kürzen (Safari gibt manchmal HH:MM:SS zurück)
+  const startClean = start.substring(0,5);
+  const endeClean  = ende.substring(0,5);
+
+  // Timezone-offset
   const tzOffset = -new Date().getTimezoneOffset();
   const tzSign = tzOffset >= 0 ? '+' : '-';
   const tzH = String(Math.floor(Math.abs(tzOffset)/60)).padStart(2,'0');
   const tzM = String(Math.abs(tzOffset)%60).padStart(2,'0');
   const tz = `${tzSign}${tzH}:${tzM}`;
 
-  const startISO = `${_nachtragDatum}T${start}:00${tz}`;
-  const endeISO  = `${_nachtragDatum}T${ende}:00${tz}`;
+  const startISO = `${_nachtragDatum}T${startClean}:00${tz}`;
+  const endeISO  = `${_nachtragDatum}T${endeClean}:00${tz}`;
 
   // Prüfen ob bereits ein Eintrag für diesen Tag existiert
   const { data: existing } = await sb.from('zeiterfassung')
@@ -4631,10 +4635,10 @@ async function saveNachtrag(){
   }
 
   if(error){ 
-    console.error('Nachtrag Fehler:', JSON.stringify(error));
-    showToast('Fehler: '+error.message+' ('+error.code+')'); 
+    showToast('Fehler: '+error.message); 
     return; 
   }
+  closeModal('nachtragModal');
   showToast(freigabe ? '✏️ Nachgetragen – ⚠️ Freigabe nötig' : '✏️ Buchung gespeichert');
   renderMeineBuchungen();
 }
