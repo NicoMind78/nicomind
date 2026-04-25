@@ -4579,8 +4579,15 @@ async function saveNachtrag(){
   const istMin = (eh*60+em) - (sh*60+sm) - pause;
   const freigabe = Math.abs(istMin - _nachtragSollMin) > 15;
 
-  const startISO = `${_nachtragDatum}T${start}:00`;
-  const endeISO  = `${_nachtragDatum}T${ende}:00`;
+  // Timezone-offset für korrekte TIMESTAMPTZ
+  const tzOffset = -new Date().getTimezoneOffset();
+  const tzSign = tzOffset >= 0 ? '+' : '-';
+  const tzH = String(Math.floor(Math.abs(tzOffset)/60)).padStart(2,'0');
+  const tzM = String(Math.abs(tzOffset)%60).padStart(2,'0');
+  const tz = `${tzSign}${tzH}:${tzM}`;
+
+  const startISO = `${_nachtragDatum}T${start}:00${tz}`;
+  const endeISO  = `${_nachtragDatum}T${ende}:00${tz}`;
 
   const { error } = await sb.from('zeiterfassung').upsert({
     staff_id: _meinsStaffId,
