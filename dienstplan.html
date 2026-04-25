@@ -1707,17 +1707,13 @@ async function loadFromSupabase(){
 
     if(staffRes.data && staffRes.data.length){
       // Clientseitig filtern: Mitarbeiter die diesem Standort/Gruppe zugewiesen sind
-      console.log(`[Staff Filter] currentGruppeId=${currentGruppeId}, currentStandortId=${currentStandortId}`);
-      console.log(`[Staff Filter] Total staff from DB: ${staffRes.data.length}`);
       const filtered = staffRes.data.filter(s=>{
         const sIds = (s.standort_ids || (s.standort_id ? [s.standort_id] : [])).map(String);
         const gIds = (s.gruppe_ids   || (s.gruppe_id   ? [s.gruppe_id]   : [])).map(String);
         const match = currentGruppeId ? gIds.includes(String(currentGruppeId)) :
                       currentStandortId ? sIds.includes(String(currentStandortId)) : true;
-        if(!match) console.log(`[Staff Filter] EXCLUDED: ${s.name} gIds=${JSON.stringify(gIds)}`);
         return match;
       });
-      console.log(`[Staff Filter] After filter: ${filtered.length}`);
       state.staff = filtered.map(s=>({
         id: s.id, name: s.name, role: s.role,
         soll: s.soll, color: s.color,
@@ -5234,6 +5230,7 @@ function applyRolePermissions(){
   const menuAdminUrlaub = document.getElementById('menuAdminUrlaub');
   if(menuAdminZeit) menuAdminZeit.style.display = adminRoles.includes(currentUserRole) ? '' : 'none';
   if(menuAdminUrlaub) menuAdminUrlaub.style.display = adminRoles.includes(currentUserRole) ? '' : 'none';
+  const btnKI = document.querySelector('button[onclick="openKIModal()"]');
   if(btnKI) btnKI.style.display = readOnly.includes(currentUserRole) ? 'none' : '';
 
   // Unternehmen-Menü: nur Owner/Master Admin – die zwischen Unternehmen wechseln dürfen
