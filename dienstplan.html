@@ -1708,10 +1708,10 @@ async function loadFromSupabase(){
     if(staffRes.data && staffRes.data.length){
       // Clientseitig filtern: Mitarbeiter die diesem Standort/Gruppe zugewiesen sind
       const filtered = staffRes.data.filter(s=>{
-        const sIds = s.standort_ids || (s.standort_id ? [s.standort_id] : []);
-        const gIds = s.gruppe_ids   || (s.gruppe_id   ? [s.gruppe_id]   : []);
-        if(currentGruppeId)   return gIds.includes(currentGruppeId);
-        if(currentStandortId) return sIds.includes(currentStandortId);
+        const sIds = (s.standort_ids || (s.standort_id ? [s.standort_id] : [])).map(String);
+        const gIds = (s.gruppe_ids   || (s.gruppe_id   ? [s.gruppe_id]   : [])).map(String);
+        if(currentGruppeId)   return gIds.includes(String(currentGruppeId));
+        if(currentStandortId) return sIds.includes(String(currentStandortId));
         return true;
       });
       state.staff = filtered.map(s=>({
@@ -3855,23 +3855,7 @@ let _stempelAktivSeit = null;
 let _stempelBuchungId = null;
 
 async function initStempel(){
-  // Staff laden falls nötig
-  if(!_meinsStaffId){
-    const sessRes = await sb.auth.getSession();
-    const session = sessRes.data && sessRes.data.session;
-    if(!session) return;
-    const profRes = await sb.from('user_profiles').select('*').eq('user_id', session.user.id).maybeSingle();
-    const profile = profRes.data;
-    if(profile){
-      const staffName = `${profile.vorname||''} ${profile.name||''}`.trim();
-      if(staffName){
-        const staffRes = await sb.from('staff').select('*')
-          .eq('unternehmen_id', currentUnternehmenId).eq('name', staffName);
-        _meinsStaff  = (staffRes.data && staffRes.data.length) ? staffRes.data[0] : null;
-        _meinsStaffId = _meinsStaff ? _meinsStaff.id : null;
-      }
-    }
-  }
+  if(!_meinsStaffId) await ladeMeinsStaff();
   if(!_meinsStaffId) return;
 
   // Aktive Buchung prüfen
@@ -3926,21 +3910,7 @@ function stempelTick(){
 }
 
 async function openStempelModal(){
-  // Staff laden falls nötig
-  if(!_meinsStaffId){
-    const { data: { session } } = await sb.auth.getSession();
-    if(session){
-      const { data: profile } = await sb.from('user_profiles').select('*')
-        .eq('user_id', session.user.id).maybeSingle();
-      if(profile){
-        const staffName = `${profile.vorname||''} ${profile.name||''}`.trim();
-        const staffRes = await sb.from('staff').select('*')
-          .eq('unternehmen_id', currentUnternehmenId).eq('name', staffName);
-        _meinsStaff  = (staffRes.data && staffRes.data.length) ? staffRes.data[0] : null;
-        _meinsStaffId = _meinsStaff ? _meinsStaff.id : null;
-      }
-    }
-  }
+  if(!_meinsStaffId) await ladeMeinsStaff();
 
   // Aktuelle Buchung laden
   const heute = fmtDate(new Date());
@@ -4139,11 +4109,29 @@ function meinsTab(tab){
   if(tab === 'tausch')   document.getElementById('meinsContent').innerHTML = '<div style="color:var(--text3);font-size:12px;padding:20px">Tausch-Funktion folgt in Kürze</div>';
 }
 
+// ── MEINS HELPER: Staff laden ─────────────────────────────────────────────────
+async function ladeMeinsStaff(){
+  if(_meinsStaffId) return; // Bereits geladen
+  const sessRes = await sb.auth.getSession();
+  const session = sessRes.data && sessRes.data.session;
+  if(!session) return;
+  const profRes = await sb.from('user_profiles').select('*').eq('user_id', session.user.id).maybeSingle();
+  const profile = profRes.data;
+  if(!profile) return;
+  const staffName = `${profile.vorname||''} ${profile.name||''}`.trim();
+  if(!staffName) return;
+  const staffRes = await sb.from('staff').select('*')
+    .eq('unternehmen_id', currentUnternehmenId).eq('name', staffName);
+  _meinsStaff   = (staffRes.data && staffRes.data.length) ? staffRes.data[0] : null;
+  _meinsStaffId = _meinsStaff ? _meinsStaff.id : null;
+}
+
 // ── MEINE DATEN ───────────────────────────────────────────────────────────────
 
 async function renderMeineDaten(){
   const content = document.getElementById('meinsContent');
-  if(!_meinsStaff){ content.innerHTML = '<div style="color:var(--red);font-size:12px;padding:20px">Kein Mitarbeiter-Datensatz gefunden</div>'; return; }
+  if(!_meinsStaffId) await ladeMeinsStaff();
+  if(!_meinsStaff){ content.innerHTML = '<div style="color:var(--red);font-size:12px;padding:20px">⚠️ Kein Mitarbeiter-Datensatz gefunden.</div>'; return; }
   const s = _meinsStaff;
 
   // User-Profil laden
@@ -4260,7 +4248,8 @@ function renderMeineDienste(){
 
 async function renderMeinUrlaub(){
   const content = document.getElementById('meinsContent');
-  if(!_meinsStaffId){ content.innerHTML = '<div style="color:var(--red);font-size:12px">Kein Mitarbeiter-Datensatz gefunden</div>'; return; }
+  if(!_meinsStaffId) await ladeMeinsStaff();
+  if(!_meinsStaffId){ content.innerHTML = '<div style="color:var(--red);font-size:12px;padding:20px">⚠️ Kein Mitarbeiter-Datensatz gefunden.</div>'; return; }
 
   // Jahr aus State oder aktuell
   if(!window._urlaubJahrAnzeige) window._urlaubJahrAnzeige = currentYear;
@@ -4526,6 +4515,8 @@ let _nachtragDatum = null;
 let _nachtragSollMin = 0;
 
 async function openNachtragModal(datum, sollMin){
+  if(!_meinsStaffId) await ladeMeinsStaff();
+  if(!_meinsStaffId){ showToast('⚠️ Kein Mitarbeiter-Datensatz gefunden'); return; }
   _nachtragDatum = datum;
   _nachtragSollMin = sollMin;
 
@@ -4573,10 +4564,15 @@ function nachtragCheckFreigabe(){
 }
 
 async function saveNachtrag(){
+  if(!_meinsStaffId){
+    showToast('Fehler: Kein Mitarbeiter-Datensatz – bitte Seite neu laden');
+    return;
+  }
   const start = document.getElementById('nachtragStart').value;
   const ende  = document.getElementById('nachtragEnde').value;
   const pause = parseInt(document.getElementById('nachtragPause').value)||0;
-  if(!start || !ende){ showToast('Bitte Start und Ende eingeben'); return; }
+  if(!start){ showToast('Bitte Startzeit eingeben'); return; }
+  if(!ende){  showToast('Bitte Endzeit eingeben'); return; }
 
   const [sh,sm] = start.split(':').map(Number);
   const [eh,em] = ende.split(':').map(Number);
@@ -4608,7 +4604,16 @@ async function saveNachtrag(){
 
 async function renderMeineBuchungen(){
   const content = document.getElementById('meinsContent');
-  if(!_meinsStaffId){ content.innerHTML = '<div style="color:var(--red);font-size:12px;padding:20px">Kein Mitarbeiter-Datensatz gefunden</div>'; return; }
+
+  // Staff laden falls noch nicht geschehen
+  if(!_meinsStaffId){
+    await ladeMeinsStaff();
+  }
+
+  if(!_meinsStaffId){
+    content.innerHTML = '<div style="color:var(--red);font-size:12px;padding:20px">⚠️ Kein Mitarbeiter-Datensatz gefunden. Bitte in der Benutzerverwaltung eintragen.</div>';
+    return;
+  }
 
   if(!window._buchungenJahr) window._buchungenJahr = currentYear;
   if(window._buchungenMonat === undefined) window._buchungenMonat = currentMonth;
