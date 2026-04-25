@@ -916,6 +916,40 @@
   </div>
 </div>
 
+<!-- Nachtrag Modal -->
+<div class="modal-overlay" id="nachtragModal" onclick="if(event.target===this)closeModal('nachtragModal')">
+  <div class="modal" style="width:360px">
+    <div class="modal-title">✏️ Buchung nachtragen</div>
+    <div class="modal-sub" id="nachtragSub"></div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px">
+      <div>
+        <div style="font-size:10px;color:var(--text3);margin-bottom:3px">Start</div>
+        <input type="time" id="nachtragStart" onchange="nachtragCheckFreigabe()" style="width:100%;padding:8px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;background:var(--surface);color:var(--text)">
+      </div>
+      <div>
+        <div style="font-size:10px;color:var(--text3);margin-bottom:3px">Ende</div>
+        <input type="time" id="nachtragEnde" onchange="nachtragCheckFreigabe()" style="width:100%;padding:8px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;background:var(--surface);color:var(--text)">
+      </div>
+    </div>
+
+    <div style="margin-bottom:10px">
+      <div style="font-size:10px;color:var(--text3);margin-bottom:3px">Pause (Minuten)</div>
+      <input type="number" id="nachtragPause" value="30" min="0" max="120" step="5"
+        style="width:100%;padding:8px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;background:var(--surface);color:var(--text)">
+    </div>
+
+    <div id="nachtragFreigabeInfo" style="display:none;padding:8px 10px;background:rgba(255,159,10,.1);border:1px solid rgba(255,159,10,.3);border-radius:8px;font-size:11px;color:#7a4a00;margin-bottom:10px">
+      ⚠️ Abweichung &gt;15 Min – Freigabe durch Admin/Perso erforderlich
+    </div>
+
+    <div class="modal-actions">
+      <button class="btn btn-secondary" onclick="closeModal('nachtragModal')">Abbrechen</button>
+      <button class="btn btn-primary" onclick="saveNachtrag()">✏️ Speichern</button>
+    </div>
+  </div>
+</div>
+
 <!-- Urlaubsantrag Bestätigen Modal -->
 <div class="modal-overlay" id="urlaubBestaetigenModal" onclick="if(event.target===this)closeModal('urlaubBestaetigenModal')"
   style="align-items:center;justify-content:center;z-index:3000">
@@ -4486,6 +4520,90 @@ async function openUrlaubsantrag(){
   renderMeinUrlaub();
 }
 
+// ── NACHTRAG ──────────────────────────────────────────────────────────────────
+
+let _nachtragDatum = null;
+let _nachtragSollMin = 0;
+
+async function openNachtragModal(datum, sollMin){
+  _nachtragDatum = datum;
+  _nachtragSollMin = sollMin;
+
+  const dt = new Date(datum+'T12:00:00');
+  document.getElementById('nachtragSub').textContent =
+    dt.toLocaleDateString('de-DE',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
+
+  // Bestehende Buchung laden falls vorhanden
+  const { data: buch } = await sb.from('zeiterfassung')
+    .select('*').eq('staff_id',_meinsStaffId).eq('datum',datum).maybeSingle();
+
+  if(buch && buch.start_zeit){
+    const s = new Date(buch.start_zeit);
+    document.getElementById('nachtragStart').value = `${String(s.getHours()).padStart(2,'0')}:${String(s.getMinutes()).padStart(2,'0')}`;
+    if(buch.end_zeit){
+      const e = new Date(buch.end_zeit);
+      document.getElementById('nachtragEnde').value = `${String(e.getHours()).padStart(2,'0')}:${String(e.getMinutes()).padStart(2,'0')}`;
+    }
+    document.getElementById('nachtragPause').value = buch.pause_minuten || 30;
+  } else {
+    // Standard aus Dienstplan vorausfüllen
+    const entry = state.entries && state.entries[`${_meinsStaffId}_${datum}`];
+    const gd = entry ? _gruppenDienste.find(d=>d.kuerzel===entry.shift) : null;
+    document.getElementById('nachtragStart').value = (gd && gd.beginn) || '';
+    document.getElementById('nachtragEnde').value  = (gd && gd.ende)   || '';
+    document.getElementById('nachtragPause').value  = (gd && gd.pause_min) || 30;
+  }
+
+  nachtragCheckFreigabe();
+  openModal('nachtragModal');
+}
+
+function nachtragCheckFreigabe(){
+  const start = document.getElementById('nachtragStart').value;
+  const ende  = document.getElementById('nachtragEnde').value;
+  const info  = document.getElementById('nachtragFreigabeInfo');
+  if(!start || !ende || !_nachtragSollMin){ info.style.display='none'; return; }
+
+  const [sh,sm] = start.split(':').map(Number);
+  const [eh,em] = ende.split(':').map(Number);
+  const pause = parseInt(document.getElementById('nachtragPause').value)||0;
+  const istMin = (eh*60+em) - (sh*60+sm) - pause;
+  const diff = Math.abs(istMin - _nachtragSollMin);
+  info.style.display = diff > 15 ? 'block' : 'none';
+}
+
+async function saveNachtrag(){
+  const start = document.getElementById('nachtragStart').value;
+  const ende  = document.getElementById('nachtragEnde').value;
+  const pause = parseInt(document.getElementById('nachtragPause').value)||0;
+  if(!start || !ende){ showToast('Bitte Start und Ende eingeben'); return; }
+
+  const [sh,sm] = start.split(':').map(Number);
+  const [eh,em] = ende.split(':').map(Number);
+  const istMin = (eh*60+em) - (sh*60+sm) - pause;
+  const freigabe = Math.abs(istMin - _nachtragSollMin) > 15;
+
+  const startISO = `${_nachtragDatum}T${start}:00`;
+  const endeISO  = `${_nachtragDatum}T${ende}:00`;
+
+  const { error } = await sb.from('zeiterfassung').upsert({
+    staff_id: _meinsStaffId,
+    datum: _nachtragDatum,
+    start_zeit: startISO,
+    end_zeit: endeISO,
+    pause_minuten: pause,
+    status: freigabe ? 'freigabe_noetig' : 'offen',
+    freigabe_noetig: freigabe,
+    freigabe_grund: freigabe ? `Manuell nachgetragen – Abweichung ${Math.abs(istMin-_nachtragSollMin)} Min` : null,
+    unternehmen_id: currentUnternehmenId
+  }, {onConflict:'staff_id,datum'});
+
+  if(error){ showToast('Fehler: '+error.message); return; }
+  closeModal('nachtragModal');
+  showToast(freigabe ? '✏️ Nachgetragen – ⚠️ Freigabe nötig' : '✏️ Buchung gespeichert');
+  renderMeineBuchungen();
+}
+
 // ── MEINE BUCHUNGEN ───────────────────────────────────────────────────────────
 
 async function renderMeineBuchungen(){
@@ -4502,9 +4620,10 @@ async function renderMeineBuchungen(){
   const sollTag = ((_meinsStaff && _meinsStaff.soll) || 38.5) / 5;
   const heute = fmtDate(new Date());
 
+  const lastDay = String(daysInMonth(jahr, monat)).padStart(2,'0');
   const { data: buchungen } = await sb.from('zeiterfassung')
     .select('*').eq('staff_id', _meinsStaffId)
-    .gte('datum', monatStr+'-01').lte('datum', monatStr+'-31').order('datum');
+    .gte('datum', monatStr+'-01').lte('datum', monatStr+'-'+lastDay).order('datum');
   const buchMap = {};
   (buchungen||[]).forEach(b => { buchMap[b.datum] = b; });
 
@@ -4570,11 +4689,15 @@ async function renderMeineBuchungen(){
       ? `<span style="padding:1px 6px;border-radius:10px;font-size:10px;font-weight:700;color:#fff;background:${gd.farbe||'#0071e3'}">${gd.kuerzel}</span> <span style="font-size:10px;color:var(--text3)">${gd.beginn||''}–${gd.ende||''}</span>`
       : shift==='FREI'?'<span style="font-size:10px;color:var(--text3)">Frei</span>':'<span style="font-size:10px;color:var(--text3)">–</span>';
 
+    const clickable = !isWE && !isFt && !isZukunft && status !== 'aktiv';
     rows.push(`
-      <div style="display:grid;grid-template-columns:48px 1fr 64px 64px 38px 58px 52px 52px;gap:3px;align-items:center;
+      <div onclick="${clickable?`openNachtragModal('${ds}',${Math.round(tagSoll*60)})`:''}"
+        style="display:grid;grid-template-columns:48px 1fr 64px 64px 38px 58px 52px 52px;gap:3px;align-items:center;
         padding:8px 10px;background:${sc.bg};border:1px solid ${sc.bg2};border-radius:10px;
-        ${isHeute?'box-shadow:0 0 0 2px var(--accent);':''}">
-        <div><div style="font-size:11px;font-weight:${isHeute?'700':'500'};color:${isHeute?'var(--accent)':'var(--text2)'}">${wt} ${d}.</div>
+        ${isHeute?'box-shadow:0 0 0 2px var(--accent);':''}
+        ${clickable?'cursor:pointer;':''}"
+        ${clickable?'title="Klicken zum Nachtragen/Bearbeiten"':''}>
+        <div><div style="font-size:11px;font-weight:${isHeute?'700':'500'};color:${isHeute?'var(--accent)':isWE||isFt?'var(--text3)':'var(--text2)'}">${wt} ${d}.</div>
           <div style="font-size:9px">${sc.badge}</div></div>
         <div>${dienstInfo}</div>
         <div style="font-size:11px;color:var(--text3);text-align:center">${startStr}</div>
@@ -5093,6 +5216,7 @@ function applyRolePermissions(){
   if(btnMeins){ btnMeins.style.display = 'flex'; btnMeins.style.alignItems = 'center'; btnMeins.style.justifyContent = 'center'; }
   const btnStempel = document.getElementById('btnStempel');
   if(btnStempel) btnStempel.style.display = 'flex';
+  const btnPersonal = document.querySelector('button[onclick="openUserManagement()"]');
   if(btnPersonal) btnPersonal.style.display = noUsers.includes(currentUserRole) ? 'none' : '';
 
   // Admin-Menü: nur für Owner/Admin/Perso
