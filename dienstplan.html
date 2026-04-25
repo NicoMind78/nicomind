@@ -3299,13 +3299,17 @@ async function saveWish(del){
     const notiz = document.getElementById('wishNotiz').value.trim();
     const dienst = _wishPrio==='wunsch_dienst' ? document.getElementById('wishDienstWahl').value : null;
     state.wishes[wkey]={prioritaet:_wishPrio, notiz, dienst};
-    await sb.from('wuensche').upsert({
-      staff_id:   parseInt(_wishStaffId),
-      datum:      _wishDate,
-      prioritaet: _wishPrio,
-      notiz:      notiz,
-      genehmigt:  _wishPrio==='soll_frei'
-    },{onConflict:'staff_id,datum'});
+    const { data: existW } = await sb.from('wuensche')
+      .select('id').eq('staff_id',parseInt(_wishStaffId)).eq('datum',_wishDate).maybeSingle();
+    const wPay = {
+      staff_id: parseInt(_wishStaffId), datum: _wishDate,
+      prioritaet: _wishPrio, notiz: notiz, genehmigt: _wishPrio==='soll_frei'
+    };
+    if(existW && existW.id){
+      await sb.from('wuensche').update(wPay).eq('id', existW.id);
+    } else {
+      await sb.from('wuensche').insert(wPay);
+    }
   }
   saveData(); closeModal('wishModal'); render();
   showToast(del?'Wunsch gelöscht':'Wunsch gespeichert ✓');
@@ -3996,17 +4000,29 @@ async function stempelKommen(){
     }
   }
 
-  const { data, error } = await sb.from('zeiterfassung').upsert({
+  // Insert oder Update für heute
+  const { data: existStempel } = await sb.from('zeiterfassung')
+    .select('id').eq('staff_id',_meinsStaffId).eq('datum',heute).maybeSingle();
+  const stempelPayload = {
     staff_id: _meinsStaffId, datum: heute,
     start_zeit: jetzt.toISOString(),
     geplanter_start: geplantStart, geplantes_ende: geplantEnde,
     status: 'offen', freigabe_noetig: freigabe, freigabe_grund: freigabeGrund,
     unternehmen_id: currentUnternehmenId
-  }, {onConflict:'staff_id,datum'}).select().single();
+  };
+  let stempelData, stempelErr;
+  if(existStempel && existStempel.id){
+    const r = await sb.from('zeiterfassung').update(stempelPayload).eq('id',existStempel.id).select().single();
+    stempelData=r.data; stempelErr=r.error;
+  } else {
+    const r = await sb.from('zeiterfassung').insert(stempelPayload).select().single();
+    stempelData=r.data; stempelErr=r.error;
+  }
+  const data = stempelData; const error = stempelErr;
 
   if(error){ showToast('Fehler: '+error.message); return; }
   _stempelAktivSeit = jetzt;
-  _stempelBuchungId = data.id;
+  _stempelBuchungId = data && data.id;
   stempelSetAktiv(true);
   closeModal('stempelModal');
   showToast(freigabe ? `✅ Eingebucht – ⚠️ Freigabe nötig` : '✅ Eingebucht – Guten Dienst!');
@@ -4589,7 +4605,11 @@ async function saveNachtrag(){
   const startISO = `${_nachtragDatum}T${start}:00${tz}`;
   const endeISO  = `${_nachtragDatum}T${ende}:00${tz}`;
 
-  const { error } = await sb.from('zeiterfassung').upsert({
+  // Prüfen ob bereits ein Eintrag für diesen Tag existiert
+  const { data: existing } = await sb.from('zeiterfassung')
+    .select('id').eq('staff_id', _meinsStaffId).eq('datum', _nachtragDatum).maybeSingle();
+
+  const payload = {
     staff_id: _meinsStaffId,
     datum: _nachtragDatum,
     start_zeit: startISO,
@@ -4599,7 +4619,16 @@ async function saveNachtrag(){
     freigabe_noetig: freigabe,
     freigabe_grund: freigabe ? `Manuell nachgetragen – Abweichung ${Math.abs(istMin-_nachtragSollMin)} Min` : null,
     unternehmen_id: currentUnternehmenId
-  }, {onConflict:'staff_id,datum'});
+  };
+
+  let error;
+  if(existing && existing.id){
+    const res = await sb.from('zeiterfassung').update(payload).eq('id', existing.id);
+    error = res.error;
+  } else {
+    const res = await sb.from('zeiterfassung').insert(payload);
+    error = res.error;
+  }
 
   if(error){ showToast('Fehler: '+error.message); return; }
   closeModal('nachtragModal');
@@ -4786,17 +4815,24 @@ async function startBuchung(){
     if(diff >= 6){ freigabe=true; freigabeGrund=`Start ${diff} Min früher als geplant (${geplantStart})`; }
   }
 
-  const { error } = await sb.from('zeiterfassung').upsert({
-    staff_id: _meinsStaffId,
-    datum: heute,
+  const { data: existH } = await sb.from('zeiterfassung')
+    .select('id').eq('staff_id',_meinsStaffId).eq('datum',heute).maybeSingle();
+  const startPay = {
+    staff_id: _meinsStaffId, datum: heute,
     start_zeit: jetzt.toISOString(),
-    geplanter_start: geplantStart,
-    geplantes_ende: geplantEnde,
-    status: 'offen',
-    freigabe_noetig: freigabe,
-    freigabe_grund: freigabeGrund,
+    geplanter_start: geplantStart, geplantes_ende: geplantEnde,
+    status: 'offen', freigabe_noetig: freigabe, freigabe_grund: freigabeGrund,
     unternehmen_id: currentUnternehmenId
-  }, {onConflict:'staff_id,datum'});
+  };
+  let startErr;
+  if(existH && existH.id){
+    const r = await sb.from('zeiterfassung').update(startPay).eq('id',existH.id);
+    startErr = r.error;
+  } else {
+    const r = await sb.from('zeiterfassung').insert(startPay);
+    startErr = r.error;
+  }
+  const error = startErr;
 
   if(error){ showToast('Fehler: '+error.message); return; }
   showToast(freigabe ? `▶ Gestartet – ⚠️ Freigabe nötig (${freigabeGrund})` : '▶ Dienst gestartet');
