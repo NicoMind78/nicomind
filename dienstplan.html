@@ -4518,15 +4518,14 @@ async function renderMeineBuchungen(){
     const dow = dt.getDay();
     const isWE = dow===0||dow===6;
     const isFt = !!hols[ds];
-    if(isWE || isFt) continue;
-
     const isZukunft = ds > heute;
     const isHeute = ds === heute;
     const entry = state.entries && state.entries[`${_meinsStaffId}_${ds}`];
     const shift = entry ? entry.shift : null;
     const gd = shift && shift!=='FREI' ? _gruppenDienste.find(x=>x.kuerzel===shift) : null;
     const hatDienst = shift && shift!=='FREI';
-    const tagSoll = sollTag;
+    // Soll: nur an Werktagen ohne Feiertag
+    const tagSoll = isWE || isFt ? 0 : sollTag;
     const buch = buchMap[ds];
     let istMin=null, startStr='–', endeStr='–', pauseMin=0, status='normal';
 
@@ -4539,16 +4538,16 @@ async function renderMeineBuchungen(){
       } else if(isHeute){ endeStr='läuft…'; status='aktiv'; }
       if(buch.freigabe_noetig && buch.status!=='festgeschrieben') status='freigabe';
       if(buch.status==='festgeschrieben') status='fest';
-    } else if(!isZukunft && !isHeute && hatDienst){
+    } else if(!isZukunft && !isHeute && !isWE && !isFt && hatDienst){
       status='fehlend';
       istMin = Math.round(tagSoll*60);
       fehlend.push(ds);
     }
 
-    const istH = istMin!==null ? istMin/60 : (isZukunft?0:0);
-    const tagSaldo = istMin!==null ? istH-tagSoll : (isZukunft?0:(hatDienst?-tagSoll:0));
+    const istH = istMin!==null ? istMin/60 : 0;
+    const tagSaldo = isWE||isFt ? 0 : istMin!==null ? istH-tagSoll : (isZukunft||isHeute?0:(hatDienst?-tagSoll:0));
     gesamtSoll += tagSoll;
-    gesamtIst  += istMin!==null ? istH : 0;
+    gesamtIst  += istH;
     const moSaldo = gesamtIst - gesamtSoll;
 
     const sc = {
@@ -4558,6 +4557,9 @@ async function renderMeineBuchungen(){
       fest:     {bg:'rgba(52,199,89,.04)',bg2:'var(--border)',badge:'✅'},
       fehlend:  {bg:'rgba(255,59,48,.06)',bg2:'rgba(255,59,48,.3)',badge:'❌'},
     }[status]||{bg:'var(--surface)',bg2:'var(--border)',badge:''};
+    // WE und Feiertag abgedunkelt
+    if(isWE) { sc.bg='rgba(142,142,147,.06)'; sc.bg2='rgba(142,142,147,.2)'; }
+    if(isFt) { sc.bg='rgba(255,149,0,.06)';   sc.bg2='rgba(255,149,0,.2)'; }
 
     const wt=['So','Mo','Di','Mi','Do','Fr','Sa'][dow];
     const istStr = istMin!==null ? `${Math.floor(Math.abs(istMin)/60)}:${String(Math.abs(istMin)%60).padStart(2,'0')}h` : '–';
@@ -5949,6 +5951,7 @@ render();
   await loadStandorteData();
   await loadFromSupabase();
   loadUserRole();
+  setTimeout(initStempel, 1500); // Nach allem anderen starten
 })();
 </script>
 </body>
