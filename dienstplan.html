@@ -5464,9 +5464,19 @@ async function syncShiftsFromGruppe(){
 async function loadUnternehmenData(){
   const { data } = await sb.from('unternehmen').select('*').order('name');
   if(data) allUnternehmen = data;
-  // Erstes Unternehmen automatisch wählen falls noch keines gesetzt
+
   if(!currentUnternehmenId && allUnternehmen.length){
-    currentUnternehmenId = allUnternehmen[0].id;
+    // Letztes Unternehmen aus localStorage wiederherstellen (nur für Owner/Master)
+    try {
+      const last = localStorage.getItem('nicomind_lastUnternehmen');
+      if(last && allUnternehmen.find(u=>u.id===last)){
+        currentUnternehmenId = last;
+      } else {
+        currentUnternehmenId = allUnternehmen[0].id;
+      }
+    } catch(e){
+      currentUnternehmenId = allUnternehmen[0].id;
+    }
   }
   updateUnternehmenLabel();
 }
@@ -5571,6 +5581,8 @@ async function switchUnternehmen(id){
   currentUnternehmenId = id;
   currentStandortId = null;
   currentGruppeId = null;
+  // Letztes Unternehmen für Owner merken
+  try { localStorage.setItem('nicomind_lastUnternehmen', id); } catch(e){}
   updateUnternehmenLabel();
   await loadStandorteData();
   closeModal('unternehmenModal');
@@ -5581,6 +5593,7 @@ async function switchUnternehmen(id){
 
 async function openUnternehmenStandorte(unternehmenId, unternehmenName){
   currentUnternehmenId = unternehmenId;
+  try { localStorage.setItem('nicomind_lastUnternehmen', unternehmenId); } catch(e){}
   await loadStandorteData();
   closeModal('unternehmenModal');
   renderStandorteList();
