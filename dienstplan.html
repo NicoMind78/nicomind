@@ -3821,14 +3821,34 @@ let _stempelAktivSeit = null;
 let _stempelBuchungId = null;
 
 async function initStempel(){
-  // Prüfen ob aktive Buchung existiert
+  // Staff laden falls nötig
+  if(!_meinsStaffId){
+    const sessRes = await sb.auth.getSession();
+    const session = sessRes.data && sessRes.data.session;
+    if(!session) return;
+    const profRes = await sb.from('user_profiles').select('*').eq('user_id', session.user.id).maybeSingle();
+    const profile = profRes.data;
+    if(profile){
+      const staffName = `${profile.vorname||''} ${profile.name||''}`.trim();
+      if(staffName){
+        const staffRes = await sb.from('staff').select('*')
+          .eq('unternehmen_id', currentUnternehmenId).eq('name', staffName);
+        _meinsStaff  = (staffRes.data && staffRes.data.length) ? staffRes.data[0] : null;
+        _meinsStaffId = _meinsStaff ? _meinsStaff.id : null;
+      }
+    }
+  }
   if(!_meinsStaffId) return;
+
+  // Aktive Buchung prüfen
   const heute = fmtDate(new Date());
-  const { data } = await sb.from('zeiterfassung')
+  const buchRes = await sb.from('zeiterfassung')
     .select('*').eq('staff_id', _meinsStaffId).eq('datum', heute).maybeSingle();
-  if(data && data.start_zeit && !data.end_zeit){
-    _stempelAktivSeit = new Date(data.start_zeit);
-    _stempelBuchungId = data.id;
+  const buch = buchRes.data;
+
+  if(buch && buch.start_zeit && !buch.end_zeit){
+    _stempelAktivSeit = new Date(buch.start_zeit);
+    _stempelBuchungId = buch.id;
     stempelSetAktiv(true);
   } else {
     stempelSetAktiv(false);
@@ -3863,10 +3883,12 @@ function stempelTick(){
   const h = Math.floor(diff/3600);
   const m = Math.floor((diff%3600)/60);
   const s = diff%60;
-  // Nur Modal-Anzeige updaten
+  const zeitStr = `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+  // Modal updaten wenn offen
   const modalZeit = document.getElementById('stempelModalZeit');
-  if(modalZeit) modalZeit.textContent =
-    `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+  if(modalZeit) modalZeit.textContent = zeitStr;
+  const statusEl = document.getElementById('stempelModalStatus');
+  if(statusEl && statusEl.textContent !== 'Nicht eingebucht') statusEl.textContent = '● EINGEBUCHT';
 }
 
 async function openStempelModal(){
@@ -4468,64 +4490,145 @@ async function openUrlaubsantrag(){
 
 async function renderMeineBuchungen(){
   const content = document.getElementById('meinsContent');
-  if(!_meinsStaffId){ content.innerHTML = '<div style="color:var(--red);font-size:12px">Kein Mitarbeiter-Datensatz gefunden</div>'; return; }
+  if(!_meinsStaffId){ content.innerHTML = '<div style="color:var(--red);font-size:12px;padding:20px">Kein Mitarbeiter-Datensatz gefunden</div>'; return; }
 
-  const monatStr = `${currentYear}-${String(currentMonth+1).padStart(2,'0')}`;
+  if(!window._buchungenJahr) window._buchungenJahr = currentYear;
+  if(window._buchungenMonat === undefined) window._buchungenMonat = currentMonth;
+  const jahr = window._buchungenJahr;
+  const monat = window._buchungenMonat;
+  const monatStr = `${jahr}-${String(monat+1).padStart(2,'0')}`;
+  const days = daysInMonth(jahr, monat);
+  const hols = holidaysForYear(jahr);
+  const sollTag = ((_meinsStaff && _meinsStaff.soll) || 38.5) / 5;
+  const heute = fmtDate(new Date());
+
   const { data: buchungen } = await sb.from('zeiterfassung')
     .select('*').eq('staff_id', _meinsStaffId)
-    .gte('datum', monatStr+'-01').lte('datum', monatStr+'-31')
-    .order('datum');
+    .gte('datum', monatStr+'-01').lte('datum', monatStr+'-31').order('datum');
+  const buchMap = {};
+  (buchungen||[]).forEach(b => { buchMap[b.datum] = b; });
 
-  // Aktive Buchung prüfen
-  const aktiv = (buchungen||[]).find(b => b.start_zeit && !b.end_zeit);
+  let gesamtSoll=0, gesamtIst=0;
+  const fehlend = [];
+  const rows = [];
 
-  const rows = (buchungen||[]).map(b => {
-    const start = b.start_zeit ? new Date(b.start_zeit).toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'}) : '–';
-    const ende = b.end_zeit ? new Date(b.end_zeit).toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'}) : '–';
-    const istMin = b.start_zeit && b.end_zeit
-      ? Math.round((new Date(b.end_zeit)-new Date(b.start_zeit))/60000) - (b.pause_minuten||0)
-      : null;
-    const istStd = istMin !== null ? `${Math.floor(istMin/60)}:${String(istMin%60).padStart(2,'0')}h` : '–';
-    const freigabe = b.freigabe_noetig && b.status!=='festgeschrieben';
-    const statusCol = b.status==='festgeschrieben' ? 'var(--green)' : freigabe ? 'var(--orange)' : 'var(--text3)';
-    const statusTxt = b.status==='festgeschrieben' ? '✅' : freigabe ? '⚠️' : '○';
-    const dt = new Date(b.datum+'T12:00:00');
-    const wt = ['So','Mo','Di','Mi','Do','Fr','Sa'][dt.getDay()];
-    return `
-      <div style="display:grid;grid-template-columns:60px 80px 80px 60px 60px 28px;gap:6px;align-items:center;padding:10px 12px;background:var(--surface);border:1px solid var(--border);border-radius:10px${freigabe?';border-color:var(--orange)':''}">
-        <div style="font-size:11px;color:var(--text3)">${wt} ${dt.getDate()}.${dt.getMonth()+1}.</div>
-        <div style="font-size:12px;font-weight:500">${start}</div>
-        <div style="font-size:12px;font-weight:500">${ende}</div>
-        <div style="font-size:11px;color:var(--text3)">${b.pause_minuten||0} Min</div>
-        <div style="font-size:12px;font-weight:600;color:var(--text)">${istStd}</div>
-        <div style="font-size:14px;color:${statusCol};text-align:center" title="${b.status}">${statusTxt}</div>
-      </div>`;
-  }).join('');
+  for(let d=1; d<=days; d++){
+    const dt = new Date(jahr, monat, d);
+    const ds = fmtDate(dt);
+    const dow = dt.getDay();
+    const isWE = dow===0||dow===6;
+    const isFt = !!hols[ds];
+    if(isWE || isFt) continue;
+
+    const isZukunft = ds > heute;
+    const isHeute = ds === heute;
+    const entry = state.entries && state.entries[`${_meinsStaffId}_${ds}`];
+    const shift = entry ? entry.shift : null;
+    const gd = shift && shift!=='FREI' ? _gruppenDienste.find(x=>x.kuerzel===shift) : null;
+    const hatDienst = shift && shift!=='FREI';
+    const tagSoll = sollTag;
+    const buch = buchMap[ds];
+    let istMin=null, startStr='–', endeStr='–', pauseMin=0, status='normal';
+
+    if(buch && buch.start_zeit){
+      startStr = new Date(buch.start_zeit).toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'});
+      if(buch.end_zeit){
+        endeStr = new Date(buch.end_zeit).toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'});
+        pauseMin = buch.pause_minuten||0;
+        istMin = Math.round((new Date(buch.end_zeit)-new Date(buch.start_zeit))/60000) - pauseMin;
+      } else if(isHeute){ endeStr='läuft…'; status='aktiv'; }
+      if(buch.freigabe_noetig && buch.status!=='festgeschrieben') status='freigabe';
+      if(buch.status==='festgeschrieben') status='fest';
+    } else if(!isZukunft && !isHeute && hatDienst){
+      status='fehlend';
+      istMin = Math.round(tagSoll*60);
+      fehlend.push(ds);
+    }
+
+    const istH = istMin!==null ? istMin/60 : (isZukunft?0:0);
+    const tagSaldo = istMin!==null ? istH-tagSoll : (isZukunft?0:(hatDienst?-tagSoll:0));
+    gesamtSoll += tagSoll;
+    gesamtIst  += istMin!==null ? istH : 0;
+    const moSaldo = gesamtIst - gesamtSoll;
+
+    const sc = {
+      normal:   {bg:'var(--surface)',bg2:'var(--border)',badge:''},
+      aktiv:    {bg:'rgba(52,199,89,.06)',bg2:'rgba(52,199,89,.3)',badge:'🟢'},
+      freigabe: {bg:'rgba(255,159,10,.07)',bg2:'rgba(255,159,10,.35)',badge:'⚠️'},
+      fest:     {bg:'rgba(52,199,89,.04)',bg2:'var(--border)',badge:'✅'},
+      fehlend:  {bg:'rgba(255,59,48,.06)',bg2:'rgba(255,59,48,.3)',badge:'❌'},
+    }[status]||{bg:'var(--surface)',bg2:'var(--border)',badge:''};
+
+    const wt=['So','Mo','Di','Mi','Do','Fr','Sa'][dow];
+    const istStr = istMin!==null ? `${Math.floor(Math.abs(istMin)/60)}:${String(Math.abs(istMin)%60).padStart(2,'0')}h` : '–';
+    const sDot = tagSaldo>=0?'+':''; const mDot = moSaldo>=0?'+':'';
+    const sCol = tagSaldo>=0?'#1a7f37':'#cf222e';
+    const mCol = moSaldo>=0?'#1a7f37':'#cf222e';
+    const dienstInfo = gd
+      ? `<span style="padding:1px 6px;border-radius:10px;font-size:10px;font-weight:700;color:#fff;background:${gd.farbe||'#0071e3'}">${gd.kuerzel}</span> <span style="font-size:10px;color:var(--text3)">${gd.beginn||''}–${gd.ende||''}</span>`
+      : shift==='FREI'?'<span style="font-size:10px;color:var(--text3)">Frei</span>':'<span style="font-size:10px;color:var(--text3)">–</span>';
+
+    rows.push(`
+      <div style="display:grid;grid-template-columns:48px 1fr 64px 64px 38px 58px 52px 52px;gap:3px;align-items:center;
+        padding:8px 10px;background:${sc.bg};border:1px solid ${sc.bg2};border-radius:10px;
+        ${isHeute?'box-shadow:0 0 0 2px var(--accent);':''}">
+        <div><div style="font-size:11px;font-weight:${isHeute?'700':'500'};color:${isHeute?'var(--accent)':'var(--text2)'}">${wt} ${d}.</div>
+          <div style="font-size:9px">${sc.badge}</div></div>
+        <div>${dienstInfo}</div>
+        <div style="font-size:11px;color:var(--text3);text-align:center">${startStr}</div>
+        <div style="font-size:11px;color:var(--text3);text-align:center">${endeStr}</div>
+        <div style="font-size:10px;color:var(--text3);text-align:center">${pauseMin?pauseMin+'m':'–'}</div>
+        <div style="font-size:12px;font-weight:600;text-align:center;color:${status==='fehlend'?'var(--red)':'var(--text)'}">${istStr}</div>
+        <div style="font-size:11px;font-weight:600;text-align:center;color:${sCol}">${sDot}${tagSaldo.toFixed(1)}h</div>
+        <div style="font-size:11px;font-weight:600;text-align:center;color:${mCol}">${mDot}${moSaldo.toFixed(1)}h</div>
+      </div>`);
+  }
+
+  const gSaldo = gesamtIst-gesamtSoll;
+  const gCol = gSaldo>=0?'#1a7f37':'#cf222e';
 
   content.innerHTML = `
-    <!-- Start/Stop Button -->
-    <div style="margin-bottom:20px">
-      ${aktiv ? `
-        <button onclick="stopBuchung('${aktiv.id}')"
-          style="width:100%;padding:16px;border:none;border-radius:12px;background:var(--red);color:#fff;font-size:15px;font-weight:700;cursor:pointer">
-          ⏹ Dienst beenden · Gestartet ${new Date(aktiv.start_zeit).toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'})} Uhr
-        </button>` : `
-        <button onclick="startBuchung()"
-          style="width:100%;padding:16px;border:none;border-radius:12px;background:var(--green);color:#fff;font-size:15px;font-weight:700;cursor:pointer">
-          ▶ Dienst starten
-        </button>`}
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">
+      <button onclick="buchungenNavMonat(-1)" style="width:28px;height:28px;border:1px solid var(--border);border-radius:7px;background:var(--surface);cursor:pointer;font-size:14px">‹</button>
+      <div style="flex:1;text-align:center;font-size:14px;font-weight:700;color:var(--text)">${MONTH_NAMES[monat]} ${jahr}</div>
+      <button onclick="buchungenNavMonat(1)" style="width:28px;height:28px;border:1px solid var(--border);border-radius:7px;background:var(--surface);cursor:pointer;font-size:14px">›</button>
     </div>
-
-    <!-- Tabellen-Header -->
-    <div style="display:grid;grid-template-columns:60px 80px 80px 60px 60px 28px;gap:6px;padding:0 12px;margin-bottom:4px">
-      ${['Datum','Start','Ende','Pause','Netto',''].map(h=>`<div style="font-size:11px;color:var(--text3);font-weight:600">${h}</div>`).join('')}
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:12px">
+      <div style="background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:10px;text-align:center">
+        <div style="font-size:18px;font-weight:700;color:var(--text)">${gesamtSoll.toFixed(1)}h</div>
+        <div style="font-size:10px;color:var(--text3)">Soll</div>
+      </div>
+      <div style="background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:10px;text-align:center">
+        <div style="font-size:18px;font-weight:700;color:var(--text)">${gesamtIst.toFixed(1)}h</div>
+        <div style="font-size:10px;color:var(--text3)">Ist</div>
+      </div>
+      <div style="background:var(--surface2);border:1.5px solid ${gCol};border-radius:10px;padding:10px;text-align:center">
+        <div style="font-size:18px;font-weight:700;color:${gCol}">${gSaldo>=0?'+':''}${gSaldo.toFixed(1)}h</div>
+        <div style="font-size:10px;color:var(--text3)">Saldo</div>
+      </div>
     </div>
-
-    <!-- Buchungen -->
-    <div style="display:flex;flex-direction:column;gap:6px">
-      ${rows || '<div style="font-size:12px;color:var(--text3)">Keine Buchungen in diesem Monat</div>'}
+    <div style="display:grid;grid-template-columns:48px 1fr 64px 64px 38px 58px 52px 52px;gap:3px;padding:0 10px;margin-bottom:4px">
+      ${['Tag','Dienst','Start','Ende','Pause','Ist','Tag±','Mon±'].map(h=>`<div style="font-size:9px;color:var(--text3);font-weight:600;text-align:${['Start','Ende','Pause','Ist','Tag±','Mon±'].includes(h)?'center':'left'}">${h}</div>`).join('')}
+    </div>
+    <div style="display:flex;flex-direction:column;gap:4px">
+      ${rows.join('')||'<div style="color:var(--text3);font-size:12px;padding:20px;text-align:center">Keine Werktage</div>'}
+    </div>
+    <div style="display:flex;gap:8px;margin-top:12px;justify-content:flex-end">
+      <button onclick="showToast('Excel Export folgt')" class="btn btn-secondary btn-sm">📥 Excel</button>
+      <button onclick="showToast('PDF Export folgt')" class="btn btn-secondary btn-sm">📄 PDF</button>
     </div>`;
+
+  if(fehlend.length) showToast(`⚠️ ${fehlend.length} fehlende Buchung${fehlend.length!==1?'en':''} in ${MONTH_NAMES[monat]}`);
 }
+
+function buchungenNavMonat(dir){
+  if(window._buchungenMonat===undefined) window._buchungenMonat=currentMonth;
+  window._buchungenMonat+=dir;
+  if(window._buchungenMonat>11){window._buchungenMonat=0;window._buchungenJahr++;}
+  if(window._buchungenMonat<0){window._buchungenMonat=11;window._buchungenJahr--;}
+  renderMeineBuchungen();
+}
+
 
 async function startBuchung(){
   if(!_meinsStaffId) return;
@@ -4964,6 +5067,7 @@ async function loadUserRole(){
   }
   console.log('Rolle:', currentUserRole);
   applyRolePermissions();
+  initStempel(); // Aktive Buchung prüfen und Button-Status setzen
 }
 
 function applyRolePermissions(){
