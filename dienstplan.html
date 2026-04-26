@@ -1447,6 +1447,17 @@
     </div>
 
     <div class="modal-actions" style="margin-top:16px;border-top:1px solid var(--border);padding-top:14px;flex-shrink:0">
+      <!-- E-Mail + Reset -->
+      <div id="euEmailBereich" style="display:none;flex:1;background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:10px 12px;margin-right:8px">
+        <div style="font-size:10px;color:var(--text3);margin-bottom:2px">Login E-Mail</div>
+        <div style="display:flex;align-items:center;gap:8px">
+          <span id="euEmailAnzeige" style="font-size:12px;font-weight:500;color:var(--text);flex:1">–</span>
+          <button onclick="sendPasswordReset()" style="padding:4px 10px;border:none;border-radius:6px;background:var(--accent);color:#fff;font-size:11px;font-weight:600;cursor:pointer;white-space:nowrap">🔑 Reset senden</button>
+        </div>
+      </div>
+      <div id="euKeinAccount" style="display:none;flex:1;margin-right:8px;font-size:11px;color:var(--text3);padding:10px 12px;background:var(--surface2);border:1px solid var(--border);border-radius:10px">
+        ⚠️ Kein Auth-Account – kein Passwort-Reset möglich
+      </div>
       <button class="btn btn-secondary" onclick="closeModal('editUserModal')">Abbrechen</button>
       <button class="btn btn-primary" onclick="saveEditUser()">Speichern</button>
     </div>
@@ -3474,6 +3485,15 @@ async function inviteUser(){
   const result = await response.json();
   if(result.error){ showToast('Fehler: ' + result.error); return; }
 
+  // E-Mail in user_profiles speichern
+  if(result.user_id && email){
+    await sb.from('user_profiles').upsert({
+      user_id: result.user_id, name, vorname, position,
+      handy, kostenstelle, soll, auto1, pool_auto: poolAuto,
+      standort_ids: standortIds, gruppe_ids: gruppeIds, email
+    });
+  }
+
   ['inviteEmail','invitePassword','inviteName','inviteVorname','invitePosition','inviteHandy','inviteKostenstelle','inviteSoll'].forEach(id=>{
     const el=document.getElementById(id); if(el) el.value='';
   });
@@ -3549,7 +3569,7 @@ async function loadUserList(){
 
   const [rolesResult, profilesResult, staffResult] = await Promise.all([
     callManageRoles('getAll'),
-    sb.from('user_profiles').select('user_id, name, vorname, position, standort_ids, gruppe_ids'),
+    sb.from('user_profiles').select('user_id, name, vorname, position, standort_ids, gruppe_ids, email'),
     sb.from('staff').select('id, name, role, standort_id, gruppe_id, unternehmen_id')
       .eq('unternehmen_id', currentUnternehmenId)
   ]);
@@ -4888,6 +4908,18 @@ async function openTauschAntrag(){
   showToast('Tausch-Funktion folgt in Kürze');
 }
 
+async function sendPasswordReset(){
+  const email = document.getElementById('euEmailAnzeige').textContent.trim();
+  if(!email || email === '–'){ showToast('Keine E-Mail hinterlegt'); return; }
+  if(!confirm(`Passwort-Reset E-Mail an ${email} senden?`)) return;
+
+  const { error } = await sb.auth.resetPasswordForEmail(email, {
+    redirectTo: window.location.origin + window.location.pathname
+  });
+  if(error){ showToast('Fehler: '+error.message); return; }
+  showToast(`✅ Reset-Link wurde an ${email} gesendet`);
+}
+
 // ─── STUNDENÜBERSICHT ────────────────────────────────────────────────────────
 
 let _stundenTab = 'planer';
@@ -5334,6 +5366,26 @@ async function openEditUser(userId){
   }
   document.getElementById('euUrlaubstage').value = (staffData && staffData.urlaubstage_jahr) || 30;
   document.getElementById('euStundenlohn').value = (staffData && staffData.stundenlohn) || 0;
+  // E-Mail aus manage-roles laden (hat Zugriff auf auth.users)
+  const rolesRes = await callManageRoles('getAll');
+  const userRole = (rolesRes.data||[]).find(u=>u.user_id===userId);
+  const emailFromAuth = userRole ? userRole.email : null;
+
+  // E-Mail und Auth-Status anzeigen
+  const emailBereich = document.getElementById('euEmailBereich');
+  const keinAccount  = document.getElementById('euKeinAccount');
+  const emailAnzeige = document.getElementById('euEmailAnzeige');
+
+  if(_editUserId){
+    const email = emailFromAuth || (profile && profile.email) || '–';
+    if(emailAnzeige) emailAnzeige.textContent = email;
+    if(emailBereich) emailBereich.style.display = 'flex';
+    if(keinAccount)  keinAccount.style.display  = 'none';
+  } else {
+    if(emailBereich) emailBereich.style.display = 'none';
+    if(keinAccount)  keinAccount.style.display  = 'flex';
+  }
+
   loadEuRules(staffData);
   openModal('editUserModal');
 }
@@ -5468,9 +5520,13 @@ async function saveEditUser(){
   };
 
   if(_editUserId){
+    // E-Mail aus Anzeige übernehmen (wird beim Invite gesetzt)
+    const emailVal = document.getElementById('euEmailAnzeige') ?
+      document.getElementById('euEmailAnzeige').textContent.trim() : '';
     const { error } = await sb.from('user_profiles').upsert({
       user_id: _editUserId, name, vorname, position, handy, kostenstelle,
-      soll, auto1, pool_auto: poolAuto, standort_ids: standortIds, gruppe_ids: gruppeIds
+      soll, auto1, pool_auto: poolAuto, standort_ids: standortIds, gruppe_ids: gruppeIds,
+      ...(emailVal && emailVal !== '–' ? {email: emailVal} : {})
     });
     if(error){ showToast('Fehler Profil: ' + error.message); return; }
 
@@ -5619,32 +5675,32 @@ function renderGruppenDienste(){
     sorted.map(d=>`
     <div style="display:grid;grid-template-columns:${cols};gap:4px;align-items:center;padding:6px 6px;background:var(--surface);border:1px solid var(--border);border-radius:8px">
       <input type="number" value="${d.position || 10}" min="1" max="99" title="Planungspriorität (1=zuerst geplant)"
-        onchange="updateGruppenDienst('${d.id}','position',this.value)"
+        onchange="updateGruppenDienst('${d.id}','position',this.value)" data-dienst-id="${d.id}" data-field="position"
         style="width:100%;padding:3px 2px;border:1.5px solid var(--accent);border-radius:5px;font-size:11px;background:var(--accent-soft);color:var(--accent);font-weight:700;text-align:center">
       <div style="font-size:11px;font-weight:700;color:#fff;padding:2px 4px;background:${d.farbe||'#0071e3'};border-radius:5px;text-align:center">${d.kuerzel}</div>
-      <input type="text" value="${d.label}" onchange="updateGruppenDienst('${d.id}','label',this.value)"
+      <input type="text" value="${d.label}" onchange="updateGruppenDienst('${d.id}','label',this.value)" data-dienst-id="${d.id}" data-field="label"
         style="padding:4px 6px;border:1px solid var(--border);border-radius:5px;font-size:11px;background:var(--surface);color:var(--text);width:100%">
-      <input type="time" value="${d.beginn||''}" onchange="updateGruppenDienst('${d.id}','beginn',this.value)"
+      <input type="time" value="${d.beginn||''}" onchange="updateGruppenDienst('${d.id}','beginn',this.value)" data-dienst-id="${d.id}" data-field="beginn"
         style="padding:4px 4px;border:1px solid var(--border);border-radius:5px;font-size:11px;background:var(--surface);color:var(--text);width:100%">
-      <input type="time" value="${d.ende||''}" onchange="updateGruppenDienst('${d.id}','ende',this.value)"
+      <input type="time" value="${d.ende||''}" onchange="updateGruppenDienst('${d.id}','ende',this.value)" data-dienst-id="${d.id}" data-field="ende"
         style="padding:4px 4px;border:1px solid var(--border);border-radius:5px;font-size:11px;background:var(--surface);color:var(--text);width:100%">
-      <input type="number" value="${d.pause_min||0}" min="0" max="120" step="5" onchange="updateGruppenDienst('${d.id}','pause_min',this.value)"
+      <input type="number" value="${d.pause_min||0}" min="0" max="120" step="5" onchange="updateGruppenDienst('${d.id}','pause_min',this.value)" data-dienst-id="${d.id}" data-field="pause_min"
         style="width:100%;padding:4px 2px;border:1px solid var(--border);border-radius:5px;font-size:11px;background:var(--surface);color:var(--text);text-align:center">
-      <input type="number" value="${d.min_tag || 0}" min="0" max="20" onchange="updateGruppenDienst('${d.id}','min_tag',this.value)"
+      <input type="number" value="${d.min_tag || 0}" min="0" max="20" onchange="updateGruppenDienst('${d.id}','min_tag',this.value)" data-dienst-id="${d.id}" data-field="min_tag"
         title="Min. Werktag" style="width:100%;padding:4px 2px;border:1px solid var(--border);border-radius:5px;font-size:11px;background:var(--surface);color:var(--text);text-align:center">
-      <input type="number" value="${d.max_tag || 5}" min="0" max="30" onchange="updateGruppenDienst('${d.id}','max_tag',this.value)"
+      <input type="number" value="${d.max_tag || 5}" min="0" max="30" onchange="updateGruppenDienst('${d.id}','max_tag',this.value)" data-dienst-id="${d.id}" data-field="max_tag"
         title="Max. Werktag" style="width:100%;padding:4px 2px;border:1px solid var(--border);border-radius:5px;font-size:11px;background:var(--surface);color:var(--text);text-align:center">
-      <input type="number" value="${d.min_we != null ? d.min_we : 0}" min="0" max="20" onchange="updateGruppenDienst('${d.id}','min_we',this.value)"
+      <input type="number" value="${d.min_we != null ? d.min_we : 0}" min="0" max="20" onchange="updateGruppenDienst('${d.id}','min_we',this.value)" data-dienst-id="${d.id}" data-field="min_we"
         title="Min. Wochenende (0 = nicht nötig)" style="width:100%;padding:4px 2px;border:1.5px solid var(--accent);border-radius:5px;font-size:11px;background:var(--accent-soft);color:var(--accent);text-align:center">
-      <input type="number" value="${d.max_we != null ? d.max_we : 5}" min="0" max="30" onchange="updateGruppenDienst('${d.id}','max_we',this.value)"
+      <input type="number" value="${d.max_we != null ? d.max_we : 5}" min="0" max="30" onchange="updateGruppenDienst('${d.id}','max_we',this.value)" data-dienst-id="${d.id}" data-field="max_we"
         title="Max. Wochenende" style="width:100%;padding:4px 2px;border:1.5px solid var(--accent);border-radius:5px;font-size:11px;background:var(--accent-soft);color:var(--accent);text-align:center">
-      <select onchange="updateGruppenDienst('${d.id}','typ',this.value)"
+      <select onchange="updateGruppenDienst('${d.id}','typ',this.value)" data-dienst-id="${d.id}" data-field="typ"
         style="width:100%;padding:3px 2px;border:1px solid var(--border);border-radius:5px;font-size:11px;background:var(--surface);color:var(--text)">
         <option value="normal" ${(d.typ||'normal')==='normal'?'selected':''}>Normal</option>
         <option value="bereitschaft" ${(d.typ||'normal')==='bereitschaft'?'selected':''}>Bereitschaft</option>
         <option value="sonder" ${(d.typ||'normal')==='sonder'?'selected':''}>Sonder</option>
       </select>
-      <input type="color" value="${d.farbe||'#0071e3'}" onchange="updateGruppenDienst('${d.id}','farbe',this.value)"
+      <input type="color" value="${d.farbe||'#0071e3'}" onchange="updateGruppenDienst('${d.id}','farbe',this.value)" data-dienst-id="${d.id}" data-field="farbe"
         style="width:26px;height:24px;padding:1px;border:1px solid var(--border);border-radius:5px;cursor:pointer">
       <button onclick="deleteGruppenDienst('${d.id}')"
         style="width:22px;height:22px;border:none;background:var(--red-soft);color:var(--red);border-radius:5px;cursor:pointer;font-size:12px;display:flex;align-items:center;justify-content:center">✕</button>
@@ -5701,7 +5757,15 @@ async function deleteGruppenDienst(id){
 }
 
 async function saveGruppenrahmen(){
-  // Dienste speichern (inkl. min_tag, max_tag, am_we, am_feiertag)
+  // Erst alle aktuellen Input-Werte aus dem DOM lesen
+  document.querySelectorAll('[data-dienst-id]').forEach(el => {
+    const id = el.dataset.dienstId;
+    const field = el.dataset.field;
+    if(!id || !field) return;
+    updateGruppenDienst(id, field, el.type==='checkbox' ? el.checked : el.value);
+  });
+
+  // Dienste speichern
   for(const d of _gruppenDienste){
     await sb.from('gruppe_dienste').update({
       label: d.label, beginn: d.beginn, ende: d.ende,
