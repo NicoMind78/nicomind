@@ -4341,7 +4341,7 @@ async function renderMeinUrlaub(){
   const urlaubVorjahr = (_meinsStaff && _meinsStaff.urlaubstage_vorjahr) || 0;
   const gesamtTage = urlaubJahr + urlaubVorjahr;
 
-  // Genehmigte Urlaubstage als Set
+  // Genehmigte Urlaubstage als Set – nur Werktage zählen
   const urlaubTage = new Set();
   const urlaubOffen = new Set();
   (antraege||[]).forEach(a => {
@@ -4350,13 +4350,22 @@ async function renderMeinUrlaub(){
     const bis = new Date(a.bis_datum+'T12:00:00');
     while(cur <= bis){
       const ds = fmtDate(cur);
-      if(a.status === 'genehmigt') urlaubTage.add(ds);
-      else if(a.status === 'offen') urlaubOffen.add(ds);
+      const dow = cur.getDay();
+      const isWE = dow===0||dow===6;
+      const isFt = !!hols[ds];
+      if(!isWE && !isFt){
+        if(a.status === 'genehmigt') urlaubTage.add(ds);
+        else if(a.status === 'offen') urlaubOffen.add(ds);
+      } else {
+        // WE/Feiertage trotzdem für Kalenderanzeige merken
+        if(a.status === 'genehmigt') urlaubTage.add(ds+'_we');
+        else if(a.status === 'offen') urlaubOffen.add(ds+'_we');
+      }
       cur.setDate(cur.getDate()+1);
     }
   });
 
-  const genehmigt = urlaubTage.size;
+  const genehmigt = [...urlaubTage].filter(d => !d.endsWith('_we')).length;
   const restTage = gesamtTage - genehmigt;
   const hols = holidaysForYear(jahr);
   const jetzt = new Date();
@@ -4376,8 +4385,8 @@ async function renderMeinUrlaub(){
       const dow = dt.getDay();
       const isWE = dow===0||dow===6;
       const isFt = !!hols[ds2];
-      const isUrlaub = urlaubTage.has(ds2);
-      const isOffen  = urlaubOffen.has(ds2);
+      const isUrlaub = urlaubTage.has(ds2) || urlaubTage.has(ds2+'_we');
+      const isOffen  = urlaubOffen.has(ds2) || urlaubOffen.has(ds2+'_we');
 
       // Selektion
       const isSel = sel.von && sel.bis && ds2 >= sel.von && ds2 <= sel.bis;
