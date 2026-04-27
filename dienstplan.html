@@ -917,7 +917,7 @@
 </div>
 
 <!-- Passwort Modal -->
-<div class="modal-overlay" id="passwortModal" onclick="if(event.target===this)closeModal('passwortModal')">
+<div class="modal-overlay" id="passwortModal" onclick="if(event.target===this)closeModal('passwortModal')" style="z-index:3000">
   <div class="modal" style="width:360px">
     <div class="modal-title">🔑 Passwort zurücksetzen</div>
     <div class="modal-sub" id="passwortModalSub">–</div>
@@ -4432,16 +4432,19 @@ async function renderMeinUrlaub(){
     <!-- Statistik -->
     <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:16px">
       <div style="background:var(--accent-soft);border:1.5px solid var(--accent);border-radius:12px;padding:12px;text-align:center">
-        <div style="font-size:26px;font-weight:700;color:var(--accent)">${restTage}</div>
-        <div style="font-size:11px;color:var(--accent)">Resturlaub</div>
+        <div style="font-size:26px;font-weight:700;color:var(--accent)">${gesamtTage}</div>
+        <div style="font-size:11px;color:var(--accent)">Voller Anspruch</div>
+        <div style="font-size:9px;color:var(--text3);margin-top:2px">${urlaubJahr} Tage${urlaubVorjahr>0?' + '+urlaubVorjahr+' Vorjahr':''}</div>
       </div>
-      <div style="background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:12px;text-align:center">
-        <div style="font-size:26px;font-weight:700;color:var(--text)">${genehmigt}</div>
-        <div style="font-size:11px;color:var(--text3)">Genommen</div>
+      <div style="background:rgba(52,199,89,.08);border:1.5px solid #34c759;border-radius:12px;padding:12px;text-align:center">
+        <div style="font-size:26px;font-weight:700;color:#1a7f37">${genehmigt}</div>
+        <div style="font-size:11px;color:#1a7f37">Verplant</div>
+        <div style="font-size:9px;color:var(--text3);margin-top:2px">genehmigt</div>
       </div>
-      <div style="background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:12px;text-align:center">
-        <div style="font-size:26px;font-weight:700;color:var(--text)">${gesamtTage}</div>
-        <div style="font-size:11px;color:var(--text3)">Gesamt</div>
+      <div style="background:${restTage>0?'rgba(0,113,227,.08)':'rgba(255,59,48,.06)'};border:1.5px solid ${restTage>0?'var(--accent)':'var(--red)'};border-radius:12px;padding:12px;text-align:center">
+        <div style="font-size:26px;font-weight:700;color:${restTage>0?'var(--accent)':'var(--red)'}">${restTage}</div>
+        <div style="font-size:11px;color:${restTage>0?'var(--accent)':'var(--red)'}">Unverplant</div>
+        <div style="font-size:9px;color:var(--text3);margin-top:2px">verbleibend</div>
       </div>
     </div>
 
