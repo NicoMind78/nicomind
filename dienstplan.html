@@ -4340,6 +4340,7 @@ async function renderMeinUrlaub(){
   const urlaubJahr = (_meinsStaff && _meinsStaff.urlaubstage_jahr) || 30;
   const urlaubVorjahr = (_meinsStaff && _meinsStaff.urlaubstage_vorjahr) || 0;
   const gesamtTage = urlaubJahr + urlaubVorjahr;
+  const hols = holidaysForYear(jahr);
 
   // Genehmigte Urlaubstage als Set – nur Werktage zählen
   const urlaubTage = new Set();
@@ -4367,7 +4368,6 @@ async function renderMeinUrlaub(){
 
   const genehmigt = [...urlaubTage].filter(d => !d.endsWith('_we')).length;
   const restTage = gesamtTage - genehmigt;
-  const hols = holidaysForYear(jahr);
   const jetzt = new Date();
   const vorjahrWarnung = urlaubVorjahr > 0 && jetzt.getMonth() < 3 && jahr === currentYear;
 
