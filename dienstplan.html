@@ -506,7 +506,7 @@
         <div class="settings-menu-item" onclick="openUserManagement()">👥 Benutzerverwaltung</div>
         <div class="settings-menu-item" id="menuUnternehmen" onclick="openUnternehmenModal()">🏭 Unternehmen</div>
         <div class="settings-menu-item" onclick="openStandorteModal()">🏢 Standorte</div>
-        <div class="settings-menu-item" id="menuUnternehmensrahmen" onclick="openUnternehmensrahmenModal()">⚖️ Unternehmensrahmen</div>
+        <div class="settings-menu-item" id="menuUnternehmensrahmen" onclick="openUnternehmensrahmenModal()">Unternehmensrahmen</div>
         <div class="settings-menu-item" onclick="openGruppenrahmenModal()">📋 Gruppen-Vorgaben</div>
         <div class="settings-menu-item" onclick="openStundenModal()">📊 Stundenübersicht</div>
         <div style="height:1px;background:var(--border);margin:4px 0"></div>
@@ -1509,7 +1509,7 @@
 <!-- Unternehmensrahmen Modal (Ebene 1) -->
 <div class="modal-overlay" id="unternehmensrahmenModal" onclick="if(event.target===this)closeModal('unternehmensrahmenModal')">
   <div class="modal modal-wide" style="max-height:85vh;display:flex;flex-direction:column">
-    <div class="modal-title">⚖️ Unternehmensrahmen</div>
+    <div class="modal-title">Unternehmensrahmen</div>
     <div class="modal-sub">Gesetzliche & betriebliche Rahmenbedingungen – gelten für alle Mitarbeiter</div>
     <div style="overflow-y:auto;flex:1;padding-right:4px">
 
@@ -1563,9 +1563,53 @@
       </div>
 
       <div style="background:var(--surface2);border-radius:10px;padding:14px;margin-bottom:12px">
-        <div style="font-size:11px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px">📅 Urlaubsregelung</div>
+        <div style="font-size:11px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:12px">Urlaubsregelung</div>
+
+        <!-- Bundesland -->
+        <div style="margin-bottom:10px">
+          <div style="font-size:11px;color:var(--text3);margin-bottom:3px">Bundesland (für Feiertage)</div>
+          <select id="ur_bundesland" style="width:100%;padding:7px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:12px;background:var(--surface);color:var(--text)">
+            <option value="Baden-Württemberg">Baden-Württemberg</option>
+            <option value="Bayern">Bayern</option>
+            <option value="Berlin">Berlin</option>
+            <option value="Brandenburg">Brandenburg</option>
+            <option value="Bremen">Bremen</option>
+            <option value="Hamburg">Hamburg</option>
+            <option value="Hessen">Hessen</option>
+            <option value="Mecklenburg-Vorpommern">Mecklenburg-Vorpommern</option>
+            <option value="Niedersachsen">Niedersachsen</option>
+            <option value="Nordrhein-Westfalen">Nordrhein-Westfalen</option>
+            <option value="Rheinland-Pfalz">Rheinland-Pfalz</option>
+            <option value="Saarland">Saarland</option>
+            <option value="Sachsen">Sachsen</option>
+            <option value="Sachsen-Anhalt">Sachsen-Anhalt</option>
+            <option value="Schleswig-Holstein">Schleswig-Holstein</option>
+            <option value="Thüringen">Thüringen</option>
+          </select>
+        </div>
+
+        <!-- 24.12 -->
+        <div style="margin-bottom:10px">
+          <div style="font-size:11px;color:var(--text3);margin-bottom:3px">24. Dezember (Heiligabend)</div>
+          <select id="ur_heiligabend" style="width:100%;padding:7px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:12px;background:var(--surface);color:var(--text)">
+            <option value="kein_feiertag">Normaler Arbeitstag</option>
+            <option value="halber_tag">Halber Arbeitstag (Soll 50%)</option>
+            <option value="feiertag">Feiertag (kein Urlaub nötig)</option>
+          </select>
+        </div>
+
+        <!-- 31.12 -->
+        <div style="margin-bottom:10px">
+          <div style="font-size:11px;color:var(--text3);margin-bottom:3px">31. Dezember (Silvester)</div>
+          <select id="ur_silvester" style="width:100%;padding:7px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:12px;background:var(--surface);color:var(--text)">
+            <option value="kein_feiertag">Normaler Arbeitstag</option>
+            <option value="halber_tag">Halber Arbeitstag (Soll 50%)</option>
+            <option value="feiertag">Feiertag (kein Urlaub nötig)</option>
+          </select>
+        </div>
+
         <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text);cursor:pointer">
-          <input type="checkbox" id="ur_we_urlaub" checked style="width:15px;height:15px"> Wochenende vor &amp; nach Urlaub frei (gilt für alle Mitarbeiter)
+          <input type="checkbox" id="ur_we_urlaub" checked style="width:15px;height:15px"> Wochenende vor &amp; nach Urlaub frei
         </label>
       </div>
 
@@ -1744,6 +1788,15 @@ async function syncToSupabase(){
 async function loadFromSupabase(){
   try {
     showToast('⏳ Lade Daten vom Server…');
+
+    // Unternehmensrahmen global laden
+    const urRes = await sb.from('unternehmensrahmen').select('*')
+      .eq('unternehmen_id', currentUnternehmenId).maybeSingle();
+    if(urRes.data){
+      _unternehmensrahmen = urRes.data;
+      // Feiertag-Cache leeren damit 24.12/31.12 Einstellung greift
+      Object.keys(_holidayCache).forEach(k=>delete _holidayCache[k]);
+    }
 
     // Staff nach aktuellem Unternehmen + Standort/Gruppe filtern
     let staffQuery = sb.from('staff').select('*').eq('unternehmen_id', currentUnternehmenId);
@@ -2095,26 +2148,37 @@ function renderGrid(){
   });
 }
 
-// ─── FEIERTAGE SCHLESWIG-HOLSTEIN ───
+// ─── FEIERTAGE – ALLE BUNDESLÄNDER ───────────────────────────────────────────
+
+let _currentBundesland = 'Bayern';
+let _unternehmensrahmen = null; // Default, wird aus DB geladen
+
+const BUNDESLAENDER = [
+  'Baden-Württemberg','Bayern','Berlin','Brandenburg','Bremen',
+  'Hamburg','Hessen','Mecklenburg-Vorpommern','Niedersachsen',
+  'Nordrhein-Westfalen','Rheinland-Pfalz','Saarland','Sachsen',
+  'Sachsen-Anhalt','Schleswig-Holstein','Thüringen'
+];
+
 function getEaster(y){
-  // Gauss/Anonymous algorithm
   const a=y%19, b=Math.floor(y/100), c=y%100;
   const d=Math.floor(b/4), e=b%4, f=Math.floor((b+8)/25);
   const g=Math.floor((b-f+1)/3), h=(19*a+b-d-g+15)%30;
   const i=Math.floor(c/4), k=c%4, l=(32+2*e+2*i-h-k)%7;
   const m=Math.floor((a+11*h+22*l)/451);
-  const month=Math.floor((h+l-7*m+114)/31)-1; // 0-based
+  const month=Math.floor((h+l-7*m+114)/31)-1;
   const day=((h+l-7*m+114)%31)+1;
   return new Date(y, month, day);
 }
 
-function getHolidaysSH(year){
+function getHolidaysByBundesland(year, bundesland){
   const e = getEaster(year);
   const ed = e.getTime();
   const off = n => { const d=new Date(ed); d.setDate(d.getDate()+n); return fmtDate(d); };
   const fix = (m,d) => `${year}-${String(m).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
 
-  return {
+  // Bundesweite Feiertage
+  const hols = {
     [fix(1,1)]:   'Neujahr',
     [off(-2)]:    'Karfreitag',
     [off(0)]:     'Ostersonntag',
@@ -2124,17 +2188,55 @@ function getHolidaysSH(year){
     [off(49)]:    'Pfingstsonntag',
     [off(50)]:    'Pfingstmontag',
     [fix(10,3)]:  'Tag der Deutschen Einheit',
-    [fix(10,31)]: 'Reformationstag',          // nur SH
     [fix(12,25)]: '1. Weihnachtstag',
     [fix(12,26)]: '2. Weihnachtstag',
   };
+
+  // Bundesland-spezifische Feiertage
+  const bl = bundesland || _currentBundesland;
+
+  if(['Baden-Württemberg','Bayern','Saarland','Sachsen-Anhalt'].includes(bl))
+    hols[fix(1,6)] = 'Heilige Drei Könige';
+
+  if(['Baden-Württemberg','Bayern','Hessen','Nordrhein-Westfalen',
+      'Rheinland-Pfalz','Saarland'].includes(bl))
+    hols[off(60)] = 'Fronleichnam';
+
+  if(['Bayern','Saarland'].includes(bl))
+    hols[fix(8,15)] = 'Mariä Himmelfahrt';
+
+  if(['Thüringen'].includes(bl))
+    hols[fix(9,20)] = 'Weltkindertag';
+
+  if(['Brandenburg','Bremen','Hamburg','Mecklenburg-Vorpommern',
+      'Niedersachsen','Sachsen','Sachsen-Anhalt','Schleswig-Holstein','Thüringen'].includes(bl))
+    hols[fix(10,31)] = 'Reformationstag';
+
+  if(['Baden-Württemberg','Bayern','Nordrhein-Westfalen',
+      'Rheinland-Pfalz','Saarland'].includes(bl))
+    hols[fix(11,1)] = 'Allerheiligen';
+
+  if(['Sachsen'].includes(bl))
+    hols[fix(11,19)] = 'Buß- und Bettag'; // Mittwoch vor dem 23. Nov – vereinfacht
+
+  if(['Berlin','Brandenburg','Mecklenburg-Vorpommern','Sachsen',
+      'Sachsen-Anhalt','Thüringen'].includes(bl))
+    hols[fix(3,8)] = 'Internationaler Frauentag';
+
+  // 24.12 / 31.12 aus Unternehmensrahmen
+  const ur = _unternehmensrahmen;
+  if(ur && ur.heiligabend === 'feiertag')    hols[fix(12,24)] = 'Heiligabend';
+  if(ur && ur.silvester   === 'feiertag')    hols[fix(12,31)] = 'Silvester';
+
+  return hols;
 }
 
-// Cache holidays per year
+// Cache per year+bundesland
 const _holidayCache = {};
-function holidaysForYear(y){
-  if(!_holidayCache[y]) _holidayCache[y] = getHolidaysSH(y);
-  return _holidayCache[y];
+function holidaysForYear(y, bl){
+  const key = `${y}_${bl||_currentBundesland}`;
+  if(!_holidayCache[key]) _holidayCache[key] = getHolidaysByBundesland(y, bl||_currentBundesland);
+  return _holidayCache[key];
 }
 function getHolidayName(dateStr){
   const y = parseInt(dateStr.slice(0,4));
@@ -2146,12 +2248,18 @@ function getHolidayName(dateStr){
 function calcMonthSoll(soll, year, month){
   const days = daysInMonth(year, month);
   const hols = holidaysForYear(year);
+  const ur = _unternehmensrahmen;
   let workdays = 0;
   for(let d=1; d<=days; d++){
     const dt = new Date(year, month, d);
     const dow = dt.getDay();
     const ds = fmtDate(dt);
-    if(dow >= 1 && dow <= 5 && !hols[ds]) workdays++;
+    if(dow >= 1 && dow <= 5 && !hols[ds]){
+      // Halber Tag für 24.12 / 31.12
+      const isHeiligabend = ds.endsWith('-12-24') && ur && ur.heiligabend === 'halber_tag';
+      const isSilvester   = ds.endsWith('-12-31') && ur && ur.silvester   === 'halber_tag';
+      workdays += (isHeiligabend || isSilvester) ? 0.5 : 1;
+    }
   }
   return workdays * (soll / 5);
 }
@@ -4385,8 +4493,8 @@ async function renderMeinUrlaub(){
       const dow = dt.getDay();
       const isWE = dow===0||dow===6;
       const isFt = !!hols[ds2];
-      const isUrlaub = urlaubTage.has(ds2) || urlaubTage.has(ds2+'_we');
-      const isOffen  = urlaubOffen.has(ds2) || urlaubOffen.has(ds2+'_we');
+      const isUrlaub = !isWE && !isFt && urlaubTage.has(ds2);
+      const isOffen  = !isWE && !isFt && urlaubOffen.has(ds2);
 
       // Selektion
       const isSel = sel.von && sel.bis && ds2 >= sel.von && ds2 <= sel.bis;
@@ -5667,6 +5775,12 @@ async function openUnternehmensrahmenModal(){
   document.getElementById('settingsMenu').style.display='none';
   const { data } = await sb.from('unternehmensrahmen')
     .select('*').eq('unternehmen_id', currentUnternehmenId).single();
+
+  // Bundesland aus Unternehmen laden
+  const u = allUnternehmen.find(u=>u.id===currentUnternehmenId);
+  const bl = (u && u.bundesland) || 'Bayern';
+  document.getElementById('ur_bundesland').value = bl;
+
   if(data){
     document.getElementById('ur_max_std_tag').value       = data.max_stunden_tag || 10;
     document.getElementById('ur_max_std_woche').value     = data.max_stunden_woche || 56;
@@ -5675,12 +5789,27 @@ async function openUnternehmensrahmenModal(){
     document.getElementById('ur_we_urlaub').checked       = data.we_vor_urlaub_frei !== false;
     document.getElementById('ur_betriebsvereinbarung').value = data.betriebsvereinbarung || '';
     document.getElementById('ur_tarifvertrag').value      = data.tarifvertrag || '';
+    document.getElementById('ur_heiligabend').value       = data.heiligabend || 'kein_feiertag';
+    document.getElementById('ur_silvester').value         = data.silvester   || 'kein_feiertag';
   }
   loadZuschlaege();
   openModal('unternehmensrahmenModal');
 }
 
 async function saveUnternehmensrahmen(){
+  // Bundesland im Unternehmen speichern
+  const bl = document.getElementById('ur_bundesland').value;
+  await sb.from('unternehmen').update({ bundesland: bl }).eq('id', currentUnternehmenId);
+
+  // Bundesland sofort anwenden
+  _currentBundesland = bl;
+  Object.keys(_holidayCache).forEach(k=>delete _holidayCache[k]);
+  const uIdx = allUnternehmen.findIndex(u=>u.id===currentUnternehmenId);
+  if(uIdx>=0) allUnternehmen[uIdx].bundesland = bl;
+
+  const heiligabend = document.getElementById('ur_heiligabend').value;
+  const silvester   = document.getElementById('ur_silvester').value;
+
   const payload = {
     unternehmen_id:       currentUnternehmenId,
     max_stunden_tag:      parseFloat(document.getElementById('ur_max_std_tag').value) || 10,
@@ -5691,11 +5820,18 @@ async function saveUnternehmensrahmen(){
     we_nach_urlaub_frei:  document.getElementById('ur_we_urlaub').checked,
     betriebsvereinbarung: document.getElementById('ur_betriebsvereinbarung').value.trim(),
     tarifvertrag:         document.getElementById('ur_tarifvertrag').value.trim(),
+    heiligabend, silvester,
   };
   const { error } = await sb.from('unternehmensrahmen').upsert(payload, { onConflict: 'unternehmen_id' });
   if(error){ showToast('Fehler: ' + error.message); return; }
-  showToast('✅ Unternehmensrahmen gespeichert');
+
+  // _unternehmensrahmen aktualisieren
+  if(!_unternehmensrahmen) _unternehmensrahmen = {};
+  Object.assign(_unternehmensrahmen, payload);
+
+  showToast(`✅ Gespeichert – Bundesland: ${bl}`);
   closeModal('unternehmensrahmenModal');
+  render(); // Dienstplan neu rendern mit neuen Feiertagen
 }
 
 // ─── GRUPPENRAHMEN (Ebene 2) ───
@@ -5908,6 +6044,12 @@ async function loadUnternehmenData(){
     } catch(e){
       currentUnternehmenId = allUnternehmen[0].id;
     }
+  }
+  // Bundesland setzen und Holiday-Cache leeren
+  const u = allUnternehmen.find(u=>u.id===currentUnternehmenId);
+  if(u && u.bundesland){
+    _currentBundesland = u.bundesland;
+    Object.keys(_holidayCache).forEach(k=>delete _holidayCache[k]);
   }
   updateUnternehmenLabel();
 }
