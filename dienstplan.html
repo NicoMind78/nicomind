@@ -816,12 +816,20 @@
 
   <!-- Header -->
   <div style="display:flex;align-items:center;gap:12px;padding:14px 20px;background:var(--surface);border-bottom:1px solid var(--border);flex-shrink:0">
-    <div style="width:36px;height:36px;border-radius:50%;background:var(--accent);display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;color:#fff" id="meinsAvatar">M</div>
-    <div style="flex:1">
-      <div style="font-size:15px;font-weight:700;color:var(--text)" id="meinsName">Mein Bereich</div>
-      <div style="font-size:11px;color:var(--text3)" id="meinsRolle">–</div>
+    <!-- Roter Apple-Schließen-Punkt -->
+    <div onclick="closeMeins()" title="Schließen"
+      style="width:13px;height:13px;border-radius:50%;background:#ff5f57;cursor:pointer;flex-shrink:0;box-shadow:0 0 0 1px rgba(0,0,0,.15);transition:opacity .15s"
+      onmouseover="this.innerHTML='<svg width=7 height=7 viewBox=\'0 0 10 10\' style=\'position:absolute;margin-top:-3.5px;margin-left:-3.5px\'><line x1=2 y1=2 x2=8 y2=8 stroke=\'#800000\' stroke-width=1.5/><line x1=8 y1=2 x2=2 y2=8 stroke=\'#800000\' stroke-width=1.5/></svg>'"
+      onmouseout="this.innerHTML=''">
     </div>
-    <button onclick="closeMeins()" style="padding:6px 16px;border:1.5px solid var(--border);border-radius:8px;background:var(--surface);color:var(--text2);font-size:12px;cursor:pointer">✕ Schließen</button>
+    <!-- Name & Rolle rechts -->
+    <div style="flex:1;display:flex;align-items:center;gap:10px;justify-content:flex-end">
+      <div style="text-align:right">
+        <div style="font-size:15px;font-weight:700;color:var(--text)" id="meinsName">Mein Bereich</div>
+        <div style="font-size:11px;color:var(--text3)" id="meinsRolle">–</div>
+      </div>
+      <div style="width:36px;height:36px;border-radius:50%;background:var(--accent);display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;color:#fff;flex-shrink:0" id="meinsAvatar">M</div>
+    </div>
   </div>
 
   <!-- Body -->
@@ -4558,9 +4566,9 @@ async function renderMeinUrlaub(){
         <div style="font-size:11px;color:#1a7f37">Verplant</div>
         <div style="font-size:9px;color:var(--text3);margin-top:2px">genehmigt</div>
       </div>
-      <div style="background:${restTage>0?'rgba(0,113,227,.08)':'rgba(255,59,48,.06)'};border:1.5px solid ${restTage>0?'var(--accent)':'var(--red)'};border-radius:12px;padding:12px;text-align:center">
-        <div style="font-size:26px;font-weight:700;color:${restTage>0?'var(--accent)':'var(--red)'}">${restTage}</div>
-        <div style="font-size:11px;color:${restTage>0?'var(--accent)':'var(--red)'}">Unverplant</div>
+      <div style="background:rgba(255,214,10,.15);border:1.5px solid #cc9a00;border-radius:12px;padding:12px;text-align:center">
+        <div style="font-size:26px;font-weight:700;color:#7a5a00">${restTage}</div>
+        <div style="font-size:11px;color:#7a5a00">Unverplant</div>
         <div style="font-size:9px;color:var(--text3);margin-top:2px">verbleibend</div>
       </div>
     </div>
@@ -4587,8 +4595,8 @@ async function renderMeinUrlaub(){
       <!-- Urlaub beantragen Button -->
       <div id="urlaubSelInfo" style="margin-top:10px;display:${window._urlaubSel&&window._urlaubSel.von?'block':'none'}">
         <button onclick="openUrlaubBestaetigenModal()"
-          style="width:100%;padding:8px 16px;border:1.5px solid var(--border);border-radius:8px;background:var(--surface);color:var(--text);font-size:12px;font-weight:600;cursor:pointer;transition:all .15s"
-          onmouseover="this.style.background='var(--surface2)'" onmouseout="this.style.background='var(--surface)'">
+          style="padding:6px 14px;border:1.5px solid #34c759;border-radius:8px;background:rgba(52,199,89,.12);color:#1a7f37;font-size:12px;font-weight:600;cursor:pointer;transition:all .15s;white-space:nowrap"
+          onmouseover="this.style.background='rgba(52,199,89,.22)'" onmouseout="this.style.background='rgba(52,199,89,.12)'">
           Urlaub beantragen
         </button>
       </div>
