@@ -3981,8 +3981,8 @@ async function loadAdminUrlaub(){
     const name = s ? s.name : `Staff ${a.staff_id}`;
     const von = new Date(a.von_datum+'T12:00:00').toLocaleDateString('de-DE',{day:'numeric',month:'short'});
     const bis = new Date(a.bis_datum+'T12:00:00').toLocaleDateString('de-DE',{day:'numeric',month:'short',year:'numeric'});
-    const statusCol = {offen:'var(--orange)', genehmigt:'var(--green)', abgelehnt:'var(--red)'};
-    const statusTxt = {offen:'🕐 Ausstehend', genehmigt:'✅ Genehmigt', abgelehnt:'❌ Abgelehnt'};
+    const statusCol = {offen:'var(--orange)', genehmigt:'var(--green)', abgelehnt:'var(--red)', storniert:'var(--text3)'};
+    const statusTxt = {offen:'🕐 Ausstehend', genehmigt:'✅ Genehmigt', abgelehnt:'❌ Abgelehnt', storniert:'🚫 Storniert'};
 
     return `
       <div style="padding:12px 14px;background:var(--surface);border:1px solid var(--border);border-radius:10px">
@@ -4006,7 +4006,13 @@ async function loadAdminUrlaub(){
             style="flex:1;padding:8px;border:none;border-radius:8px;background:#ff3b30;color:#fff;font-size:12px;font-weight:600;cursor:pointer">
             ❌ Ablehnen
           </button>
-        </div>` : a.ablehnungsgrund ? `<div style="margin-top:6px;font-size:11px;color:var(--red)">Grund: ${a.ablehnungsgrund}</div>` : ''}
+        </div>` : a.status==='genehmigt' ? `
+        <div style="margin-top:8px">
+          <button onclick="urlaubEntscheiden('${a.id}','storniert')"
+            style="padding:6px 14px;border:1.5px solid var(--text3);border-radius:8px;background:var(--surface2);color:var(--text2);font-size:11px;font-weight:600;cursor:pointer">
+            🚫 Stornieren
+          </button>
+        </div>` : (a.ablehnungsgrund||a.stornogrund) ? `<div style="margin-top:6px;font-size:11px;color:var(--red)">${a.status==='storniert'?'Stornogrund:':'Grund:'} ${a.ablehnungsgrund||a.stornogrund}</div>` : ''}
       </div>`;
   }).join('');
 
@@ -4018,6 +4024,12 @@ async function urlaubEntscheiden(id, status){
   if(status === 'abgelehnt'){
     grund = prompt('Ablehnungsgrund (wird dem MA angezeigt):');
     if(grund === null) return;
+    if(!grund.trim()){ showToast('Bitte Ablehnungsgrund eingeben'); return; }
+  }
+  if(status === 'storniert'){
+    grund = prompt('Stornogrund (wird dem MA angezeigt):');
+    if(grund === null) return;
+    if(!grund.trim()){ showToast('Bitte Stornogrund eingeben'); return; }
   }
   const { data: { session } } = await sb.auth.getSession();
   await sb.from('urlaubsantraege').update({
@@ -4026,7 +4038,8 @@ async function urlaubEntscheiden(id, status){
     entschieden_von: session && session.user && session.user.id,
     entschieden_am: new Date().toISOString()
   }).eq('id', id);
-  showToast(status === 'genehmigt' ? '✅ Urlaub genehmigt' : '❌ Urlaub abgelehnt');
+  const msg = status==='genehmigt' ? '✅ Urlaub genehmigt' : status==='storniert' ? '🚫 Urlaub storniert' : '❌ Urlaub abgelehnt';
+  showToast(msg);
   loadAdminUrlaub();
 }
 
@@ -4536,10 +4549,11 @@ async function renderMeinUrlaub(){
 
   // ── Anträge Liste ────────────────────────────────────────────────────────────
   const statusBadge = s => {
-    const map = {offen:'🕐 Ausstehend', genehmigt:'✅ Genehmigt', abgelehnt:'❌ Abgelehnt'};
-    const col = {offen:'var(--orange)', genehmigt:'var(--green)', abgelehnt:'var(--red)'};
+    const map = {offen:'🕐 Ausstehend', genehmigt:'✅ Genehmigt', abgelehnt:'❌ Abgelehnt', storniert:'🚫 Storniert'};
+    const col = {offen:'var(--orange)', genehmigt:'var(--green)', abgelehnt:'var(--red)', storniert:'var(--text3)'};
     return `<span style="font-size:11px;font-weight:600;color:${col[s]||'var(--text3)'}">${map[s]||s}</span>`;
   };
+  // Stornierte Anträge aus Zählung ausschließen
   const dieseJahrAntraege = (antraege||[]).filter(a=>new Date(a.von_datum).getFullYear()===jahr);
   const antraegeHtml = dieseJahrAntraege.length ? dieseJahrAntraege.map(a => `
     <div style="padding:10px 12px;background:var(--surface);border:1px solid var(--border);border-radius:10px">
@@ -4550,7 +4564,7 @@ async function renderMeinUrlaub(){
         </div>
         ${statusBadge(a.status)}
       </div>
-      ${a.ablehnungsgrund?`<div style="margin-top:4px;font-size:11px;color:var(--red)">Grund: ${a.ablehnungsgrund}</div>`:''}
+      ${a.ablehnungsgrund?`<div style="margin-top:4px;font-size:11px;color:var(--red)">${a.status==='storniert'?'Stornogrund:':'Grund:'} ${a.ablehnungsgrund}</div>`:''}
     </div>`).join('') : `<div style="font-size:12px;color:var(--text3)">Keine Anträge für ${jahr}</div>`;
 
   content.innerHTML = `
@@ -4598,6 +4612,14 @@ async function renderMeinUrlaub(){
           style="padding:6px 14px;border:1.5px solid #34c759;border-radius:8px;background:rgba(52,199,89,.12);color:#1a7f37;font-size:12px;font-weight:600;cursor:pointer;transition:all .15s;white-space:nowrap"
           onmouseover="this.style.background='rgba(52,199,89,.22)'" onmouseout="this.style.background='rgba(52,199,89,.12)'">
           Urlaub beantragen
+        </button>
+      </div>
+      <!-- Urlaubskarte drucken Button -->
+      <div style="margin-top:8px">
+        <button onclick="druckeUrlaubskarte()"
+          style="padding:6px 14px;border:1.5px solid var(--border);border-radius:8px;background:var(--surface);color:var(--text2);font-size:12px;font-weight:500;cursor:pointer;transition:all .15s"
+          onmouseover="this.style.borderColor='var(--accent)';this.style.color='var(--accent)'" onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--text2)'">
+          🖨️ Urlaubskarte drucken
         </button>
       </div>
     </div>
@@ -4664,6 +4686,77 @@ async function urlaubSelBestaetigen(){
   window._urlaubSel = {von:null, bis:null};
   showToast(`✅ ${tage} Urlaubstag${tage!==1?'e':''} beantragt – warte auf Genehmigung`);
   renderMeinUrlaub();
+}
+
+function druckeUrlaubskarte(){
+  const jahr = window._urlaubJahrAnzeige || currentYear;
+  const hols = holidaysForYear(jahr);
+  const s = _meinsStaff;
+  const unternehmen = allUnternehmen.find(u=>u.id===currentUnternehmenId);
+  const gruppe = allGruppen.find(g=>String(g.id)===String(currentGruppeId));
+  const staffName = s ? s.name : '';
+  const urlaubJahr = (s && s.urlaubstage_jahr) || 30;
+
+  const monate = ['Januar','Februar','März','April','Mai','Juni',
+    'Juli','August','September','Oktober','November','Dezember'];
+
+  const kalenderRows = monate.map((mName, mIdx) => {
+    const tage = daysInMonth(jahr, mIdx);
+    const chips = [];
+    for(let d=1; d<=tage; d++){
+      const dt = new Date(jahr, mIdx, d);
+      const ds = fmtDate(dt);
+      const dow = dt.getDay();
+      const isWE = dow===0||dow===6;
+      const isFt = !!hols[ds];
+      const isUrlaub = urlaubTage && urlaubTage.has(ds);
+      const isOffen  = urlaubOffen && urlaubOffen.has(ds);
+      let bg='#fff', border='#ddd', color='#333', fw='normal';
+      if(isUrlaub){ bg='#34c759'; border='#28a745'; color='#fff'; fw='bold'; }
+      else if(isOffen){ bg='#fffbe6'; border='#cc9a00'; color='#7a5a00'; }
+      else if(isFt){ bg='#fff5e6'; border='#e6a020'; color='#7a4a00'; }
+      else if(isWE){ bg='#f5f5f5'; border='#ccc'; color='#999'; }
+      chips.push(`<div style="display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:3px;background:${bg};border:1px solid ${border};font-size:9px;font-weight:${fw};color:${color};margin:1px">${d}</div>`);
+    }
+    return `<tr><td style="font-size:11px;font-weight:600;color:#333;padding:3px 10px 3px 0;white-space:nowrap">${mName}</td><td>${chips.join('')}</td></tr>`;
+  }).join('');
+
+  const printWin = window.open('', '_blank', 'width=1100,height=750');
+  printWin.document.write(`<!DOCTYPE html><html><head>
+    <meta charset="UTF-8">
+    <title>Urlaubskarte ${staffName} ${jahr}</title>
+    <style>
+      @page { size: A4 landscape; margin: 12mm 15mm; }
+      body { font-family: -apple-system, Arial, sans-serif; margin:0; padding:0; color:#222; }
+      .header { display:flex; justify-content:space-between; align-items:flex-end; border-bottom:2px solid #222; padding-bottom:8px; margin-bottom:14px; }
+      h1 { font-size:18px; margin:0 0 2px 0; }
+      .sub { font-size:11px; color:#666; }
+      table { border-collapse:collapse; width:100%; }
+      .legende { display:flex; gap:16px; margin-top:14px; flex-wrap:wrap; border-top:1px solid #ddd; padding-top:10px; }
+      .li { display:flex; align-items:center; gap:5px; font-size:10px; color:#555; }
+      .lb { width:14px; height:14px; border-radius:3px; border:1px solid #ccc; flex-shrink:0; }
+      @media print { body { -webkit-print-color-adjust:exact; print-color-adjust:exact; } }
+    </style>
+  </head><body>
+    <div class="header">
+      <div>
+        <h1>Urlaubskarte ${jahr}</h1>
+        <div class="sub">${staffName}${gruppe?' · '+gruppe.name:''}${unternehmen?' · '+unternehmen.name:''}</div>
+      </div>
+      <div style="text-align:right;font-size:11px;color:#666">
+        Urlaubsanspruch: <strong>${urlaubJahr} Tage</strong>
+      </div>
+    </div>
+    <table><tbody>${kalenderRows}</tbody></table>
+    <div class="legende">
+      <div class="li"><div class="lb" style="background:#34c759;border-color:#28a745"></div>Urlaub genehmigt</div>
+      <div class="li"><div class="lb" style="background:#fffbe6;border-color:#cc9a00"></div>Urlaub ausstehend</div>
+      <div class="li"><div class="lb" style="background:#fff5e6;border-color:#e6a020"></div>Feiertag (${_currentBundesland})</div>
+      <div class="li"><div class="lb" style="background:#f5f5f5;border-color:#ccc"></div>Wochenende</div>
+    </div>
+    <script>window.onload=()=>{window.print();}<\/script>
+  </body></html>`);
+  printWin.document.close();
 }
 
 function urlaubKalenderKlick(ds){
