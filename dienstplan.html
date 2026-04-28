@@ -4607,17 +4607,14 @@ async function renderMeinUrlaub(){
       <div style="overflow-x:auto">${kalender}</div>
 
       <!-- Urlaub beantragen Button -->
-      <div id="urlaubSelInfo" style="margin-top:10px;display:${window._urlaubSel&&window._urlaubSel.von?'block':'none'}">
-        <button onclick="openUrlaubBestaetigenModal()"
-          style="padding:6px 14px;border:1.5px solid #34c759;border-radius:8px;background:rgba(52,199,89,.12);color:#1a7f37;font-size:12px;font-weight:600;cursor:pointer;transition:all .15s;white-space:nowrap"
-          onmouseover="this.style.background='rgba(52,199,89,.22)'" onmouseout="this.style.background='rgba(52,199,89,.12)'">
+      <!-- Buttons nebeneinander -->
+      <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap">
+        <button id="btnUrlaubBeantragen" onclick="openUrlaubBestaetigenModal()"
+          style="padding:6px 14px;border:1.5px solid var(--border);border-radius:8px;background:var(--surface2);color:var(--text3);font-size:12px;font-weight:600;cursor:pointer;transition:all .15s;white-space:nowrap;pointer-events:none;opacity:.5">
           Urlaub beantragen
         </button>
-      </div>
-      <!-- Urlaubskarte drucken Button -->
-      <div style="margin-top:8px">
         <button onclick="druckeUrlaubskarte()"
-          style="padding:6px 14px;border:1.5px solid var(--border);border-radius:8px;background:var(--surface);color:var(--text2);font-size:12px;font-weight:500;cursor:pointer;transition:all .15s"
+          style="padding:6px 14px;border:1.5px solid var(--border);border-radius:8px;background:var(--surface);color:var(--text2);font-size:12px;font-weight:500;cursor:pointer;transition:all .15s;white-space:nowrap"
           onmouseover="this.style.borderColor='var(--accent)';this.style.color='var(--accent)'" onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--text2)'">
           🖨️ Urlaubskarte drucken
         </button>
@@ -4688,14 +4685,35 @@ async function urlaubSelBestaetigen(){
   renderMeinUrlaub();
 }
 
-function druckeUrlaubskarte(){
+async function druckeUrlaubskarte(){
+  if(!_meinsStaffId) await ladeMeinsStaff();
+  if(!_meinsStaffId){ showToast('Kein Mitarbeiter-Datensatz'); return; }
+
   const jahr = window._urlaubJahrAnzeige || currentYear;
   const hols = holidaysForYear(jahr);
   const s = _meinsStaff;
   const unternehmen = allUnternehmen.find(u=>u.id===currentUnternehmenId);
   const gruppe = allGruppen.find(g=>String(g.id)===String(currentGruppeId));
   const staffName = s ? s.name : '';
-  const urlaubJahr = (s && s.urlaubstage_jahr) || 30;
+  const urlaubJahr2 = (s && s.urlaubstage_jahr) || 30;
+
+  // Urlaub frisch laden
+  const { data: antraege } = await sb.from('urlaubsantraege')
+    .select('*').eq('staff_id', _meinsStaffId).order('von_datum');
+
+  const uTage = new Set();
+  const uOffen = new Set();
+  (antraege||[]).forEach(a => {
+    if(a.status === 'storniert' || a.status === 'abgelehnt') return;
+    let cur = new Date(a.von_datum+'T12:00:00');
+    const bis = new Date(a.bis_datum+'T12:00:00');
+    while(cur <= bis){
+      const ds = fmtDate(cur);
+      if(a.status === 'genehmigt') uTage.add(ds);
+      else if(a.status === 'offen') uOffen.add(ds);
+      cur.setDate(cur.getDate()+1);
+    }
+  });
 
   const monate = ['Januar','Februar','März','April','Mai','Juni',
     'Juli','August','September','Oktober','November','Dezember'];
@@ -4709,11 +4727,11 @@ function druckeUrlaubskarte(){
       const dow = dt.getDay();
       const isWE = dow===0||dow===6;
       const isFt = !!hols[ds];
-      const isUrlaub = urlaubTage && urlaubTage.has(ds);
-      const isOffen  = urlaubOffen && urlaubOffen.has(ds);
+      const isUrlaub = uTage.has(ds);
+      const isOffen2 = uOffen.has(ds);
       let bg='#fff', border='#ddd', color='#333', fw='normal';
       if(isUrlaub){ bg='#34c759'; border='#28a745'; color='#fff'; fw='bold'; }
-      else if(isOffen){ bg='#fffbe6'; border='#cc9a00'; color='#7a5a00'; }
+      else if(isOffen2){ bg='#fffbe6'; border='#cc9a00'; color='#7a5a00'; }
       else if(isFt){ bg='#fff5e6'; border='#e6a020'; color='#7a4a00'; }
       else if(isWE){ bg='#f5f5f5'; border='#ccc'; color='#999'; }
       chips.push(`<div style="display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:3px;background:${bg};border:1px solid ${border};font-size:9px;font-weight:${fw};color:${color};margin:1px">${d}</div>`);
@@ -4722,6 +4740,7 @@ function druckeUrlaubskarte(){
   }).join('');
 
   const printWin = window.open('', '_blank', 'width=1100,height=750');
+  if(!printWin){ showToast('Bitte Pop-up Blocker deaktivieren'); return; }
   printWin.document.write(`<!DOCTYPE html><html><head>
     <meta charset="UTF-8">
     <title>Urlaubskarte ${staffName} ${jahr}</title>
@@ -4743,9 +4762,7 @@ function druckeUrlaubskarte(){
         <h1>Urlaubskarte ${jahr}</h1>
         <div class="sub">${staffName}${gruppe?' · '+gruppe.name:''}${unternehmen?' · '+unternehmen.name:''}</div>
       </div>
-      <div style="text-align:right;font-size:11px;color:#666">
-        Urlaubsanspruch: <strong>${urlaubJahr} Tage</strong>
-      </div>
+      <div style="text-align:right;font-size:11px;color:#666">Urlaubsanspruch: <strong>${urlaubJahr2} Tage</strong></div>
     </div>
     <table><tbody>${kalenderRows}</tbody></table>
     <div class="legende">
@@ -4764,15 +4781,23 @@ function urlaubKalenderKlick(ds){
   const sel = window._urlaubSel;
 
   if(!sel.von || (sel.von && sel.bis)){
-    // Neuer Start
     sel.von = ds; sel.bis = null;
   } else if(ds < sel.von){
-    // Klick vor Start → neuer Start
     sel.von = ds; sel.bis = null;
   } else {
-    // Ende setzen
     sel.bis = ds;
   }
+
+  // Button grün schalten
+  const btn = document.getElementById('btnUrlaubBeantragen');
+  if(btn && sel.von){
+    btn.style.borderColor = '#34c759';
+    btn.style.background  = 'rgba(52,199,89,.12)';
+    btn.style.color       = '#1a7f37';
+    btn.style.opacity     = '1';
+    btn.style.pointerEvents = 'auto';
+  }
+
   renderMeinUrlaub();
 }
 
