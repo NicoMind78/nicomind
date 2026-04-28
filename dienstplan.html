@@ -4584,10 +4584,12 @@ async function renderMeinUrlaub(){
       <!-- Kalender -->
       <div style="overflow-x:auto">${kalender}</div>
 
-      <!-- Urlaubsantrag Button -->
-      <div id="urlaubSelInfo" style="margin-top:10px;display:${window._urlaubSel&&window._urlaubSel.von&&window._urlaubSel.bis?'block':'none'}">
-        <button onclick="openUrlaubBestaetigenModal()" class="btn btn-secondary btn-sm" style="width:100%">
-          🏖️ Urlaubsantrag
+      <!-- Urlaub beantragen Button -->
+      <div id="urlaubSelInfo" style="margin-top:10px;display:${window._urlaubSel&&window._urlaubSel.von?'block':'none'}">
+        <button onclick="openUrlaubBestaetigenModal()"
+          style="width:100%;padding:8px 16px;border:1.5px solid var(--border);border-radius:8px;background:var(--surface);color:var(--text);font-size:12px;font-weight:600;cursor:pointer;transition:all .15s"
+          onmouseover="this.style.background='var(--surface2)'" onmouseout="this.style.background='var(--surface)'">
+          Urlaub beantragen
         </button>
       </div>
     </div>
@@ -4599,10 +4601,11 @@ async function renderMeinUrlaub(){
 
 function openUrlaubBestaetigenModal(){
   const sel = window._urlaubSel;
-  if(!sel || !sel.von || !sel.bis){ showToast('Bitte erst Start- und Enddatum im Kalender wählen'); return; }
-  const hols = holidaysForYear(parseInt(sel.von.slice(0,4)));
+  if(!sel || !sel.von){ showToast('Bitte erst einen Tag im Kalender wählen'); return; }
+  // Einzeltag: bis = von
+  if(!sel.bis) sel.bis = sel.von;
 
-  // Werktage zählen
+  const hols = holidaysForYear(parseInt(sel.von.slice(0,4)));
   let tage = 0;
   let cur = new Date(sel.von+'T12:00:00');
   const bis = new Date(sel.bis+'T12:00:00');
@@ -4615,15 +4618,19 @@ function openUrlaubBestaetigenModal(){
 
   const vonDE = new Date(sel.von+'T12:00:00').toLocaleDateString('de-DE',{day:'numeric',month:'long'});
   const bisDE = new Date(sel.bis+'T12:00:00').toLocaleDateString('de-DE',{day:'numeric',month:'long',year:'numeric'});
+  const zeitraum = sel.von === sel.bis
+    ? new Date(sel.von+'T12:00:00').toLocaleDateString('de-DE',{weekday:'long',day:'numeric',month:'long',year:'numeric'})
+    : `${vonDE} – ${bisDE}`;
 
-  document.getElementById('urlaubBestaetigenZeitraum').textContent = `${vonDE} – ${bisDE}`;
+  document.getElementById('urlaubBestaetigenZeitraum').textContent = zeitraum;
   document.getElementById('urlaubBestaetigenInfo').textContent = `${tage} Urlaubstag${tage!==1?'e':''}`;
   openModal('urlaubBestaetigenModal');
 }
 
 async function urlaubSelBestaetigen(){
   const sel = window._urlaubSel;
-  if(!sel || !sel.von || !sel.bis){ showToast('Bitte Zeitraum im Kalender wählen'); return; }
+  if(!sel || !sel.von){ showToast('Bitte Zeitraum im Kalender wählen'); return; }
+  if(!sel.bis) sel.bis = sel.von;
   if(!_meinsStaffId){ showToast('Fehler: Kein Mitarbeiter-Datensatz – bitte Admin kontaktieren'); return; }
 
   const hols = holidaysForYear(parseInt(sel.von.slice(0,4)));
