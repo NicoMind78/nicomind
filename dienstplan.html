@@ -4476,6 +4476,7 @@ async function renderMeinUrlaub(){
   const urlaubOffen = new Set();
   (antraege||[]).forEach(a => {
     if(new Date(a.von_datum).getFullYear() !== jahr) return;
+    if(a.status === 'storniert' || a.status === 'abgelehnt') return; // nicht zählen!
     let cur = new Date(a.von_datum+'T12:00:00');
     const bis = new Date(a.bis_datum+'T12:00:00');
     while(cur <= bis){
@@ -4729,14 +4730,14 @@ async function druckeUrlaubskarte(){
       const isFt = !!hols[ds];
       const isUrlaub = uTage.has(ds);
       const isOffen2 = uOffen.has(ds);
-      let bg='#fff', border='#ddd', color='#333', fw='normal';
-      if(isUrlaub){ bg='#34c759'; border='#28a745'; color='#fff'; fw='bold'; }
-      else if(isOffen2){ bg='#fffbe6'; border='#cc9a00'; color='#7a5a00'; }
-      else if(isFt){ bg='#fff5e6'; border='#e6a020'; color='#7a4a00'; }
-      else if(isWE){ bg='#f5f5f5'; border='#ccc'; color='#999'; }
-      chips.push(`<div style="display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:3px;background:${bg};border:1px solid ${border};font-size:9px;font-weight:${fw};color:${color};margin:1px">${d}</div>`);
+      let bg='#fff', border='#e0e0e0', color='#333', fw='400';
+      if(isUrlaub && !isWE && !isFt){ bg='#34c759'; border='#28a745'; color='#fff'; fw='700'; }
+      else if(isOffen2 && !isWE && !isFt){ bg='rgba(255,214,10,.25)'; border='#cc9a00'; color='#7a5a00'; }
+      else if(isFt){ bg='rgba(255,149,0,.12)'; border='rgba(255,149,0,.35)'; color='#7a4a00'; }
+      else if(isWE){ bg='rgba(142,142,147,.1)'; border='rgba(142,142,147,.25)'; color='#999'; }
+      chips.push(`<span class="chip" style="background:${bg};border:1px solid ${border};color:${color};font-weight:${fw}">${d}</span>`);
     }
-    return `<tr><td style="font-size:11px;font-weight:600;color:#333;padding:3px 10px 3px 0;white-space:nowrap">${mName}</td><td>${chips.join('')}</td></tr>`;
+    return `<tr><td class="mn">${mName}</td><td>${chips.join('')}</td></tr>`;
   }).join('');
 
   const printWin = window.open('', '_blank', 'width=1100,height=750');
@@ -4746,12 +4747,15 @@ async function druckeUrlaubskarte(){
     <title>Urlaubskarte ${staffName} ${jahr}</title>
     <style>
       @page { size: A4 landscape; margin: 0; }
-      body { font-family: -apple-system, Arial, sans-serif; margin:0; padding:1cm; color:#222; box-sizing:border-box; border: 1px solid #000; min-height: calc(210mm - 2cm); }
-      .rahmen { border: 1.5px solid #222; padding: 0.8cm; min-height: calc(210mm - 2.5cm); box-sizing:border-box; }
+      body { font-family: -apple-system, Arial, sans-serif; margin:0; padding:1cm; color:#222; box-sizing:border-box; }
+      .rahmen { border: 1.5px solid #222; padding: 0.8cm; box-sizing:border-box; }
       .header { display:flex; justify-content:space-between; align-items:flex-end; border-bottom:2px solid #222; padding-bottom:8px; margin-bottom:14px; }
       h1 { font-size:18px; margin:0 0 2px 0; }
       .sub { font-size:11px; color:#666; }
       table { border-collapse:collapse; width:100%; }
+      td { vertical-align:middle; }
+      .mn { font-size:11px; font-weight:600; color:#333; padding:3px 10px 3px 0; white-space:nowrap; }
+      .chip { display:inline-flex; align-items:center; justify-content:center; width:26px; height:26px; border-radius:5px; font-size:10px; margin:1px; }
       .legende { display:flex; gap:16px; margin-top:14px; flex-wrap:wrap; border-top:1px solid #ddd; padding-top:10px; }
       .li { display:flex; align-items:center; gap:5px; font-size:10px; color:#555; }
       .lb { width:14px; height:14px; border-radius:3px; border:1px solid #ccc; flex-shrink:0; }
@@ -4790,17 +4794,17 @@ function urlaubKalenderKlick(ds){
     sel.bis = ds;
   }
 
-  // Button grün schalten
-  const btn = document.getElementById('btnUrlaubBeantragen');
-  if(btn && sel.von){
-    btn.style.borderColor = '#34c759';
-    btn.style.background  = 'rgba(52,199,89,.12)';
-    btn.style.color       = '#1a7f37';
-    btn.style.opacity     = '1';
-    btn.style.pointerEvents = 'auto';
-  }
-
-  renderMeinUrlaub();
+  renderMeinUrlaub().then(()=>{
+    // Nach dem Render Button grün schalten wenn Tag ausgewählt
+    const btn = document.getElementById('btnUrlaubBeantragen');
+    if(btn && window._urlaubSel && window._urlaubSel.von){
+      btn.style.borderColor   = '#34c759';
+      btn.style.background    = 'rgba(52,199,89,.12)';
+      btn.style.color         = '#1a7f37';
+      btn.style.opacity       = '1';
+      btn.style.pointerEvents = 'auto';
+    }
+  });
 }
 
 async function openUrlaubsantrag(){
