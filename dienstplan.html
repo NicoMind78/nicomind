@@ -1957,9 +1957,13 @@ async function loadFromSupabase(){
     }
 
     localStorage.setItem('pflegeplan_v3', JSON.stringify(state));
+    // Monats-Sperre für aktuellen Monat laden
+    const sperrRes = await sb.from('monats_sperren').select('*')
+      .eq('gruppe_id', currentGruppeId)
+      .eq('jahr', currentYear).eq('monat', currentMonth).maybeSingle();
+    _monatsSperre = sperrRes.data || null;
     render();
     showToast('✅ Daten geladen');
-    // Änderungshistorie laden (für Badge auf Chips) – nach render, damit Fehler nicht blockieren
     loadDienstplanAenderungen().then(() => render());
   } catch(e){
     console.warn('Supabase load failed:', e.message);
@@ -5707,22 +5711,25 @@ async function loadDienstplanAenderungen(){
 }
 
 async function logAenderung(key, altDienst, neuDienst, tauschAntragId=null){
-  // Monats-Sperre prüfen – lazy load wenn nötig
-  if(!_monatsSperre){
-    const ds = key.split('_')[1]; // YYYY-MM-DD
-    if(!ds) return;
-    const [y,m] = ds.split('-').map(Number);
-    showToast(`DEBUG query: gruppe=${currentGruppeId?.substring(0,8)} jahr=${y} monat=${m-1}`);
-    const {data, error} = await sb.from('monats_sperren').select('*')
-      .eq('gruppe_id', currentGruppeId).eq('jahr', y).eq('monat', m-1).maybeSingle();
-    showToast(`DEBUG result: data=${JSON.stringify(data)?.substring(0,60)} err=${error?.message}`);
-    _monatsSperre = data || null;
-  }
-  // Nur loggen wenn Monat gesperrt – oder wenn es ein Tausch ist (hat eigenen Audit-Trail)
   const isTausch = !!tauschAntragId;
-  if(!isTausch && !(_monatsSperre && _monatsSperre.gesperrt)){
-    showToast(`DEBUG: kein Log. gesperrt=${_monatsSperre?.gesperrt}`);
-    return;
+  // Bei manueller Änderung: Sperre prüfen
+  if(!isTausch){
+    // _monatsSperre könnte null sein wenn nie geladen – direkt aus DB holen
+    let sperre = _monatsSperre;
+    if(!sperre){
+      const ds = key.split('_')[1];
+      if(!ds) return;
+      const [y,m] = ds.split('-').map(Number);
+      // Alle möglichen Sperren für diese Gruppe laden (ignoriert Monat-Indexing-Probleme)
+      const {data} = await sb.from('monats_sperren').select('*')
+        .eq('gruppe_id', currentGruppeId)
+        .eq('gesperrt', true)
+        .eq('jahr', y)
+        .maybeSingle();
+      sperre = data || null;
+      if(sperre) _monatsSperre = sperre;
+    }
+    if(!(sperre && sperre.gesperrt)) return;
   }
 
   const ds = key.split('_')[1];
@@ -5983,7 +5990,14 @@ async function toggleMonatSperre(){
       entsperrt_am: null,
       entsperrt_notiz: null
     };
-    await sb.from('monats_sperren').upsert(payload, {onConflict:'gruppe_id,jahr,monat'});
+    // Sicheres INSERT/UPDATE (kein upsert ohne garantierten UNIQUE constraint)
+    const {data: existing} = await sb.from('monats_sperren').select('id')
+      .eq('gruppe_id', currentGruppeId).eq('jahr', currentYear).eq('monat', currentMonth).maybeSingle();
+    if(existing?.id){
+      await sb.from('monats_sperren').update(payload).eq('id', existing.id);
+    } else {
+      await sb.from('monats_sperren').insert(payload);
+    }
     showToast('🔒 Monat gesperrt');
     await logFreigabe(); // Freigabe als Start der Änderungshistorie dokumentieren
   }
