@@ -5994,9 +5994,11 @@ async function toggleMonatSperre(){
     const {data: existing} = await sb.from('monats_sperren').select('id')
       .eq('gruppe_id', currentGruppeId).eq('jahr', currentYear).eq('monat', currentMonth).maybeSingle();
     if(existing?.id){
-      await sb.from('monats_sperren').update(payload).eq('id', existing.id);
+      const {error:ue} = await sb.from('monats_sperren').update(payload).eq('id', existing.id);
+      if(ue){ showToast('⚠️ Sperre-Update Fehler: '+ue.message); return; }
     } else {
-      await sb.from('monats_sperren').insert(payload);
+      const {error:ie} = await sb.from('monats_sperren').insert(payload);
+      if(ie){ showToast('⚠️ Sperre-Insert Fehler: '+ie.message); return; }
     }
     showToast('🔒 Monat gesperrt');
     await logFreigabe(); // Freigabe als Start der Änderungshistorie dokumentieren
