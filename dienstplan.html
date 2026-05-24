@@ -2376,9 +2376,15 @@ function quickEdit(staffId,dateStr){
   const dt = new Date(dateStr+'T12:00:00');
   if(_monatsSperre && _monatsSperre.gesperrt &&
      dt.getFullYear()===currentYear && dt.getMonth()===currentMonth){
-    const canUnlock = ['owner','master_admin','admin','personal'].includes(currentUserRole);
-    showToast('🔒 Monat gesperrt' + (canUnlock ? ' – über Stundenübersicht entsperren' : ''));
-    return;
+    const canOverride = ['owner','master_admin','admin','personal','planer'].includes(currentUserRole);
+    if(!canOverride){
+      showToast('🔒 Monat gesperrt – Änderungen nur durch Admin/Planer');
+      return;
+    }
+    // Admin/Planer dürfen mit Bestätigung ändern – wird dokumentiert
+    if(!confirm('⚠️ Dieser Monat ist festgeschrieben.\n\nÄnderung trotzdem vornehmen?\nDie Änderung wird im Audit-Protokoll dokumentiert.')){
+      return;
+    }
   }
   _editStaffId=staffId; _editDate=dateStr;
   const staff=state.staff.find(s=>s.id==staffId);
