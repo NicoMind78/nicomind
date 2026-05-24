@@ -2479,10 +2479,11 @@ async function saveEntry(){
     state.entries[key] = entryData; 
     if(state.allEntries) state.allEntries[key] = entryData;
   }
-  saveData(); closeModal('entryModal'); render(); showToast('Dienst gespeichert ✓');
-  // Audit-Trail: Änderung nach Freigabe loggen
+  saveData(); closeModal('entryModal'); showToast('Dienst gespeichert ✓');
+  // Audit-Trail: Änderung nach Freigabe loggen – erst dann render() damit Badge sofort erscheint
   const neuDienst = _selectedShift || null;
-  if(altDienst !== neuDienst) logAenderung(key, altDienst, neuDienst);
+  if(altDienst !== neuDienst) await logAenderung(key, altDienst, neuDienst);
+  render();
 }
 
 // ─── STAFF ───
