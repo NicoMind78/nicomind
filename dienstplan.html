@@ -5710,15 +5710,19 @@ async function logAenderung(key, altDienst, neuDienst, tauschAntragId=null){
   // Monats-Sperre prüfen – lazy load wenn nötig
   if(!_monatsSperre){
     const ds = key.split('_')[1]; // YYYY-MM-DD
-    if(!ds) return;
+    if(!ds){ showToast('DEBUG: kein Datum im Key: '+key); return; }
     const [y,m] = ds.split('-').map(Number);
     const {data} = await sb.from('monats_sperren').select('*')
       .eq('gruppe_id', currentGruppeId).eq('jahr', y).eq('monat', m-1).maybeSingle();
     _monatsSperre = data || null;
+    showToast('DEBUG lazy load: gesperrt='+(_monatsSperre?.gesperrt)+' key='+key);
   }
   // Nur loggen wenn Monat gesperrt – oder wenn es ein Tausch ist (hat eigenen Audit-Trail)
   const isTausch = !!tauschAntragId;
-  if(!isTausch && !(_monatsSperre && _monatsSperre.gesperrt)) return;
+  if(!isTausch && !(_monatsSperre && _monatsSperre.gesperrt)){
+    showToast('DEBUG: nicht gesperrt – kein Log. gesperrt='+(_monatsSperre?.gesperrt));
+    return;
+  }
 
   const ds = key.split('_')[1];
   if(!ds) return;
