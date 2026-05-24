@@ -1957,10 +1957,10 @@ async function loadFromSupabase(){
     }
 
     localStorage.setItem('pflegeplan_v3', JSON.stringify(state));
-    // Änderungshistorie laden (für Badge auf Chips)
-    await loadDienstplanAenderungen();
     render();
     showToast('✅ Daten geladen');
+    // Änderungshistorie laden (für Badge auf Chips) – nach render, damit Fehler nicht blockieren
+    loadDienstplanAenderungen().then(() => render());
   } catch(e){
     console.warn('Supabase load failed:', e.message);
     showToast('⚠️ Server nicht erreichbar – lokale Daten');
@@ -5689,19 +5689,21 @@ async function vollzieheTausch(antrag){
 async function loadDienstplanAenderungen(){
   if(!currentGruppeId) return;
   _dienstplanAenderungen = {};
-  const {data} = await sb.from('dienstplan_aenderungen')
-    .select('*').eq('gruppe_id', currentGruppeId)
-    .order('geaendert_am',{ascending:true});
-  (data||[]).forEach(a => {
-    if(a.event_type === 'freigabe'){
-      // Freigabe-Eintrag: key = __freigabe__JAHR_MONAT
-      const fk = `__freigabe__${a.jahr}_${a.monat}`;
-      _dienstplanAenderungen[fk] = a;
-    } else {
-      if(!_dienstplanAenderungen[a.entry_key]) _dienstplanAenderungen[a.entry_key] = [];
-      _dienstplanAenderungen[a.entry_key].push(a);
-    }
-  });
+  try {
+    const {data, error} = await sb.from('dienstplan_aenderungen')
+      .select('*').eq('gruppe_id', currentGruppeId)
+      .order('geaendert_am',{ascending:true});
+    if(error){ console.warn('dienstplan_aenderungen Fehler:', error.message); return; }
+    (data||[]).forEach(a => {
+      if(a.event_type === 'freigabe'){
+        const fk = `__freigabe__${a.jahr}_${a.monat}`;
+        _dienstplanAenderungen[fk] = a;
+      } else {
+        if(!_dienstplanAenderungen[a.entry_key]) _dienstplanAenderungen[a.entry_key] = [];
+        _dienstplanAenderungen[a.entry_key].push(a);
+      }
+    });
+  } catch(e){ console.warn('loadDienstplanAenderungen:', e.message); }
 }
 
 async function logAenderung(key, altDienst, neuDienst, tauschAntragId=null){
@@ -5736,11 +5738,13 @@ async function logAenderung(key, altDienst, neuDienst, tauschAntragId=null){
     monat:              m - 1,
     unternehmen_id:     currentUnternehmenId
   };
-  const {data, error} = await sb.from('dienstplan_aenderungen').insert(payload).select().single();
-  if(error){ console.warn('Aenderungslog Fehler:', error.message); return; }
-  // Lokal updaten
-  if(!_dienstplanAenderungen[key]) _dienstplanAenderungen[key] = [];
-  _dienstplanAenderungen[key].push(data);
+  try {
+    const {data, error} = await sb.from('dienstplan_aenderungen').insert(payload).select().single();
+    if(error){ showToast('⚠️ Änderungslog: '+error.message); console.warn(error); return; }
+    // Lokal updaten damit Badge sofort erscheint
+    if(!_dienstplanAenderungen[key]) _dienstplanAenderungen[key] = [];
+    _dienstplanAenderungen[key].push(data);
+  } catch(e){ showToast('⚠️ Änderungslog Fehler: '+e.message); }
 }
 
 async function logFreigabe(){
