@@ -460,6 +460,20 @@
     background: var(--red); border: 1.5px solid white;
     pointer-events: none;
   }
+  .aenderungs-badge {
+    position: absolute; top: -3px; left: -3px;
+    width: 8px; height: 8px; border-radius: 50%;
+    background: #ffcc00; border: 1.5px solid white;
+    cursor: pointer; z-index: 10; transition: transform .15s;
+  }
+  .aenderungs-badge:hover { transform: scale(1.5); }
+  .aenderungs-popover {
+    position: fixed; z-index: 4000;
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 12px; box-shadow: 0 8px 32px rgba(0,0,0,.18);
+    padding: 14px 16px; min-width: 260px; max-width: 320px;
+    font-size: 12px; color: var(--text);
+  }
   /* TOAST */
   .toast-area { position: fixed; bottom: 24px; right: 24px; z-index: 200; display: flex; flex-direction: column; gap: 7px; }
   .toast {
@@ -1943,6 +1957,8 @@ async function loadFromSupabase(){
     }
 
     localStorage.setItem('pflegeplan_v3', JSON.stringify(state));
+    // Änderungshistorie laden (für Badge auf Chips)
+    await loadDienstplanAenderungen();
     render();
     showToast('✅ Daten geladen');
   } catch(e){
@@ -2162,13 +2178,16 @@ function renderGrid(){
       const conflictDot = conflict ? `<span class="chip-conflict-dot" title="In ${getConflictStandort(staff.id, ds)} eingetragen"></span>` : '';
       // Suche zuerst in Gruppendiensten, dann in SHIFT_MAP
       const gruppenDienstChip = entry ? _gruppenDienste.find(gd=>gd.kuerzel===entry.shift) : null;
+      // Änderungs-Badge (gelb, oben links) – nur wenn Eintrag nach Freigabe geändert wurde
+      const hasAenderung = (_dienstplanAenderungen[key]||[]).length > 0;
+      const aenderungsBadge = hasAenderung ? `<span class="aenderungs-badge" onclick="event.stopPropagation();showAenderungsPopover('${key}',event)" title="Geändert nach Freigabe – Klick für Details"></span>` : '';
       if(shift || gruppenDienstChip){
         const chipCls   = gruppenDienstChip ? getChipClass(gruppenDienstChip.kuerzel) : shift.cls;
         const chipIcon  = gruppenDienstChip ? gruppenDienstChip.kuerzel : shift.icon;
         const chipLabel = gruppenDienstChip ? gruppenDienstChip.label   : shift.label;
-        html+=`<button class="shift-chip ${chipCls}" onclick="quickEdit('${staff.id}','${ds}')" title="${chipLabel}${(entry && entry.info)?' – '+entry.info:''}${tipExtra}${conflict?' 🔴 Konflikt mit '+getConflictStandort(staff.id,ds):''}" style="position:relative">${chipIcon}${conflictDot}</button>`;
+        html+=`<button class="shift-chip ${chipCls}" onclick="quickEdit('${staff.id}','${ds}')" title="${chipLabel}${(entry && entry.info)?' – '+entry.info:''}${tipExtra}${conflict?' 🔴 Konflikt mit '+getConflictStandort(staff.id,ds):''}${hasAenderung?' 🟡 Geändert nach Freigabe':''}" style="position:relative">${chipIcon}${conflictDot}${aenderungsBadge}</button>`;
       } else {
-        html+=`<button class="shift-chip chip-frei" onclick="quickEdit('${staff.id}','${ds}')" title="${holName?holName+' – ':''}Frei / Eintrag ändern${conflict?' 🔴 In '+getConflictStandort(staff.id,ds)+' eingetragen':''}" style="position:relative">✕${conflictDot}</button>`;
+        html+=`<button class="shift-chip chip-frei" onclick="quickEdit('${staff.id}','${ds}')" title="${holName?holName+' – ':''}Frei / Eintrag ändern${conflict?' 🔴 In '+getConflictStandort(staff.id,ds)+' eingetragen':''}${hasAenderung?' 🟡 Geändert nach Freigabe':''}" style="position:relative">✕${conflictDot}${aenderungsBadge}</button>`;
       }
       html+='</div>';
     }
@@ -2435,6 +2454,9 @@ async function saveEntry(){
   const info=document.getElementById('entryInfo').value.trim();
   const key=`${staffId}_${dateStr}`;
 
+  // Alt-Dienst für Audit-Trail vor Änderung merken
+  const altDienst = state.entries[key]?.shift || null;
+
   // Konflikt-Prüfung: ist dieser Mitarbeiter an diesem Tag woanders eingeplant?
   if(_selectedShift && hasConflict(staffId, dateStr)){
     const conflictStandort = getConflictStandort(staffId, dateStr);
@@ -2458,6 +2480,9 @@ async function saveEntry(){
     if(state.allEntries) state.allEntries[key] = entryData;
   }
   saveData(); closeModal('entryModal'); render(); showToast('Dienst gespeichert ✓');
+  // Audit-Trail: Änderung nach Freigabe loggen
+  const neuDienst = _selectedShift || null;
+  if(altDienst !== neuDienst) logAenderung(key, altDienst, neuDienst);
 }
 
 // ─── STAFF ───
@@ -5649,9 +5674,177 @@ async function vollzieheTausch(antrag){
   }).eq('id',antrag.id);
   if(e3) console.warn('Audit-Trail Update Fehler:',e3.message);
 
+  // 5. Änderungshistorie für beide betroffenen Einträge loggen
+  await logAenderung(newKeyA, shiftA, shiftB, antrag.id);
+  await logAenderung(newKeyB, shiftB, shiftA, antrag.id);
+
   showToast(`✅ Tausch vollzogen: ${datA} ⇄ ${datB}`);
   render(); // Dienstplan-Grid neu rendern
   loadAdminTausch();
+}
+
+// ── ÄNDERUNGSHISTORIE ─────────────────────────────────────────────────────────
+
+async function loadDienstplanAenderungen(){
+  if(!currentGruppeId) return;
+  _dienstplanAenderungen = {};
+  const {data} = await sb.from('dienstplan_aenderungen')
+    .select('*').eq('gruppe_id', currentGruppeId)
+    .order('geaendert_am',{ascending:true});
+  (data||[]).forEach(a => {
+    if(a.event_type === 'freigabe'){
+      // Freigabe-Eintrag: key = __freigabe__JAHR_MONAT
+      const fk = `__freigabe__${a.jahr}_${a.monat}`;
+      _dienstplanAenderungen[fk] = a;
+    } else {
+      if(!_dienstplanAenderungen[a.entry_key]) _dienstplanAenderungen[a.entry_key] = [];
+      _dienstplanAenderungen[a.entry_key].push(a);
+    }
+  });
+}
+
+async function logAenderung(key, altDienst, neuDienst, tauschAntragId=null){
+  // Monats-Sperre prüfen – lazy load wenn nötig
+  if(!_monatsSperre){
+    const ds = key.split('_')[1]; // YYYY-MM-DD
+    if(!ds) return;
+    const [y,m] = ds.split('-').map(Number);
+    const {data} = await sb.from('monats_sperren').select('*')
+      .eq('gruppe_id', currentGruppeId).eq('jahr', y).eq('monat', m-1).maybeSingle();
+    _monatsSperre = data || null;
+  }
+  // Nur loggen wenn Monat gesperrt – oder wenn es ein Tausch ist (hat eigenen Audit-Trail)
+  const isTausch = !!tauschAntragId;
+  if(!isTausch && !(_monatsSperre && _monatsSperre.gesperrt)) return;
+
+  const ds = key.split('_')[1];
+  if(!ds) return;
+  const [y,m] = ds.split('-').map(Number);
+
+  const payload = {
+    entry_key:          key,
+    event_type:         isTausch ? 'tausch' : 'aenderung',
+    alt_dienst:         altDienst || null,
+    neu_dienst:         neuDienst || null,
+    geaendert_am:       new Date().toISOString(),
+    geaendert_von:      currentUserId,
+    geaendert_von_name: _currentUserName || '–',
+    tausch_antrag_id:   tauschAntragId || null,
+    gruppe_id:          currentGruppeId,
+    jahr:               y,
+    monat:              m - 1,
+    unternehmen_id:     currentUnternehmenId
+  };
+  const {data, error} = await sb.from('dienstplan_aenderungen').insert(payload).select().single();
+  if(error){ console.warn('Aenderungslog Fehler:', error.message); return; }
+  // Lokal updaten
+  if(!_dienstplanAenderungen[key]) _dienstplanAenderungen[key] = [];
+  _dienstplanAenderungen[key].push(data);
+}
+
+async function logFreigabe(){
+  const payload = {
+    entry_key:          null,
+    event_type:         'freigabe',
+    alt_dienst:         null,
+    neu_dienst:         null,
+    geaendert_am:       new Date().toISOString(),
+    geaendert_von:      currentUserId,
+    geaendert_von_name: _currentUserName || '–',
+    tausch_antrag_id:   null,
+    gruppe_id:          currentGruppeId,
+    jahr:               currentYear,
+    monat:              currentMonth,
+    unternehmen_id:     currentUnternehmenId
+  };
+  const {data, error} = await sb.from('dienstplan_aenderungen').insert(payload).select().single();
+  if(error){ console.warn('Freigabe-Log Fehler:', error.message); return; }
+  _dienstplanAenderungen[`__freigabe__${currentYear}_${currentMonth}`] = data;
+}
+
+function showAenderungsPopover(key, event){
+  event.stopPropagation();
+  closeAenderungsPopover();
+
+  const changes = _dienstplanAenderungen[key] || [];
+  if(!changes.length) return;
+
+  // Datum aus key extrahieren für Freigabe-Lookup
+  const ds = key.split('_')[1]; // YYYY-MM-DD
+  const [y, m] = ds ? ds.split('-').map(Number) : [currentYear, currentMonth+1];
+  const freigabe = _dienstplanAenderungen[`__freigabe__${y}_${m-1}`];
+
+  const fmtTs = (ts) => {
+    if(!ts) return '–';
+    const d = new Date(ts);
+    return d.toLocaleDateString('de-DE',{day:'numeric',month:'short',year:'numeric'})
+      + ' ' + d.toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'}) + ' Uhr';
+  };
+  const shiftLabel = (k) => {
+    if(!k) return '–';
+    const gd = _gruppenDienste.find(g=>g.kuerzel===k);
+    if(gd) return `${k} (${gd.label})`;
+    const sm = SHIFT_MAP[k];
+    return sm ? `${sm.icon} ${sm.label}` : k;
+  };
+
+  let html = `<div style="font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px">📋 Änderungshistorie</div>`;
+
+  // Freigabe als Startpunkt
+  if(freigabe){
+    html += `<div style="display:flex;gap:8px;margin-bottom:10px;padding-bottom:10px;border-bottom:1px solid var(--border)">
+      <div style="font-size:16px;line-height:1;margin-top:1px">🔒</div>
+      <div>
+        <div style="font-weight:600;color:var(--text)">Plan freigegeben</div>
+        <div style="color:var(--text3);margin-top:2px">${fmtTs(freigabe.geaendert_am)}</div>
+        <div style="color:var(--text2);margin-top:1px">von ${freigabe.geaendert_von_name||'–'}</div>
+      </div>
+    </div>`;
+  }
+
+  // Alle Änderungen chronologisch
+  changes.forEach((c, i) => {
+    const isTausch = c.event_type === 'tausch';
+    const icon = isTausch ? '🔄' : '✏️';
+    const label = isTausch ? 'Diensttausch' : 'Manuell geändert';
+    html += `<div style="display:flex;gap:8px;${i < changes.length-1 ? 'margin-bottom:10px;padding-bottom:10px;border-bottom:1px solid var(--border)' : ''}">
+      <div style="font-size:16px;line-height:1;margin-top:1px">${icon}</div>
+      <div>
+        <div style="font-weight:600;color:var(--text)">${label}</div>
+        <div style="margin-top:3px">
+          <span style="color:var(--text3)">${shiftLabel(c.alt_dienst)||'–'}</span>
+          <span style="color:var(--text3);margin:0 5px">→</span>
+          <span style="color:var(--accent);font-weight:600">${shiftLabel(c.neu_dienst)||'–'}</span>
+        </div>
+        <div style="color:var(--text3);margin-top:2px">${fmtTs(c.geaendert_am)}</div>
+        <div style="color:var(--text2);margin-top:1px">von ${c.geaendert_von_name||'–'}</div>
+      </div>
+    </div>`;
+  });
+
+  const popover = document.createElement('div');
+  popover.className = 'aenderungs-popover';
+  popover.id = 'aenderungsPopover';
+  popover.innerHTML = html;
+
+  // Positionierung
+  const rect = event.target.getBoundingClientRect();
+  const top = rect.top + window.scrollY + 12;
+  const left = Math.min(rect.left + window.scrollX + 12, window.innerWidth - 340);
+  popover.style.top = top + 'px';
+  popover.style.left = Math.max(8, left) + 'px';
+
+  document.body.appendChild(popover);
+
+  // Schließen bei Klick außen
+  setTimeout(() => {
+    document.addEventListener('click', closeAenderungsPopover, {once:true});
+  }, 50);
+}
+
+function closeAenderungsPopover(){
+  const el = document.getElementById('aenderungsPopover');
+  if(el) el.remove();
 }
 
 function openPasswortModal(){
@@ -5698,6 +5891,8 @@ async function neuesPasswortVergeben(){
 let _stundenTab = 'planer';
 let _monatsSperre = null;
 let _zuschlaege = [];
+let _dienstplanAenderungen = {};
+let _currentUserName = '';
 
 async function openStundenModal(){
   document.getElementById('settingsMenu').style.display = 'none';
@@ -5780,6 +5975,7 @@ async function toggleMonatSperre(){
     };
     await sb.from('monats_sperren').upsert(payload, {onConflict:'gruppe_id,jahr,monat'});
     showToast('🔒 Monat gesperrt');
+    await logFreigabe(); // Freigabe als Start der Änderungshistorie dokumentieren
   }
   // Neu laden
   const sperrRes = await sb.from('monats_sperren')
@@ -6038,6 +6234,9 @@ async function loadUserRole(){
   const { data: { session } } = await sb.auth.getSession();
   if(!session) return;
   currentUserId = session.user.id;
+  // Namen des eingeloggten Users für Audit-Trail cachen
+  sb.from('user_profiles').select('name,vorname').eq('user_id', currentUserId).maybeSingle()
+    .then(({data:p}) => { if(p) _currentUserName = `${p.vorname||''} ${p.name||''}`.trim(); });
   // Direkt lesen – eigene Rolle ist per RLS erlaubt
   const { data, error } = await sb.from('user_roles').select('role').eq('user_id', currentUserId).single();
   if(data){
