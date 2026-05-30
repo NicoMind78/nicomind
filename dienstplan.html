@@ -5943,10 +5943,12 @@ async function sendNotification(to, subject, html){
 async function getEmailForStaff(staffId){
   if(!staffId) return null;
   const s = state.staff.find(x => x.id == staffId);
-  if(!s) return null;
-  const {data} = await sb.from('user_profiles')
+  if(!s){ showToast('DEBUG: Staff '+staffId+' nicht in state.staff'); return null; }
+  const lastName = s.name.split(' ').pop();
+  const {data, error} = await sb.from('user_profiles')
     .select('email').eq('unternehmen_id', currentUnternehmenId)
-    .ilike('name', `%${s.name.split(' ').pop()}%`).maybeSingle();
+    .ilike('name', `%${lastName}%`).maybeSingle();
+  showToast(`DEBUG email: staff="${s.name}" last="${lastName}" email="${data?.email||'null'}" err="${error?.message||'–'}"`);
   return data?.email || null;
 }
 
