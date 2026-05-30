@@ -5490,29 +5490,67 @@ async function saveTauschAntrag(){
   if(error){ showToast('Fehler: '+error.message); return; }
   closeModal('tauschAntragModal');
   showToast('✅ Tausch-Antrag gestellt – Kollege muss zustimmen');
+  // Notification an Tauschpartner
+  const partnerEmail = await getEmailForStaff(partnerId);
+  if(partnerEmail){
+    const meinName = _meinsStaff?.name || 'Ein Kollege';
+    const fmtD = (d) => new Date(d+'T12:00:00').toLocaleDateString('de-DE',{weekday:'short',day:'numeric',month:'long'});
+    sendNotification(partnerEmail,
+      `🔄 Tausch-Anfrage von ${meinName}`,
+      emailHtml(`${meinName} möchte einen Dienst tauschen`, [
+        `<strong>${meinName}</strong> schlägt folgenden Tausch vor:`,
+        `📅 Sein/Ihr Tag: <strong>${fmtD(myDate)} (${shiftA||'–'})</strong>`,
+        `📅 Dein Tag: <strong>${fmtD(partnerDate)} (${shiftB||'–'})</strong>`,
+        notiz ? `💬 Notiz: <em>${notiz}</em>` : '',
+        `Bitte melde dich in der App um den Tausch anzunehmen oder abzulehnen.`
+      ].filter(Boolean), 'Zur App', 'https://curenio.de/dienstplan.html')
+    );
+  }
   renderMeineTausche();
 }
 
 async function tauschPartnerAntwort(antragId, annehmen){
   if(!annehmen){
     const grund = prompt('Ablehnungsgrund (optional):');
-    if(grund===null) return; // Abgebrochen
+    if(grund===null) return;
     const {error} = await sb.from('tausch_antraege').update({
-      status:                  'abgelehnt',
-      partner_ok:              false,
-      ablehnungsgrund:         grund||'Von Partner abgelehnt',
-      partner_entschieden_am:  new Date().toISOString()
+      status:'abgelehnt', partner_ok:false,
+      ablehnungsgrund: grund||'Von Partner abgelehnt',
+      partner_entschieden_am: new Date().toISOString()
     }).eq('id',antragId);
     if(error){ showToast('Fehler: '+error.message); return; }
     showToast('✕ Anfrage abgelehnt');
+    // Notification an Antragsteller
+    const {data:antrag} = await sb.from('tausch_antraege').select('*').eq('id',antragId).single();
+    if(antrag){
+      const email = await getEmailForStaff(antrag.antragsteller_id);
+      if(email) sendNotification(email, '❌ Tausch-Anfrage abgelehnt',
+        emailHtml('Deine Tausch-Anfrage wurde abgelehnt',[
+          `Leider hat dein Kollege die Tausch-Anfrage abgelehnt.`,
+          grund ? `Grund: <em>${grund}</em>` : ''
+        ].filter(Boolean), 'Zur App', 'https://curenio.de/dienstplan.html'));
+    }
   } else {
     const {error} = await sb.from('tausch_antraege').update({
-      status:                 'partner_ok',
-      partner_ok:             true,
+      status:'partner_ok', partner_ok:true,
       partner_entschieden_am: new Date().toISOString()
     }).eq('id',antragId);
     if(error){ showToast('Fehler: '+error.message); return; }
     showToast('👍 Zugestimmt – Admin wird den Tausch genehmigen');
+    // Notification an Antragsteller + Admins
+    const {data:antrag} = await sb.from('tausch_antraege').select('*').eq('id',antragId).single();
+    if(antrag){
+      const fmtD = (d) => new Date(d+'T12:00:00').toLocaleDateString('de-DE',{weekday:'short',day:'numeric',month:'long'});
+      const antragEmail = await getEmailForStaff(antrag.antragsteller_id);
+      const adminEmails = await getAdminEmails();
+      const alle = [...new Set([antragEmail, ...adminEmails].filter(Boolean))];
+      if(alle.length) sendNotification(alle, '👍 Tausch-Anfrage angenommen – wartet auf Admin',
+        emailHtml('Tausch wurde vom Partner bestätigt',[
+          `Der Tauschpartner hat der Anfrage zugestimmt.`,
+          `📅 ${fmtD(antrag.datum_antragsteller)} (${antrag.shift_antragsteller||'–'}) ⇄ ${fmtD(antrag.datum_tauschpartner)} (${antrag.shift_tauschpartner||'–'})`,
+          `Ein Admin/Planer muss den Tausch jetzt final genehmigen.`
+        ], 'Zur App', 'https://curenio.de/dienstplan.html'));
+    }
   }
   renderMeineTausche();
 }
@@ -5688,6 +5726,21 @@ async function vollzieheTausch(antrag){
   // 5. Änderungshistorie für beide betroffenen Einträge loggen
   await logAenderung(newKeyA, shiftA, shiftB, antrag.id);
   await logAenderung(newKeyB, shiftB, shiftA, antrag.id);
+
+  // 6. Beide Mitarbeiter per E-Mail benachrichtigen
+  const fmtD = (d) => new Date(d+'T12:00:00').toLocaleDateString('de-DE',{weekday:'short',day:'numeric',month:'long'});
+  const emailA = await getEmailForStaff(idA);
+  const emailB = await getEmailForStaff(idB);
+  const beide = [...new Set([emailA, emailB].filter(Boolean))];
+  const nameA = state.staff.find(s=>s.id==idA)?.name||'MA A';
+  const nameB = state.staff.find(s=>s.id==idB)?.name||'MA B';
+  if(beide.length) sendNotification(beide, '✅ Diensttausch vollzogen',
+    emailHtml('Euer Diensttausch wurde genehmigt & vollzogen',[
+      `Der Tausch zwischen <strong>${nameA}</strong> und <strong>${nameB}</strong> wurde genehmigt.`,
+      `📅 ${nameA} arbeitet jetzt am: <strong>${fmtD(datB)} (${shiftB||'–'})</strong>`,
+      `📅 ${nameB} arbeitet jetzt am: <strong>${fmtD(datA)} (${shiftA||'–'})</strong>`,
+      `Der Dienstplan wurde entsprechend aktualisiert.`
+    ], 'Dienstplan ansehen', 'https://curenio.de/dienstplan.html'));
 
   showToast(`✅ Tausch vollzogen: ${datA} ⇄ ${datB}`);
   render(); // Dienstplan-Grid neu rendern
@@ -5868,6 +5921,67 @@ function showAenderungsPopover(key, event){
 function closeAenderungsPopover(){
   const el = document.getElementById('aenderungsPopover');
   if(el) el.remove();
+}
+
+// ── E-MAIL BENACHRICHTIGUNGEN ─────────────────────────────────────────────────
+
+async function sendNotification(to, subject, html){
+  if(!to || (Array.isArray(to) && !to.length)) return;
+  try {
+    const {data:{session}} = await sb.auth.getSession();
+    if(!session) return;
+    const res = await fetch(`${SUPABASE_URL}/functions/v1/send-notification`, {
+      method: 'POST',
+      headers: { 'Content-Type':'application/json', 'Authorization':`Bearer ${session.access_token}` },
+      body: JSON.stringify({to, subject, html})
+    });
+    const result = await res.json();
+    if(result.error) console.warn('Notification Fehler:', result.error);
+  } catch(e){ console.warn('sendNotification:', e.message); }
+}
+
+async function getEmailForStaff(staffId){
+  if(!staffId) return null;
+  const s = state.staff.find(x => x.id == staffId);
+  if(!s) return null;
+  const {data} = await sb.from('user_profiles')
+    .select('email').eq('unternehmen_id', currentUnternehmenId)
+    .ilike('name', `%${s.name.split(' ').pop()}%`).maybeSingle();
+  return data?.email || null;
+}
+
+async function getAdminEmails(){
+  const {data:roles} = await sb.from('user_roles')
+    .select('user_id').eq('unternehmen_id', currentUnternehmenId)
+    .in('role', ['owner','master_admin','admin','personal']);
+  if(!roles?.length) return [];
+  const ids = roles.map(r => r.user_id);
+  const {data:profiles} = await sb.from('user_profiles')
+    .select('email').in('user_id', ids);
+  return (profiles||[]).map(p => p.email).filter(Boolean);
+}
+
+function emailHtml(title, lines, btnText, btnHref){
+  const btn = btnText && btnHref
+    ? `<div style="text-align:center;margin:24px 0">
+        <a href="${btnHref}" style="background:#2563eb;color:#fff;padding:12px 28px;border-radius:8px;text-decoration:none;font-weight:600;font-size:14px">${btnText}</a>
+       </div>`
+    : '';
+  return `<!DOCTYPE html><html><head><meta charset="utf-8"></head><body style="font-family:-apple-system,sans-serif;background:#f4f4f5;margin:0;padding:24px">
+  <div style="max-width:520px;margin:0 auto;background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,.08)">
+    <div style="background:#2563eb;padding:20px 28px">
+      <div style="color:#fff;font-size:20px;font-weight:700">curenio</div>
+      <div style="color:#bfdbfe;font-size:12px;margin-top:2px">Dienstplan-Benachrichtigung</div>
+    </div>
+    <div style="padding:28px">
+      <div style="font-size:18px;font-weight:700;color:#111;margin-bottom:16px">${title}</div>
+      ${lines.map(l => `<div style="font-size:14px;color:#374151;margin-bottom:8px;line-height:1.5">${l}</div>`).join('')}
+      ${btn}
+    </div>
+    <div style="padding:16px 28px;background:#f9fafb;border-top:1px solid #e5e7eb;font-size:11px;color:#9ca3af">
+      Diese E-Mail wurde automatisch von curenio gesendet. Bitte nicht antworten.
+    </div>
+  </div></body></html>`;
 }
 
 function openPasswortModal(){
