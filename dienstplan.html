@@ -5942,14 +5942,20 @@ async function sendNotification(to, subject, html){
 
 async function getEmailForStaff(staffId){
   if(!staffId) return null;
-  const s = state.staff.find(x => x.id == staffId);
-  if(!s){ showToast('DEBUG: Staff '+staffId+' nicht in state.staff'); return null; }
-  const lastName = s.name.split(' ').pop();
-  const {data, error} = await sb.from('user_profiles')
-    .select('email').eq('unternehmen_id', currentUnternehmenId)
-    .ilike('name', `%${lastName}%`).maybeSingle();
-  showToast(`DEBUG email: staff="${s.name}" last="${lastName}" email="${data?.email||'null'}" err="${error?.message||'–'}"`);
-  return data?.email || null;
+  try {
+    const s = state.staff.find(x => x.id == staffId);
+    if(!s) return null;
+    const {data:profiles} = await sb.from('user_profiles')
+      .select('email,name,vorname')
+      .eq('unternehmen_id', currentUnternehmenId);
+    if(!profiles?.length) return null;
+    const staffParts = s.name.toLowerCase().split(' ').filter(Boolean);
+    const match = profiles.find(p => {
+      const fullName = `${p.vorname||''} ${p.name||''}`.toLowerCase();
+      return staffParts.every(part => fullName.includes(part));
+    });
+    return match?.email || null;
+  } catch(e){ console.warn('getEmailForStaff:', e.message); return null; }
 }
 
 async function getAdminEmails(){
