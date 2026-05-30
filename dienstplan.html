@@ -3577,8 +3577,8 @@ async function saveWish(del){
 }
 
 async function doLogout(){
-  await sb.auth.signOut();
-  window.location.href='nicode_login.html';
+  try { await sb.auth.signOut(); } catch(e){ console.warn('signOut Fehler:', e); }
+  window.location.href = 'nicode_login.html';
 }
 
 // ─── SETTINGS MENU ───
@@ -6382,14 +6382,12 @@ async function loadUserRole(){
   currentUserId = session.user.id;
   // Namen des eingeloggten Users für Audit-Trail cachen
   sb.from('user_profiles').select('name,vorname').eq('user_id', currentUserId).maybeSingle()
-    .then(({data:p}) => { if(p) _currentUserName = `${p.vorname||''} ${p.name||''}`.trim(); });
+    .then(({data:p}) => { if(p) _currentUserName = `${p.vorname||''} ${p.name||''}`.trim(); })
+    .catch(e => console.warn('_currentUserName Fehler:', e));
   // Direkt lesen – eigene Rolle ist per RLS erlaubt
   const { data, error } = await sb.from('user_roles').select('role').eq('user_id', currentUserId).single();
   if(data){
     currentUserRole = data.role;
-  // Meins-Button für alle eingeloggten User anzeigen
-  const btnMeins = document.getElementById('btnMeins');
-  if(btnMeins){ btnMeins.style.display = 'flex'; btnMeins.style.alignItems = 'center'; btnMeins.style.justifyContent = 'center'; }
   } else {
     // Fallback via Edge Function
     const result = await callManageRoles('getOwn');
@@ -6397,7 +6395,7 @@ async function loadUserRole(){
   }
   console.log('Rolle:', currentUserRole);
   applyRolePermissions();
-  initStempel(); // Aktive Buchung prüfen und Button-Status setzen
+  initStempel();
 }
 
 function applyRolePermissions(){
