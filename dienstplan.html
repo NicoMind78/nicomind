@@ -527,6 +527,7 @@
         <div class="settings-menu-item" id="menuAdminZeit" onclick="openAdminZeiterfassung()">⏱️ Zeiterfassung verwalten</div>
         <div class="settings-menu-item" id="menuAdminUrlaub" onclick="openAdminUrlaub()">🏖️ Urlaubsanträge</div>
         <div class="settings-menu-item" id="menuAdminTausch" onclick="openAdminTausch()">🔄 Tausch-Anträge</div>
+        <div class="settings-menu-item" id="menuTestEmail" onclick="testEmailSenden()" style="color:var(--accent)">📧 Test-Email senden</div>
         <div style="height:1px;background:var(--border);margin:4px 0"></div>
         <div class="settings-menu-item" onclick="showToast('Datenschutz & TOM folgt bald')">🔒 Datenschutz & TOM</div>
       </div>
@@ -5996,6 +5997,30 @@ function closeAenderungsPopover(){
 }
 
 // ── E-MAIL BENACHRICHTIGUNGEN ─────────────────────────────────────────────────
+
+async function testEmailSenden(){
+  document.getElementById('settingsMenu').style.display = 'none';
+  const {data:{session}} = await sb.auth.getSession();
+  if(!session){ showToast('Nicht eingeloggt'); return; }
+  const email = session.user.email;
+  if(!email){ showToast('Keine Email im Account'); return; }
+  showToast(`📧 Sende Test-Email an ${email}…`);
+  const res = await fetch(`${SUPABASE_URL}/functions/v1/send-notification`, {
+    method: 'POST',
+    headers: { 'Content-Type':'application/json', 'Authorization':`Bearer ${session.access_token}` },
+    body: JSON.stringify({
+      to: [email],
+      subject: '✅ Test-Email von curenio',
+      html: emailHtml('Test erfolgreich!', [
+        'Die E-Mail-Benachrichtigungen von curenio funktionieren.',
+        `Gesendet an: <strong>${email}</strong>`
+      ])
+    })
+  });
+  const result = await res.json();
+  if(result.success){ showToast('✅ Test-Email gesendet! Bitte Postfach prüfen.'); }
+  else { showToast('❌ Fehler: '+JSON.stringify(result.error)); }
+}
 
 async function sendNotification(to, subject, html){
   if(!to || (Array.isArray(to) && !to.length)) return;
