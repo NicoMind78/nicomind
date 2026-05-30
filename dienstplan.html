@@ -6652,6 +6652,7 @@ async function saveEditUser(){
     const { error } = await sb.from('user_profiles').upsert({
       user_id: _editUserId, name, vorname, position, handy, kostenstelle,
       soll, auto1, pool_auto: poolAuto, standort_ids: standortIds, gruppe_ids: gruppeIds,
+      unternehmen_id: currentUnternehmenId,
       ...(emailVal && emailVal !== '–' ? {email: emailVal} : {})
     });
     if(error){ showToast('Fehler Profil: ' + error.message); return; }
