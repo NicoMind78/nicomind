@@ -5310,9 +5310,42 @@ async function renderMeineTausche() {
     .or(`antragsteller_id.eq.${_meinsStaffId},tauschpartner_id.eq.${_meinsStaffId}`)
     .order('erstellt_am', { ascending: false });
 
+  const today = new Date(); today.setHours(0,0,0,0);
+
+  const getAblaufDatum = (a) => {
+    const d1 = new Date(a.datum_antragsteller+'T12:00:00');
+    const d2 = new Date(a.datum_tauschpartner+'T12:00:00');
+    const fruehesterTag = d1 < d2 ? d1 : d2;
+    const maxDatum = new Date(new Date(a.erstellt_am).getTime() + 28*24*60*60*1000);
+    return fruehesterTag < maxDatum ? fruehesterTag : maxDatum;
+  };
+
+  const ablaufBadge = (a) => {
+    if(['genehmigt','abgelehnt','storniert'].includes(a.status)) return '';
+    const ablauf = getAblaufDatum(a);
+    const diffTage = Math.ceil((ablauf - today) / (24*60*60*1000));
+    if(diffTage < 0) return `<div style="font-size:10.5px;color:var(--red);margin-top:6px;font-weight:600">⛔ Abgelaufen am ${ablauf.toLocaleDateString('de-DE')}</div>`;
+    if(diffTage === 0) return `<div style="font-size:10.5px;color:var(--red);margin-top:6px;font-weight:600">🔴 Läuft heute ab</div>`;
+    if(diffTage <= 3) return `<div style="font-size:10.5px;color:var(--orange);margin-top:6px;font-weight:600">🟠 Läuft in ${diffTage} Tag${diffTage===1?'':'en'} ab (${ablauf.toLocaleDateString('de-DE')})</div>`;
+    return `<div style="font-size:10.5px;color:var(--text3);margin-top:6px">⏱ Läuft ab: ${ablauf.toLocaleDateString('de-DE')}</div>`;
+  };
+
+  // Auto-Storno abgelaufener Anträge
+  const abgelaufen = (antraege||[]).filter(a =>
+    ['offen','partner_ok'].includes(a.status) && getAblaufDatum(a) < today
+  );
+  for(const a of abgelaufen){
+    await sb.from('tausch_antraege').update({
+      status: 'storniert',
+      ablehnungsgrund: 'Automatisch storniert – Ablaufdatum überschritten',
+      admin_entschieden_am: new Date().toISOString()
+    }).eq('id', a.id);
+    a.status = 'storniert';
+    a.ablehnungsgrund = 'Automatisch storniert – Ablaufdatum überschritten';
+  }
+
   const myAntraege = (antraege||[]).filter(a => a.antragsteller_id === _meinsStaffId);
   const incoming   = (antraege||[]).filter(a => a.tauschpartner_id === _meinsStaffId && a.status === 'offen');
-
   const statusBadge = (a) => {
     const map = {
       offen:      ['🕐 Wartet auf Dich',          'var(--orange)',  '#7a4a00'],
@@ -5375,6 +5408,7 @@ async function renderMeineTausche() {
       ${a.antragsteller_notiz?`<div style="font-size:11px;color:var(--text2);margin-top:6px;font-style:italic">💬 ${a.antragsteller_notiz}</div>`:''}
       ${a.ablehnungsgrund?`<div style="font-size:11px;color:var(--red);margin-top:6px">Ablehnungsgrund: ${a.ablehnungsgrund}</div>`:''}
       ${a.vollzogen_am?`<div style="font-size:10.5px;color:var(--green);margin-top:6px">✅ Vollzogen am ${new Date(a.vollzogen_am).toLocaleDateString('de-DE')}</div>`:''}
+      ${ablaufBadge(a)}
       ${canRespond?`
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px">
           <button onclick="tauschPartnerAntwort('${a.id}',true)"
@@ -5386,6 +5420,11 @@ async function renderMeineTausche() {
             ✕ Ablehnen
           </button>
         </div>`:''}
+      ${!isIncoming && ['offen','partner_ok'].includes(a.status) ? `
+        <button onclick="stornoTauschAntrag('${a.id}')"
+          style="width:100%;margin-top:8px;padding:7px;border:1.5px solid var(--red);border-radius:8px;background:transparent;color:var(--red);font-size:12px;font-weight:600;cursor:pointer">
+          ✕ Stornieren
+        </button>` : ''}
     </div>`;
   };
 
@@ -5555,6 +5594,38 @@ async function tauschPartnerAntwort(antragId, annehmen){
   renderMeineTausche();
 }
 
+async function stornoTauschAntrag(antragId){
+  const grund = prompt('Stornogrund (optional):');
+  if(grund === null) return; // Abgebrochen
+
+  const {data:antrag} = await sb.from('tausch_antraege').select('*').eq('id',antragId).single();
+  if(!antrag){ showToast('Antrag nicht gefunden'); return; }
+
+  const {error} = await sb.from('tausch_antraege').update({
+    status: 'storniert',
+    ablehnungsgrund: grund || 'Vom Antragsteller storniert',
+    admin_entschieden_am: new Date().toISOString()
+  }).eq('id', antragId);
+  if(error){ showToast('Fehler: '+error.message); return; }
+
+  showToast('✕ Tausch-Antrag storniert');
+
+  // Email an Partner + Admins + Perso
+  const fmtD = (d) => new Date(d+'T12:00:00').toLocaleDateString('de-DE',{weekday:'short',day:'numeric',month:'long'});
+  const partnerEmail = await getEmailForStaff(antrag.tauschpartner_id);
+  const adminEmails  = await getAdminEmails();
+  const alle = [...new Set([partnerEmail, ...adminEmails].filter(Boolean))];
+  const meinName = _meinsStaff?.name || 'Ein Kollege';
+  if(alle.length) sendNotification(alle, '✕ Tausch-Antrag storniert',
+    emailHtml('Ein Tausch-Antrag wurde storniert',[
+      `<strong>${meinName}</strong> hat den Tausch-Antrag storniert.`,
+      `📅 ${fmtD(antrag.datum_antragsteller)} (${antrag.shift_antragsteller||'–'}) ⇄ ${fmtD(antrag.datum_tauschpartner)} (${antrag.shift_tauschpartner||'–'})`,
+      grund ? `Grund: <em>${grund}</em>` : ''
+    ].filter(Boolean), 'Zur App', 'https://curenio.de/dienstplan.html'));
+
+  renderMeineTausche();
+}
+
 // ── ADMIN TAUSCH ──────────────────────────────────────────────────────────────
 
 async function openAdminTausch(){
@@ -5590,6 +5661,7 @@ async function loadAdminTausch(){
     partner_ok: ['👍 Bereit zur Genehmigung', 'var(--accent)'],
     genehmigt:  ['✅ Vollzogen', 'var(--green)'],
     abgelehnt:  ['❌ Abgelehnt', 'var(--red)'],
+    storniert:  ['✕ Storniert', 'var(--text3)'],
   };
 
   body.innerHTML = antraege.map(a => {
