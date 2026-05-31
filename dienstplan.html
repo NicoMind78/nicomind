@@ -7578,36 +7578,38 @@ if(state.showWuensche){
 render();
 // Erst Unternehmen laden, dann Standorte, dann Daten
 (async()=>{
-  // Recovery-Modus sofort erkennen (BEVOR App-Daten geladen werden)
-  const hash = window.location.hash;
-  const isRecovery = hash.includes('type=recovery') || hash.includes('type%3Drecovery');
-  if(isRecovery){
-    document.getElementById('recoveryModal').style.display = 'flex';
-    sb.auth.onAuthStateChange(async (event) => {
-      if(event === 'PASSWORD_RECOVERY'){
-        document.getElementById('recoveryModal').style.display = 'flex';
-      }
-    });
-    return; // App NICHT laden
-  }
-
-  // Session ZUERST prüfen – bevor irgendwelche Daten geladen werden
-  const sessRes = await sb.auth.getSession();
-  const session = sessRes?.data?.session;
-  if(!session){
-    window.location.href = 'https://curenio.de/nicode_login.html';
-    return;
-  }
-
-  // onAuthStateChange für Recovery-Links die während der Session kommen
-  sb.auth.onAuthStateChange(async (event) => {
+  // onAuthStateChange ZUERST registrieren – bevor jeder await
+  // Sonst verpasst der Handler den PASSWORD_RECOVERY Event
+  let _recoveryDetected = false;
+  sb.auth.onAuthStateChange(async (event, session) => {
     if(event === 'PASSWORD_RECOVERY'){
+      _recoveryDetected = true;
       document.getElementById('recoveryModal').style.display = 'flex';
     }
     if(event === 'SIGNED_OUT'){
       window.location.href = 'https://curenio.de/nicode_login.html';
     }
   });
+
+  // Auch alten Hash-Flow abfangen (ältere Supabase-Versionen)
+  const hash = window.location.hash;
+  if(hash.includes('type=recovery') || hash.includes('type%3Drecovery')){
+    _recoveryDetected = true;
+    document.getElementById('recoveryModal').style.display = 'flex';
+  }
+
+  // Kurz warten damit Supabase den PKCE-Token verarbeiten und
+  // onAuthStateChange feuern kann
+  await new Promise(r => setTimeout(r, 300));
+  if(_recoveryDetected) return; // App NICHT laden
+
+  // Session prüfen
+  const sessRes = await sb.auth.getSession();
+  const session = sessRes?.data?.session;
+  if(!session){
+    window.location.href = 'https://curenio.de/nicode_login.html';
+    return;
+  }
 
   await loadUnternehmenData();
   await loadStandorteData();
