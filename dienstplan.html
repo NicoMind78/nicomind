@@ -540,7 +540,7 @@
     </div>
     <div id="unternehmenLabel" style="font-size:11px;color:var(--text3);white-space:nowrap;margin-right:2px;padding:2px 8px;border:1px solid var(--border);border-radius:20px">–</div>
     <div id="standortLabel" style="font-size:11px;color:var(--text3);white-space:nowrap;margin-right:4px">–</div>
-    <button id="btnMeins" onclick="openMeins()" title="Meins" style="width:32px;height:32px;border-radius:50%;border:1.5px solid var(--border);background:var(--surface2);cursor:pointer;display:none;align-items:center;justify-content:center;color:var(--text2);transition:all .15s;flex-shrink:0;font-size:13px;font-weight:700"
+    <button id="btnMeins" onclick="openMeins()" title="Meins" style="width:32px;height:32px;border-radius:50%;border:1.5px solid var(--border);background:var(--surface2);cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--text2);transition:all .15s;flex-shrink:0;font-size:13px;font-weight:700"
       onmouseover="this.style.background='var(--accent-soft)';this.style.borderColor='var(--accent)';this.style.color='var(--accent)'"
       onmouseout="this.style.background='var(--surface2)';this.style.borderColor='var(--border)';this.style.color='var(--text2)'">M</button>
 
@@ -5490,24 +5490,29 @@ async function renderMeineTausche() {
 async function openTauschAntrag(){
   if(!_meinsStaffId){ showToast('⚠️ Kein Mitarbeiter-Datensatz'); return; }
 
-  const prefix = currentYear+'-'+String(currentMonth+1).padStart(2,'0');
-  const myEntries = Object.entries(state.entries)
-    .filter(([k])=>k.startsWith(_meinsStaffId+'_'+prefix))
-    .map(([k,v])=>({date:k.replace(_meinsStaffId+'_',''), shift:v.shift}))
-    .filter(e=>e.shift && e.shift!=='FREI')
-    .sort((a,b)=>a.date.localeCompare(b.date));
+  const daysInMonth = new Date(currentYear, currentMonth+1, 0).getDate();
+  const fmtDay = (ds) => new Date(ds+'T12:00:00').toLocaleDateString('de-DE',{weekday:'short',day:'numeric',month:'short'});
+  const shiftLabel = (shift) => {
+    if(!shift) return 'Frei';
+    const gd = _gruppenDienste.find(g=>g.kuerzel===shift);
+    if(gd) return shift+' – '+gd.label;
+    const sm = SHIFT_MAP[shift];
+    return sm ? shift+' – '+sm.label : shift;
+  };
 
-  if(!myEntries.length){
-    showToast('⚠️ Keine eigenen Dienste im aktuellen Monat verfügbar');
-    return;
+  // Alle Tage des Monats anzeigen
+  const myEntries = [];
+  for(let d=1; d<=daysInMonth; d++){
+    const date = `${currentYear}-${String(currentMonth+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    const entry = state.entries[`${_meinsStaffId}_${date}`];
+    myEntries.push({date, shift: entry?.shift || null});
   }
+
   const partners = state.staff.filter(s=>s.id!==_meinsStaffId);
   if(!partners.length){ showToast('⚠️ Keine Tauschpartner verfügbar'); return; }
 
-  const fmtDay = (ds) => new Date(ds+'T12:00:00').toLocaleDateString('de-DE',{weekday:'short',day:'numeric',month:'short'});
-
   document.getElementById('tauschEigenerTagSelect').innerHTML =
-    myEntries.map(e=>`<option value="${e.date}">${fmtDay(e.date)} – ${e.shift}</option>`).join('');
+    myEntries.map(e=>`<option value="${e.date}">${fmtDay(e.date)} – ${shiftLabel(e.shift)}</option>`).join('');
   document.getElementById('tauschPartnerSelect').innerHTML =
     partners.map(p=>`<option value="${p.id}">${p.name}</option>`).join('');
   document.getElementById('tauschNotiz').value = '';
@@ -5518,18 +5523,24 @@ async function openTauschAntrag(){
 function tauschUpdatePartnerTage(){
   const partnerId = document.getElementById('tauschPartnerSelect')?.value;
   if(!partnerId) return;
-  const prefix = currentYear+'-'+String(currentMonth+1).padStart(2,'0');
-  const entries = Object.entries(state.entries)
-    .filter(([k])=>k.startsWith(partnerId+'_'+prefix))
-    .map(([k,v])=>({date:k.replace(partnerId+'_',''), shift:v.shift}))
-    .filter(e=>e.shift && e.shift!=='FREI')
-    .sort((a,b)=>a.date.localeCompare(b.date));
+  const daysInMonth = new Date(currentYear, currentMonth+1, 0).getDate();
   const fmtDay = (ds) => new Date(ds+'T12:00:00').toLocaleDateString('de-DE',{weekday:'short',day:'numeric',month:'short'});
+  const shiftLabel = (shift) => {
+    if(!shift) return 'Frei';
+    const gd = _gruppenDienste.find(g=>g.kuerzel===shift);
+    if(gd) return shift+' – '+gd.label;
+    const sm = SHIFT_MAP[shift];
+    return sm ? shift+' – '+sm.label : shift;
+  };
+  const entries = [];
+  for(let d=1; d<=daysInMonth; d++){
+    const date = `${currentYear}-${String(currentMonth+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    const entry = state.entries[`${partnerId}_${date}`];
+    entries.push({date, shift: entry?.shift || null});
+  }
   const sel = document.getElementById('tauschPartnerTagSelect');
   if(!sel) return;
-  sel.innerHTML = entries.length
-    ? entries.map(e=>`<option value="${e.date}">${fmtDay(e.date)} – ${e.shift}</option>`).join('')
-    : '<option value="">– Keine Dienste im Monat –</option>';
+  sel.innerHTML = entries.map(e=>`<option value="${e.date}">${fmtDay(e.date)} – ${shiftLabel(e.shift)}</option>`).join('');
 }
 
 async function saveTauschAntrag(){
@@ -6526,25 +6537,44 @@ let currentUserRole = null;
 let currentUserId = null;
 
 async function loadUserRole(){
-  const { data: { session } } = await sb.auth.getSession();
-  if(!session) return;
-  currentUserId = session.user.id;
-  // Namen des eingeloggten Users für Audit-Trail cachen
-  sb.from('user_profiles').select('name,vorname').eq('user_id', currentUserId).maybeSingle()
-    .then(({data:p}) => { if(p) _currentUserName = `${p.vorname||''} ${p.name||''}`.trim(); })
-    .catch(e => console.warn('_currentUserName Fehler:', e));
-  // Direkt lesen – eigene Rolle ist per RLS erlaubt
-  const { data, error } = await sb.from('user_roles').select('role').eq('user_id', currentUserId).single();
-  if(data){
-    currentUserRole = data.role;
-  } else {
-    // Fallback via Edge Function
-    const result = await callManageRoles('getOwn');
-    if(result.role) currentUserRole = result.role;
+  try {
+    const sessRes = await sb.auth.getSession();
+    const session = sessRes?.data?.session;
+    if(!session){
+      // Nicht eingeloggt – zur Login-Seite
+      window.location.href = 'nicode_login.html';
+      return;
+    }
+    currentUserId = session.user.id;
+
+    // Username für Audit-Trail (fire-and-forget, darf nie die Hauptlogik blockieren)
+    sb.from('user_profiles').select('name,vorname').eq('user_id', currentUserId).maybeSingle()
+      .then(r => { const p=r?.data; if(p) _currentUserName = `${p.vorname||''} ${p.name||''}`.trim(); })
+      .catch(() => {});
+
+    // Rolle laden – maybeSingle statt single (single wirft Exception bei 0 Zeilen)
+    const roleRes = await sb.from('user_roles').select('role')
+      .eq('user_id', currentUserId).maybeSingle();
+    if(roleRes?.data?.role){
+      currentUserRole = roleRes.data.role;
+    } else {
+      // Fallback: Owner-Check
+      try {
+        const result = await callManageRoles('getOwn');
+        if(result?.role) currentUserRole = result.role;
+      } catch(e){ console.warn('callManageRoles Fehler:', e); }
+    }
+
+    console.log('Rolle geladen:', currentUserRole || '(keine)');
+
+  } catch(e){
+    console.warn('loadUserRole Fehler:', e);
+    // Trotz Fehler: UI aufbauen was möglich ist
+  } finally {
+    // applyRolePermissions IMMER aufrufen – auch bei Fehlern
+    applyRolePermissions();
+    initStempel();
   }
-  console.log('Rolle:', currentUserRole);
-  applyRolePermissions();
-  initStempel();
 }
 
 function applyRolePermissions(){
