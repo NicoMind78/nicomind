@@ -527,7 +527,6 @@
         <div class="settings-menu-item" id="menuAdminZeit" onclick="openAdminZeiterfassung()">⏱️ Zeiterfassung verwalten</div>
         <div class="settings-menu-item" id="menuAdminUrlaub" onclick="openAdminUrlaub()">🏖️ Urlaubsanträge</div>
         <div class="settings-menu-item" id="menuAdminTausch" onclick="openAdminTausch()">🔄 Tausch-Anträge</div>
-        <div class="settings-menu-item" id="menuTestEmail" onclick="testEmailSenden()" style="color:var(--accent)">📧 Test-Email senden</div>
         <div style="height:1px;background:var(--border);margin:4px 0"></div>
         <div class="settings-menu-item" onclick="showToast('Datenschutz & TOM folgt bald')">🔒 Datenschutz & TOM</div>
       </div>
@@ -4125,6 +4124,7 @@ async function urlaubEntscheiden(id, status){
     if(!grund.trim()){ showToast('Bitte Stornogrund eingeben'); return; }
   }
   const { data: { session } } = await sb.auth.getSession();
+  const {data:antrag} = await sb.from('urlaubsantraege').select('*').eq('id', id).single();
   await sb.from('urlaubsantraege').update({
     status,
     ablehnungsgrund: grund || null,
@@ -4133,6 +4133,23 @@ async function urlaubEntscheiden(id, status){
   }).eq('id', id);
   const msg = status==='genehmigt' ? '✅ Urlaub genehmigt' : status==='storniert' ? '🚫 Urlaub storniert' : '❌ Urlaub abgelehnt';
   showToast(msg);
+
+  // Notification an MA
+  if(antrag){
+    const maEmail = await getEmailForStaff(antrag.staff_id);
+    if(maEmail){
+      const von = new Date(antrag.von_datum+'T12:00:00').toLocaleDateString('de-DE',{day:'numeric',month:'long',year:'numeric'});
+      const bis = new Date(antrag.bis_datum+'T12:00:00').toLocaleDateString('de-DE',{day:'numeric',month:'long',year:'numeric'});
+      const icons = {genehmigt:'✅',abgelehnt:'❌',storniert:'🚫'};
+      const labels = {genehmigt:'genehmigt',abgelehnt:'abgelehnt',storniert:'storniert'};
+      sendNotification(maEmail, `${icons[status]||''} Urlaubsantrag ${labels[status]||status}`,
+        emailHtml(`Dein Urlaubsantrag wurde ${labels[status]||status}`, [
+          `📅 ${von} – ${bis} (${antrag.tage} Werktag${antrag.tage!==1?'e':''})`,
+          grund ? `Grund: <em>${grund}</em>` : '',
+          status==='genehmigt' ? 'Dein Urlaub wurde bestätigt. Gute Erholung! 🌴' : ''
+        ].filter(Boolean), 'Zur App', 'https://curenio.de/dienstplan.html'));
+    }
+  }
   loadAdminUrlaub();
 }
 
@@ -4776,6 +4793,20 @@ async function urlaubSelBestaetigen(){
   closeModal('urlaubBestaetigenModal');
   window._urlaubSel = {von:null, bis:null};
   showToast(`✅ ${tage} Urlaubstag${tage!==1?'e':''} beantragt – warte auf Genehmigung`);
+
+  // Notification an Admins + Perso
+  const adminEmails = await getAdminEmails();
+  if(adminEmails.length){
+    const name = _meinsStaff?.name || 'Ein Mitarbeiter';
+    const von = new Date(sel.von+'T12:00:00').toLocaleDateString('de-DE',{day:'numeric',month:'long',year:'numeric'});
+    const bis = new Date(sel.bis+'T12:00:00').toLocaleDateString('de-DE',{day:'numeric',month:'long',year:'numeric'});
+    sendNotification(adminEmails, `🏖️ Urlaubsantrag von ${name}`,
+      emailHtml(`Neuer Urlaubsantrag`, [
+        `<strong>${name}</strong> hat einen Urlaubsantrag gestellt:`,
+        `📅 ${von} – ${bis} (${tage} Werktag${tage!==1?'e':''})`,
+        `Bitte in der App genehmigen oder ablehnen.`
+      ], 'Zur App', 'https://curenio.de/dienstplan.html'));
+  }
   renderMeinUrlaub();
 }
 
@@ -5426,6 +5457,11 @@ async function renderMeineTausche() {
           style="width:100%;margin-top:8px;padding:7px;border:1.5px solid var(--red);border-radius:8px;background:transparent;color:var(--red);font-size:12px;font-weight:600;cursor:pointer">
           ✕ Stornieren
         </button>` : ''}
+      ${!isIncoming && ['storniert','abgelehnt'].includes(a.status) ? `
+        <button onclick="loescheTauschAntrag('${a.id}')"
+          style="width:100%;margin-top:8px;padding:7px;border:1.5px solid var(--border);border-radius:8px;background:transparent;color:var(--text3);font-size:12px;font-weight:600;cursor:pointer">
+          🗑 Aus Liste entfernen
+        </button>` : ''}
     </div>`;
   };
 
@@ -5624,6 +5660,14 @@ async function stornoTauschAntrag(antragId){
       grund ? `Grund: <em>${grund}</em>` : ''
     ].filter(Boolean), 'Zur App', 'https://curenio.de/dienstplan.html'));
 
+  renderMeineTausche();
+}
+
+async function loescheTauschAntrag(antragId){
+  if(!confirm('Antrag endgültig löschen?\n(Email-Benachrichtigungen wurden bereits versendet)')) return;
+  const {error} = await sb.from('tausch_antraege').delete().eq('id', antragId);
+  if(error){ showToast('Fehler: '+error.message); return; }
+  showToast('🗑 Antrag gelöscht');
   renderMeineTausche();
 }
 
