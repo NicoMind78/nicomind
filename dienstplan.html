@@ -3600,7 +3600,10 @@ async function saveWish(del){
 }
 
 async function doLogout(){
-  try { await sb.auth.signOut(); } catch(e){ console.warn('signOut Fehler:', e); }
+  try {
+    // scope:'local' löscht nur die lokale Session ohne Server-Call (kein CORS-Problem)
+    await sb.auth.signOut({ scope: 'local' });
+  } catch(e){ console.warn('signOut Fehler:', e); }
   window.location.href = 'https://curenio.de/nicode_login.html';
 }
 
