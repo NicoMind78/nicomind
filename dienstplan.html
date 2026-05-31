@@ -941,10 +941,10 @@
 
 <!-- Passwort Modal -->
 <!-- Passwort-Recovery Modal (erscheint wenn MA auf Reset-Link klickt) -->
-<div class="modal-overlay" id="recoveryModal" style="display:none;z-index:9000">
+<div class="modal-overlay" id="recoveryModal" style="display:none;z-index:99999;background:rgba(0,0,0,0.95)">
   <div class="modal" style="width:400px">
     <div class="modal-title">🔐 Neues Passwort setzen</div>
-    <div class="modal-sub">Bitte wähle ein neues Passwort für deinen Account.</div>
+    <div class="modal-sub">Bitte wähle ein neues Passwort. Du wirst danach zur Anmeldeseite weitergeleitet.</div>
     <div class="form-group" style="margin-top:16px">
       <label class="form-label">Neues Passwort</label>
       <input type="password" class="form-input" id="recoveryPasswortInput"
@@ -957,7 +957,7 @@
     </div>
     <div class="modal-actions">
       <button class="btn btn-primary" style="width:100%" onclick="recoveryPasswortSpeichern()">
-        ✅ Passwort speichern
+        ✅ Passwort speichern & anmelden
       </button>
     </div>
   </div>
@@ -6174,8 +6174,11 @@ async function recoveryPasswortSpeichern(){
   if(pw !== pw2){ showToast('Passwörter stimmen nicht überein'); return; }
   const {error} = await sb.auth.updateUser({ password: pw });
   if(error){ showToast('Fehler: '+error.message); return; }
-  document.getElementById('recoveryModal').style.display = 'none';
-  showToast('✅ Passwort erfolgreich gesetzt – du bist jetzt eingeloggt');
+  showToast('✅ Passwort gesetzt – du wirst zur Anmeldung weitergeleitet...');
+  setTimeout(async () => {
+    await sb.auth.signOut();
+    window.location.href = 'nicode_login.html';
+  }, 1500);
 }
 
 function openPasswortModal(){
@@ -7557,11 +7560,25 @@ if(state.showWuensche){
 render();
 // Erst Unternehmen laden, dann Standorte, dann Daten
 (async()=>{
-  // Password-Recovery abfangen (wenn MA auf Reset-Link geklickt hat)
-  sb.auth.onAuthStateChange(async (event, session) => {
+  // Recovery-Modus sofort erkennen (BEVOR App-Daten geladen werden)
+  const hash = window.location.hash;
+  const isRecovery = hash.includes('type=recovery') || hash.includes('type%3Drecovery');
+  if(isRecovery){
+    // App komplett sperren, nur Recovery-Modal zeigen
+    document.getElementById('recoveryModal').style.display = 'flex';
+    // onAuthStateChange trotzdem registrieren für Supabase-Token-Verarbeitung
+    sb.auth.onAuthStateChange(async (event) => {
+      if(event === 'PASSWORD_RECOVERY'){
+        document.getElementById('recoveryModal').style.display = 'flex';
+      }
+    });
+    return; // App NICHT laden
+  }
+
+  // Normaler Start
+  sb.auth.onAuthStateChange(async (event) => {
     if(event === 'PASSWORD_RECOVERY'){
-      const overlay = document.getElementById('recoveryModal');
-      if(overlay) overlay.style.display = 'flex';
+      document.getElementById('recoveryModal').style.display = 'flex';
     }
   });
 
