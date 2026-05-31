@@ -7182,19 +7182,34 @@ async function loadUnternehmenData(){
   if(data) allUnternehmen = data;
 
   if(!currentUnternehmenId && allUnternehmen.length){
-    // Letztes Unternehmen aus localStorage wiederherstellen (nur für Owner/Master)
+    // 1. Priorität: unternehmen_id aus user_roles (korrekte Zuweisung)
     try {
-      const last = localStorage.getItem('nicomind_lastUnternehmen');
-      if(last && allUnternehmen.find(u=>u.id===last)){
-        currentUnternehmenId = last;
-      } else {
-        currentUnternehmenId = allUnternehmen[0].id;
+      const sessRes = await sb.auth.getSession();
+      const uid = sessRes?.data?.session?.user?.id;
+      if(uid){
+        const {data: roleRow} = await sb.from('user_roles').select('unternehmen_id').eq('user_id', uid).maybeSingle();
+        if(roleRow?.unternehmen_id && allUnternehmen.find(u=>u.id===roleRow.unternehmen_id)){
+          currentUnternehmenId = roleRow.unternehmen_id;
+        }
       }
-    } catch(e){
+    } catch(e){ console.warn('unternehmen_id aus user_roles Fehler:', e); }
+
+    // 2. Priorität: letztes aus localStorage
+    if(!currentUnternehmenId){
+      try {
+        const last = localStorage.getItem('nicomind_lastUnternehmen');
+        if(last && allUnternehmen.find(u=>u.id===last)){
+          currentUnternehmenId = last;
+        }
+      } catch(e){}
+    }
+
+    // 3. Fallback: erstes in Liste
+    if(!currentUnternehmenId){
       currentUnternehmenId = allUnternehmen[0].id;
     }
   }
-  // Bundesland setzen und Holiday-Cache leeren
+
   const u = allUnternehmen.find(u=>u.id===currentUnternehmenId);
   if(u && u.bundesland){
     _currentBundesland = u.bundesland;
