@@ -6191,7 +6191,7 @@ async function sendPasswordReset(){
   const email = document.getElementById('euEmailAnzeige')?.textContent?.trim();
   if(!email || email === '–'){ showToast('Keine E-Mail hinterlegt'); return; }
   const { error } = await sb.auth.resetPasswordForEmail(email, {
-    redirectTo: window.location.origin + window.location.pathname
+    redirectTo: 'https://curenio.de/dienstplan.html'
   });
   if(error){ showToast('Fehler: '+error.message); return; }
   closeModal('passwortModal');
