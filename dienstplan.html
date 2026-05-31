@@ -3601,7 +3601,7 @@ async function saveWish(del){
 
 async function doLogout(){
   try { await sb.auth.signOut(); } catch(e){ console.warn('signOut Fehler:', e); }
-  window.location.href = 'nicode_login.html';
+  window.location.href = 'https://curenio.de/nicode_login.html';
 }
 
 // ─── SETTINGS MENU ───
@@ -6177,7 +6177,7 @@ async function recoveryPasswortSpeichern(){
   showToast('✅ Passwort gesetzt – du wirst zur Anmeldung weitergeleitet...');
   setTimeout(async () => {
     await sb.auth.signOut();
-    window.location.href = 'nicode_login.html';
+    window.location.href = 'https://curenio.de/nicode_login.html';
   }, 1500);
 }
 
@@ -6579,7 +6579,7 @@ async function loadUserRole(){
     const session = sessRes?.data?.session;
     if(!session){
       // Nicht eingeloggt – zur Login-Seite
-      window.location.href = 'nicode_login.html';
+      window.location.href = 'https://curenio.de/nicode_login.html';
       return;
     }
     currentUserId = session.user.id;
@@ -7531,7 +7531,7 @@ function resetInactivityTimer(){
   clearTimeout(_inactivityTimer);
   _inactivityTimer = setTimeout(async ()=>{
     await sb.auth.signOut();
-    window.location.href = 'nicode_login.html';
+    window.location.href = 'https://curenio.de/nicode_login.html';
   }, INACTIVITY_MS);
 }
 
@@ -7546,7 +7546,7 @@ resetInactivityTimer(); // Timer starten
 (async function(){
   const { data: { session } } = await sb.auth.getSession();
   if(!session){
-    window.location.href = 'nicode_login.html';
+    window.location.href = 'https://curenio.de/nicode_login.html';
   }
 })();
 
@@ -7564,9 +7564,7 @@ render();
   const hash = window.location.hash;
   const isRecovery = hash.includes('type=recovery') || hash.includes('type%3Drecovery');
   if(isRecovery){
-    // App komplett sperren, nur Recovery-Modal zeigen
     document.getElementById('recoveryModal').style.display = 'flex';
-    // onAuthStateChange trotzdem registrieren für Supabase-Token-Verarbeitung
     sb.auth.onAuthStateChange(async (event) => {
       if(event === 'PASSWORD_RECOVERY'){
         document.getElementById('recoveryModal').style.display = 'flex';
@@ -7575,10 +7573,21 @@ render();
     return; // App NICHT laden
   }
 
-  // Normaler Start
+  // Session ZUERST prüfen – bevor irgendwelche Daten geladen werden
+  const sessRes = await sb.auth.getSession();
+  const session = sessRes?.data?.session;
+  if(!session){
+    window.location.href = 'https://curenio.de/nicode_login.html';
+    return;
+  }
+
+  // onAuthStateChange für Recovery-Links die während der Session kommen
   sb.auth.onAuthStateChange(async (event) => {
     if(event === 'PASSWORD_RECOVERY'){
       document.getElementById('recoveryModal').style.display = 'flex';
+    }
+    if(event === 'SIGNED_OUT'){
+      window.location.href = 'https://curenio.de/nicode_login.html';
     }
   });
 
