@@ -247,6 +247,30 @@ if('serviceWorker' in navigator){
     <button class="btn-back" onclick="showResetStep1()">← Code erneut senden</button>
   </div>
 
+  <!-- ── FORCED PASSWORD CHANGE (erstes Login) ── -->
+  <div id="forceChangeSection" style="display:none">
+    <div class="step-title">🔒 Passwort ändern erforderlich</div>
+    <div class="step-sub">Ihr Administrator hat ein temporäres Passwort gesetzt. Bitte legen Sie jetzt Ihr eigenes Passwort fest.</div>
+    <div class="form-group">
+      <div class="input-wrap">
+        <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
+        </svg>
+        <input type="password" id="forcePwInput" placeholder="Neues Passwort (min. 8 Zeichen)">
+      </div>
+    </div>
+    <div class="form-group">
+      <div class="input-wrap">
+        <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
+        </svg>
+        <input type="password" id="forcePwWdhInput" placeholder="Passwort bestätigen">
+      </div>
+    </div>
+    <div id="forceChangeError" class="error-msg"></div>
+    <button class="btn-primary" id="forceChangeBtn" onclick="doForceChange()">Passwort setzen & anmelden</button>
+  </div>
+
 </div>
 
 <div class="footer">
@@ -322,6 +346,21 @@ async function doLogin(){
     err.style.display = 'block';
     btn.textContent = 'Anmelden'; btn.disabled = false;
   } else {
+    // Prüfen ob Passwort-Änderung erzwungen wird
+    const { data: { session } } = await sb.auth.getSession();
+    if(session){
+      const { data: profile } = await sb.from('user_profiles')
+        .select('muss_passwort_aendern')
+        .eq('user_id', session.user.id)
+        .maybeSingle();
+      if(profile?.muss_passwort_aendern){
+        // Forced Change anzeigen
+        document.getElementById('loginSection').style.display = 'none';
+        document.getElementById('forceChangeSection').style.display = '';
+        document.getElementById('forcePwInput').focus();
+        return;
+      }
+    }
     window.location.href = 'dienstplan.html';
   }
 }
@@ -400,13 +439,47 @@ async function validateOTPCode(){
   }
 }
 
+// ── FORCED CHANGE ───────────────────────────────────────────────
+async function doForceChange(){
+  const pw = document.getElementById('forcePwInput').value;
+  const pw2 = document.getElementById('forcePwWdhInput').value;
+  const btn = document.getElementById('forceChangeBtn');
+  const err = document.getElementById('forceChangeError');
+
+  if(!pw || pw.length < 8){ err.textContent = 'Passwort muss mindestens 8 Zeichen haben.'; err.style.display='block'; return; }
+  if(pw !== pw2){ err.textContent = 'Passwörter stimmen nicht überein.'; err.style.display='block'; return; }
+
+  btn.textContent = '…'; btn.disabled = true;
+  err.style.display = 'none';
+
+  try {
+    // Passwort ändern
+    const { error: updateError } = await sb.auth.updateUser({ password: pw });
+    if(updateError){ err.textContent = 'Fehler: '+updateError.message; err.style.display='block'; btn.textContent='Passwort setzen & anmelden'; btn.disabled=false; return; }
+
+    // Flag zurücksetzen
+    const { data: { session } } = await sb.auth.getSession();
+    if(session){
+      await sb.from('user_profiles').update({ muss_passwort_aendern: false }).eq('user_id', session.user.id);
+    }
+
+    window.location.href = 'dienstplan.html';
+  } catch(e) {
+    err.textContent = 'Verbindungsfehler: '+e.message;
+    err.style.display = 'block';
+    btn.textContent = 'Passwort setzen & anmelden'; btn.disabled = false;
+  }
+}
+
 // Enter-Taste
 document.addEventListener('keydown', e=>{
   if(e.key !== 'Enter') return;
   const s1 = document.getElementById('resetStep1');
   const s2 = document.getElementById('resetStep2');
+  const fc = document.getElementById('forceChangeSection');
   if(s1.style.display !== 'none') sendOTPCode();
   else if(s2.style.display !== 'none') validateOTPCode();
+  else if(fc.style.display !== 'none') doForceChange();
   else doLogin();
 });
 </script>
