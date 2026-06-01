@@ -11,7 +11,7 @@ if('serviceWorker' in navigator){
   navigator.serviceWorker.register('/sw.js').catch(()=>{});
 }
 </script>
-<title>NicoMind – Anmelden</title>
+<title>curenio – Anmelden</title>
 <script src="https://unpkg.com/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -22,10 +22,10 @@ if('serviceWorker' in navigator){
     --text: #1d1d1f;
     --text2: #6e6e73;
     --accent: #0071e3;
+    --red: #c0002a;
     --radius: 14px;
     font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Helvetica Neue', sans-serif;
   }
-
   body {
     background: var(--bg);
     min-height: 100vh;
@@ -35,8 +35,6 @@ if('serviceWorker' in navigator){
     justify-content: center;
     -webkit-font-smoothing: antialiased;
   }
-
-  /* subtle grid background */
   body::before {
     content: '';
     position: fixed; inset: 0;
@@ -46,7 +44,6 @@ if('serviceWorker' in navigator){
     background-size: 40px 40px;
     pointer-events: none;
   }
-
   .card {
     background: var(--surface);
     border-radius: 20px;
@@ -57,44 +54,31 @@ if('serviceWorker' in navigator){
     position: relative;
     animation: fadeUp .4s ease both;
   }
-
   @keyframes fadeUp {
     from { opacity: 0; transform: translateY(18px); }
     to   { opacity: 1; transform: translateY(0); }
   }
-
-  /* Logo + Brand */
   .brand {
     display: flex;
     flex-direction: column;
     align-items: center;
     margin-bottom: 32px;
   }
+  .brand-name { font-size: 22px; font-weight: 600; letter-spacing: -0.4px; color: var(--text); }
+  .brand-sub  { font-size: 13px; color: var(--text2); margin-top: 3px; }
 
-  .brand-name {
-    font-size: 22px;
-    font-weight: 600;
-    letter-spacing: -0.4px;
-    color: var(--text);
-  }
-  .brand-sub {
-    font-size: 13px;
-    color: var(--text2);
-    margin-top: 3px;
-  }
-
-  /* Form */
   .form-group { margin-bottom: 14px; }
+  .form-label { font-size: 12px; color: var(--text2); margin-bottom: 5px; display: block; }
 
-  .input-wrap {
-    position: relative;
-  }
+  .input-wrap { position: relative; }
   .input-wrap svg {
     position: absolute; left: 13px; top: 50%; transform: translateY(-50%);
     color: var(--text2); pointer-events: none;
   }
   input[type="email"],
-  input[type="password"] {
+  input[type="password"],
+  input[type="text"],
+  input[type="number"] {
     width: 100%;
     padding: 12px 14px 12px 40px;
     border: 1.5px solid var(--border);
@@ -105,15 +89,12 @@ if('serviceWorker' in navigator){
     outline: none;
     transition: border .15s, background .15s;
     font-family: inherit;
-    -webkit-font-smoothing: antialiased;
   }
-  input:focus {
-    border-color: var(--accent);
-    background: #fff;
-  }
+  input.no-icon { padding-left: 14px; }
+  input:focus { border-color: var(--accent); background: #fff; }
   input::placeholder { color: #b0b0b5; }
 
-  .btn-login {
+  .btn-primary {
     width: 100%;
     padding: 13px;
     background: var(--accent);
@@ -128,42 +109,53 @@ if('serviceWorker' in navigator){
     letter-spacing: -0.1px;
     transition: all .15s;
   }
-  .btn-login:hover { background: #0077ed; box-shadow: 0 2px 12px rgba(0,113,227,.35); }
+  .btn-primary:hover { background: #0077ed; box-shadow: 0 2px 12px rgba(0,113,227,.35); }
+  .btn-primary:disabled { opacity: .6; cursor: default; }
 
-  .divider {
-    display: flex; align-items: center; gap: 10px;
-    margin: 20px 0 16px;
-    color: var(--text2); font-size: 12px;
-  }
-  .divider::before, .divider::after {
-    content: ''; flex: 1; height: 1px; background: var(--border);
-  }
-
-  .coming-soon {
+  .btn-back {
+    background: none;
+    border: none;
+    color: var(--accent);
+    font-size: 13px;
+    cursor: pointer;
+    padding: 0;
+    margin-top: 14px;
+    font-family: inherit;
+    display: block;
     text-align: center;
-    font-size: 12px;
-    color: var(--text2);
-    padding: 10px 14px;
-    background: rgba(0,113,227,.06);
-    border-radius: 8px;
-    border: 1px solid rgba(0,113,227,.14);
-    line-height: 1.5;
+    width: 100%;
   }
-  .coming-soon strong { color: var(--accent); font-weight: 600; }
+  .btn-back:hover { text-decoration: underline; }
 
-  /* Forgot link */
   .forgot {
     display: block;
     text-align: right;
     font-size: 12.5px;
     color: var(--accent);
-    text-decoration: none;
+    cursor: pointer;
     margin-top: 6px;
-    opacity: .6;
-    cursor: default;
+    background: none;
+    border: none;
+    font-family: inherit;
+    padding: 0;
+  }
+  .forgot:hover { text-decoration: underline; }
+
+  .error-msg { color: var(--red); font-size: 12.5px; margin-bottom: 10px; text-align: center; display: none; }
+  .success-msg { color: #00a86b; font-size: 12.5px; margin-bottom: 10px; text-align: center; display: none; }
+
+  .step-title { font-size: 17px; font-weight: 600; color: var(--text); margin-bottom: 6px; }
+  .step-sub   { font-size: 13px; color: var(--text2); margin-bottom: 24px; line-height: 1.5; }
+
+  .otp-input {
+    font-size: 28px !important;
+    font-weight: 700 !important;
+    letter-spacing: 12px !important;
+    text-align: center !important;
+    padding: 14px !important;
+    color: var(--accent) !important;
   }
 
-  /* Footer */
   .footer {
     margin-top: 28px;
     font-size: 11.5px;
@@ -179,80 +171,244 @@ if('serviceWorker' in navigator){
 
 <div class="card">
   <div class="brand">
-    <div class="brand-name">NicoMind</div>
+    <div class="brand-name">curenio</div>
     <div class="brand-sub">Intelligente Dienstplanung</div>
   </div>
 
-
-  <div class="form-group">
-    <div class="input-wrap">
-      <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
-        <path stroke-linecap="round" stroke-linejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
-      </svg>
-      <input type="email" id="emailInput" placeholder="E-Mail-Adresse">
+  <!-- ── LOGIN FORM ── -->
+  <div id="loginSection">
+    <div class="form-group">
+      <div class="input-wrap">
+        <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
+        </svg>
+        <input type="email" id="emailInput" placeholder="E-Mail-Adresse">
+      </div>
     </div>
+    <div class="form-group">
+      <div class="input-wrap">
+        <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
+        </svg>
+        <input type="password" id="passwordInput" placeholder="Passwort">
+      </div>
+      <button class="forgot" onclick="showResetStep1()">Passwort vergessen?</button>
+    </div>
+    <div id="loginError" class="error-msg"></div>
+    <div id="loginSuccess" class="success-msg"></div>
+    <button class="btn-primary" id="loginBtn" onclick="doLogin()">Anmelden</button>
   </div>
 
-  <div class="form-group">
-    <div class="input-wrap">
-      <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
-        <path stroke-linecap="round" stroke-linejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
-      </svg>
-      <input type="password" id="passwordInput" placeholder="Passwort">
+  <!-- ── RESET STEP 1: E-Mail eingeben ── -->
+  <div id="resetStep1" style="display:none">
+    <div class="step-title">Passwort zurücksetzen</div>
+    <div class="step-sub">Geben Sie Ihre E-Mail-Adresse ein. Wir senden Ihnen einen 6-stelligen Code.</div>
+    <div class="form-group">
+      <div class="input-wrap">
+        <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
+        </svg>
+        <input type="email" id="resetEmailInput" placeholder="E-Mail-Adresse">
+      </div>
     </div>
-    <a href="#" class="forgot">Passwort vergessen?</a>
+    <div id="step1Error" class="error-msg"></div>
+    <button class="btn-primary" id="sendOtpBtn" onclick="sendOTPCode()">Code senden</button>
+    <button class="btn-back" onclick="showLogin()">← Zurück zur Anmeldung</button>
   </div>
 
-  <div id="errorMsg" style="color:#c0002a;font-size:12.5px;margin-bottom:10px;display:none;text-align:center"></div>
-
-  <button class="btn-login" id="loginBtn" onclick="doLogin()">Anmelden</button>
+  <!-- ── RESET STEP 2: Code + neues Passwort ── -->
+  <div id="resetStep2" style="display:none">
+    <div class="step-title">Code eingeben</div>
+    <div class="step-sub" id="step2Sub">Code wurde gesendet.</div>
+    <div class="form-group">
+      <div class="input-wrap">
+        <input type="text" id="otpInput" class="no-icon otp-input" placeholder="000000"
+          maxlength="6" inputmode="numeric" autocomplete="one-time-code">
+      </div>
+    </div>
+    <div class="form-group">
+      <div class="input-wrap">
+        <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
+        </svg>
+        <input type="password" id="newPwInput" placeholder="Neues Passwort (min. 8 Zeichen)">
+      </div>
+    </div>
+    <div class="form-group">
+      <div class="input-wrap">
+        <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
+        </svg>
+        <input type="password" id="newPwWdhInput" placeholder="Passwort bestätigen">
+      </div>
+    </div>
+    <div id="step2Error" class="error-msg"></div>
+    <button class="btn-primary" id="validateOtpBtn" onclick="validateOTPCode()">Passwort setzen</button>
+    <button class="btn-back" onclick="showResetStep1()">← Code erneut senden</button>
+  </div>
 
 </div>
 
 <div class="footer">
-  © 2026 NicoMind &nbsp;·&nbsp; <a href="#">Datenschutz</a> &nbsp;·&nbsp; <a href="#">Nutzungsbedingungen</a>
+  © 2026 curenio &nbsp;·&nbsp; <a href="#">Datenschutz</a> &nbsp;·&nbsp; <a href="#">Nutzungsbedingungen</a>
 </div>
 
 <script>
+const SUPABASE_URL = 'https://pxztxkqzvjkwvbfymbst.supabase.co';
 const sb = supabase.createClient(
-  'https://pxztxkqzvjkwvbfymbst.supabase.co',
+  SUPABASE_URL,
   'sb_publishable_bpKLnvsUQYffH7XEQay1Bg_Y__1XWEL'
 );
 
-// Check if already logged in
+let _resetEmail = '';
+
+// Bereits eingeloggt?
 sb.auth.getSession().then(({data:{session}})=>{
-  if(session) window.location.href='dienstplan.html';
+  if(session) window.location.href = 'dienstplan.html';
 });
 
+// ── NAVIGATION ───────────────────────────────────────────────────
+function showLogin(){
+  document.getElementById('loginSection').style.display = '';
+  document.getElementById('resetStep1').style.display = 'none';
+  document.getElementById('resetStep2').style.display = 'none';
+  document.getElementById('loginError').style.display = 'none';
+}
+
+function showResetStep1(){
+  document.getElementById('loginSection').style.display = 'none';
+  document.getElementById('resetStep1').style.display = '';
+  document.getElementById('resetStep2').style.display = 'none';
+  // E-Mail aus Login-Feld übernehmen falls vorhanden
+  const loginEmail = document.getElementById('emailInput').value.trim();
+  if(loginEmail) document.getElementById('resetEmailInput').value = loginEmail;
+  document.getElementById('step1Error').style.display = 'none';
+  document.getElementById('resetEmailInput').focus();
+}
+
+function showResetStep2(email){
+  _resetEmail = email;
+  document.getElementById('loginSection').style.display = 'none';
+  document.getElementById('resetStep1').style.display = 'none';
+  document.getElementById('resetStep2').style.display = '';
+  document.getElementById('step2Sub').textContent = `Code wurde an ${email} gesendet. Gültig 15 Minuten.`;
+  document.getElementById('step2Error').style.display = 'none';
+  document.getElementById('otpInput').value = '';
+  document.getElementById('newPwInput').value = '';
+  document.getElementById('newPwWdhInput').value = '';
+  document.getElementById('otpInput').focus();
+}
+
+// ── LOGIN ────────────────────────────────────────────────────────
 async function doLogin(){
   const email = document.getElementById('emailInput').value.trim();
   const password = document.getElementById('passwordInput').value;
   const btn = document.getElementById('loginBtn');
-  const err = document.getElementById('errorMsg');
+  const err = document.getElementById('loginError');
+  const suc = document.getElementById('loginSuccess');
 
   if(!email || !password){
     err.textContent = 'Bitte E-Mail und Passwort eingeben.';
     err.style.display = 'block'; return;
   }
 
-  btn.textContent = '…';
-  btn.style.opacity = '.7';
-  err.style.display = 'none';
+  btn.textContent = '…'; btn.disabled = true;
+  err.style.display = 'none'; suc.style.display = 'none';
 
   const { error } = await sb.auth.signInWithPassword({ email, password });
 
   if(error){
-    err.textContent = 'Ungültige E-Mail oder Passwort.';
+    err.textContent = 'Ungültige E-Mail oder falsches Passwort.';
     err.style.display = 'block';
-    btn.textContent = 'Anmelden';
-    btn.style.opacity = '1';
+    btn.textContent = 'Anmelden'; btn.disabled = false;
   } else {
     window.location.href = 'dienstplan.html';
   }
 }
 
-// Enter key support
-document.addEventListener('keydown', e=>{ if(e.key==='Enter') doLogin(); });
+// ── OTP SENDEN ───────────────────────────────────────────────────
+async function sendOTPCode(){
+  const email = document.getElementById('resetEmailInput').value.trim();
+  const btn = document.getElementById('sendOtpBtn');
+  const err = document.getElementById('step1Error');
+
+  if(!email){ err.textContent = 'Bitte E-Mail eingeben.'; err.style.display='block'; return; }
+
+  btn.textContent = '…'; btn.disabled = true;
+  err.style.display = 'none';
+
+  try {
+    const res = await fetch(`${SUPABASE_URL}/functions/v1/otp-reset`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'generate', email })
+    });
+    const data = await res.json();
+    if(!res.ok || data.error){
+      err.textContent = data.error || 'Fehler beim Senden.';
+      err.style.display = 'block';
+      btn.textContent = 'Code senden'; btn.disabled = false;
+      return;
+    }
+    showResetStep2(email);
+  } catch(e) {
+    err.textContent = 'Verbindungsfehler. Bitte erneut versuchen.';
+    err.style.display = 'block';
+    btn.textContent = 'Code senden'; btn.disabled = false;
+  }
+}
+
+// ── OTP VALIDIEREN ───────────────────────────────────────────────
+async function validateOTPCode(){
+  const otp = document.getElementById('otpInput').value.trim();
+  const newPw = document.getElementById('newPwInput').value;
+  const newPwWdh = document.getElementById('newPwWdhInput').value;
+  const btn = document.getElementById('validateOtpBtn');
+  const err = document.getElementById('step2Error');
+
+  if(!otp || otp.length !== 6){ err.textContent = 'Bitte 6-stelligen Code eingeben.'; err.style.display='block'; return; }
+  if(!newPw || newPw.length < 8){ err.textContent = 'Passwort muss mindestens 8 Zeichen haben.'; err.style.display='block'; return; }
+  if(newPw !== newPwWdh){ err.textContent = 'Passwörter stimmen nicht überein.'; err.style.display='block'; return; }
+
+  btn.textContent = '…'; btn.disabled = true;
+  err.style.display = 'none';
+
+  try {
+    const res = await fetch(`${SUPABASE_URL}/functions/v1/otp-reset`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'validate', email: _resetEmail, otp, newPassword: newPw })
+    });
+    const data = await res.json();
+    if(!res.ok || data.error){
+      err.textContent = data.error || 'Ungültiger Code.';
+      err.style.display = 'block';
+      btn.textContent = 'Passwort setzen'; btn.disabled = false;
+      return;
+    }
+    // Erfolg → Login-Seite mit Erfolgsmeldung
+    showLogin();
+    const suc = document.getElementById('loginSuccess');
+    suc.textContent = '✅ Passwort erfolgreich gesetzt. Bitte jetzt anmelden.';
+    suc.style.display = 'block';
+    document.getElementById('emailInput').value = _resetEmail;
+    document.getElementById('passwordInput').focus();
+  } catch(e) {
+    err.textContent = 'Verbindungsfehler. Bitte erneut versuchen.';
+    err.style.display = 'block';
+    btn.textContent = 'Passwort setzen'; btn.disabled = false;
+  }
+}
+
+// Enter-Taste
+document.addEventListener('keydown', e=>{
+  if(e.key !== 'Enter') return;
+  const s1 = document.getElementById('resetStep1');
+  const s2 = document.getElementById('resetStep2');
+  if(s1.style.display !== 'none') sendOTPCode();
+  else if(s2.style.display !== 'none') validateOTPCode();
+  else doLogin();
+});
 </script>
 </body>
 </html>

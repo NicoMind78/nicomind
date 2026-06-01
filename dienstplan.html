@@ -981,8 +981,8 @@ if('serviceWorker' in navigator){
       <button onclick="sendPasswordReset()" id="btnResetLink"
         style="padding:14px 16px;border:1.5px solid var(--border);border-radius:10px;background:var(--surface2);cursor:pointer;text-align:left;transition:border-color .15s"
         onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='var(--border)'">
-        <div style="font-size:13px;font-weight:600;color:var(--text)">📧 Reset-Link senden</div>
-        <div style="font-size:11px;color:var(--text3);margin-top:2px">Mitarbeiter erhält E-Mail mit Link zum selbst Zurücksetzen</div>
+        <div style="font-size:13px;font-weight:600;color:var(--text)">📧 Reset-Code senden</div>
+        <div style="font-size:11px;color:var(--text3);margin-top:2px">Mitarbeiter erhält E-Mail mit 6-stelligem Code (15 Min gültig)</div>
       </button>
 
       <!-- Option 2: Neues Passwort direkt vergeben -->
@@ -6204,12 +6204,23 @@ function openPasswortModal(){
 async function sendPasswordReset(){
   const email = document.getElementById('euEmailAnzeige')?.textContent?.trim();
   if(!email || email === '–'){ showToast('Keine E-Mail hinterlegt'); return; }
-  const { error } = await sb.auth.resetPasswordForEmail(email, {
-    redirectTo: 'https://curenio.de/dienstplan.html'
-  });
-  if(error){ showToast('Fehler: '+error.message); return; }
-  closeModal('passwortModal');
-  showToast(`✅ Reset-Link an ${email} gesendet`);
+  const btn = document.getElementById('btnResetLink');
+  if(btn){ btn.textContent = '…'; btn.disabled = true; }
+  try {
+    const res = await fetch(`${SUPABASE_URL}/functions/v1/otp-reset`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'generate', email })
+    });
+    const data = await res.json();
+    if(!res.ok || data.error){ showToast('Fehler: ' + (data.error || 'Unbekannt')); return; }
+    closeModal('passwortModal');
+    showToast(`✅ Reset-Code an ${email} gesendet (gültig 15 Min)`);
+  } catch(e) {
+    showToast('Verbindungsfehler: ' + e.message);
+  } finally {
+    if(btn){ btn.textContent = '🔗 Reset-Code senden'; btn.disabled = false; }
+  }
 }
 
 async function neuesPasswortVergeben(){
