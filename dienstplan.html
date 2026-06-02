@@ -6231,6 +6231,7 @@ let _dienstplanAenderungen = {};
 let _currentUserName = '';
 
 async function openStundenModal(){
+  if(['mitarbeiter','betriebsrat'].includes(currentUserRole)){ return; }
   document.getElementById('settingsMenu').style.display = 'none';
   document.getElementById('stundenSub').textContent =
     `${MONTH_NAMES[currentMonth]} ${currentYear} · ${allGruppen.find(g=>g.id===currentGruppeId)?.name||''}`;
@@ -6684,6 +6685,18 @@ function applyRolePermissions(){
     menuStandorte.style.display = ['owner','master_admin','admin','planer'].includes(currentUserRole) ? '' : 'none';
   }
 
+  // Unternehmensrahmen: nur Owner/Master Admin/Admin
+  const menuUr = document.getElementById('menuUnternehmensrahmen');
+  if(menuUr){
+    menuUr.style.display = ['owner','master_admin','admin'].includes(currentUserRole) ? '' : 'none';
+  }
+
+  // Stundenübersicht: nicht für Mitarbeiter
+  const menuStunden = document.querySelector('.settings-menu-item[onclick="openStundenModal()"]');
+  if(menuStunden){
+    menuStunden.style.display = readOnly.includes(currentUserRole) ? 'none' : '';
+  }
+
   // Benutzerverwaltung
   const menuUserMgmt = document.querySelector('.settings-menu-item[onclick="openUserManagement()"]');
   if(menuUserMgmt){
@@ -6941,6 +6954,7 @@ async function saveEditUser(){
 
 // ─── UNTERNEHMENSRAHMEN (Ebene 1) ───
 async function openUnternehmensrahmenModal(){
+  if(['mitarbeiter','betriebsrat','planer','personal'].includes(currentUserRole)){ return; }
   document.getElementById('settingsMenu').style.display='none';
   const { data } = await sb.from('unternehmensrahmen')
     .select('*').eq('unternehmen_id', currentUnternehmenId).single();
