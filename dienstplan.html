@@ -207,6 +207,8 @@ if('serviceWorker' in navigator){
   .cell-staff:hover .staff-edit { opacity: 1; }
   .staff-edit:hover { background: var(--accent-soft); color: var(--accent); }
   .staff-delete:hover { background: var(--red-soft); color: var(--red); }
+  /* Mitarbeiter darf ✎ nicht sehen */
+  body.role-mitarbeiter .staff-edit { display: none !important; }
 
   .cell-day {
     width: 50px; min-width: 50px; padding: 5px 3px; border-right: 1px solid var(--border);
@@ -2616,6 +2618,7 @@ function saveShiftSettings(){
 let _editStaffSollId = null;
 
 function openEditStaff(staffId){
+  if(['mitarbeiter','betriebsrat'].includes(currentUserRole)){ return; }
   _editStaffSollId = staffId;
   const staff = state.staff.find(s=>s.id==staffId);
   document.getElementById('editStaffSub').textContent = `${staff.name} · ${staff.role}`;
@@ -6625,10 +6628,12 @@ async function loadUserRole(){
   }
 }
 
-function applyRolePermissions(){
-  const readOnly       = ['mitarbeiter','betriebsrat'];
+function applyRolePermissions(){\n  const readOnly       = ['mitarbeiter','betriebsrat'];
   const noUsers        = ['planer','personal','betriebsrat','mitarbeiter'];
   const canManageUsers = ['owner','master_admin','admin','personal'];
+
+  // Body-Klasse für CSS-Steuerung
+  document.body.classList.toggle('role-mitarbeiter', readOnly.includes(currentUserRole));
 
   // Schreibgeschützt: Chips ausgegraut
   if(readOnly.includes(currentUserRole)){
@@ -6660,7 +6665,13 @@ function applyRolePermissions(){
   const btnKI = document.querySelector('button[onclick="openKIModal()"]');
   if(btnKI) btnKI.style.display = readOnly.includes(currentUserRole) ? 'none' : '';
 
-  // Unternehmen-Menü: nur Owner/Master Admin – die zwischen Unternehmen wechseln dürfen
+  // Gruppen-Vorgaben: nur für Owner/Admin/Planer – NICHT für Mitarbeiter
+  const menuGruppenVorgaben = document.querySelector('.settings-menu-item[onclick="openGruppenrahmenModal()"]');
+  if(menuGruppenVorgaben){
+    menuGruppenVorgaben.style.display = ['owner','master_admin','admin','planer','personal'].includes(currentUserRole) ? '' : 'none';
+  }
+
+  // Unternehmen-Menü: nur Owner/Master Admin
   const menuUnternehmen = document.getElementById('menuUnternehmen');
   if(menuUnternehmen){
     menuUnternehmen.style.display = ['owner','master_admin'].includes(currentUserRole) ? '' : 'none';
@@ -6672,7 +6683,7 @@ function applyRolePermissions(){
     menuStandorte.style.display = ['owner','master_admin','admin','planer'].includes(currentUserRole) ? '' : 'none';
   }
 
-  // Benutzerverwaltung: Planer hat keinen Zugriff
+  // Benutzerverwaltung
   const menuUserMgmt = document.querySelector('.settings-menu-item[onclick="openUserManagement()"]');
   if(menuUserMgmt){
     menuUserMgmt.style.display = canManageUsers.includes(currentUserRole) ? '' : 'none';
@@ -6995,6 +7006,7 @@ async function saveUnternehmensrahmen(){
 let _gruppenDienste = [];
 
 async function openGruppenrahmenModal(){
+  if(['mitarbeiter','betriebsrat'].includes(currentUserRole)){ return; }
   document.getElementById('settingsMenu').style.display='none';
   const gruppe = allGruppen.find(g=>g.id===currentGruppeId);
   const standort = allStandorte.find(s=>s.id===currentStandortId);
