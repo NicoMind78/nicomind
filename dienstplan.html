@@ -6628,7 +6628,8 @@ async function loadUserRole(){
   }
 }
 
-function applyRolePermissions(){\n  const readOnly       = ['mitarbeiter','betriebsrat'];
+function applyRolePermissions(){
+  const readOnly       = ['mitarbeiter','betriebsrat'];
   const noUsers        = ['planer','personal','betriebsrat','mitarbeiter'];
   const canManageUsers = ['owner','master_admin','admin','personal'];
 
