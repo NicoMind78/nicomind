@@ -278,6 +278,11 @@ if('serviceWorker' in navigator){
 </div>
 
 <script>
+// Safari BFCache Fix
+window.addEventListener('pageshow', (event) => {
+  if(event.persisted){ window.location.reload(); }
+});
+
 const SUPABASE_URL = 'https://pxztxkqzvjkwvbfymbst.supabase.co';
 const sb = supabase.createClient(
   SUPABASE_URL,

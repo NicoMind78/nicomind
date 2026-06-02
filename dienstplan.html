@@ -7616,6 +7616,15 @@ if(state.showWuensche){
   if(btn){ btn.style.background='var(--red-soft)'; btn.style.borderColor='var(--red)'; btn.style.color='var(--red)'; }
 }
 render();
+// Safari BFCache Fix: Seite neu laden wenn aus Cache wiederhergestellt
+window.addEventListener('pageshow', (event) => {
+  if(event.persisted){
+    // Safari hat Seite aus Back-Forward Cache wiederhergestellt
+    // Session könnte veraltet sein → kompletter Reload
+    window.location.reload();
+  }
+});
+
 // Erst Unternehmen laden, dann Standorte, dann Daten
 (async()=>{
   // PASSWORD_RECOVERY via onAuthStateChange abfangen (ZUERST registrieren)
