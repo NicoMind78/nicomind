@@ -3609,11 +3609,15 @@ async function saveWish(del){
 }
 
 async function doLogout(){
+  try { await sb.auth.signOut({ scope: 'local' }); } catch(e){}
+  // Alle Supabase-Keys aus localStorage löschen (verhindert Akkumulation von veraltetem State)
   try {
-    // scope:'local' löscht nur die lokale Session ohne Server-Call (kein CORS-Problem)
-    await sb.auth.signOut({ scope: 'local' });
-  } catch(e){ console.warn('signOut Fehler:', e); }
-  window.location.href = 'https://curenio.de/nicode_login.html';
+    Object.keys(localStorage)
+      .filter(k => k.includes('supabase') || k.startsWith('sb-'))
+      .forEach(k => localStorage.removeItem(k));
+  } catch(e){}
+  // location.replace() statt href: entfernt History-Eintrag → kein BFCache-Restore möglich
+  window.location.replace('https://curenio.de/nicode_login.html');
 }
 
 // ─── SETTINGS MENU ───
@@ -6189,7 +6193,7 @@ async function recoveryPasswortSpeichern(){
   showToast('✅ Passwort gesetzt – du wirst zur Anmeldung weitergeleitet...');
   setTimeout(async () => {
     await sb.auth.signOut();
-    window.location.href = 'https://curenio.de/nicode_login.html';
+    window.location.replace('https://curenio.de/nicode_login.html');
   }, 1500);
 }
 
@@ -6583,7 +6587,7 @@ async function loadUserRole(){
     const sessRes = await sb.auth.getSession();
     const session = sessRes?.data?.session;
     if(!session){
-      window.location.href = 'https://curenio.de/nicode_login.html';
+      window.location.replace('https://curenio.de/nicode_login.html');
       return;
     }
     currentUserId = session.user.id;
@@ -6600,7 +6604,7 @@ async function loadUserRole(){
     if(!profileErr && (!profile || !profile.unternehmen_id)){
       // Kein Profil oder keine Firmenzuweisung → ausloggen
       await sb.auth.signOut({ scope: 'local' });
-      window.location.href = 'https://curenio.de/nicode_login.html';
+      window.location.replace('https://curenio.de/nicode_login.html');
       return;
     }
 
@@ -6610,7 +6614,7 @@ async function loadUserRole(){
     if(profile.muss_passwort_aendern){
       // Ausloggen BEVOR Redirect – sonst Endlosschleife (Login erkennt Session → Redirect zurück)
       await sb.auth.signOut({ scope: 'local' });
-      window.location.href = 'https://curenio.de/nicode_login.html';
+      window.location.replace('https://curenio.de/nicode_login.html');
       return;
     }
 
@@ -7597,7 +7601,7 @@ function resetInactivityTimer(){
   clearTimeout(_inactivityTimer);
   _inactivityTimer = setTimeout(async ()=>{
     await sb.auth.signOut();
-    window.location.href = 'https://curenio.de/nicode_login.html';
+    window.location.replace('https://curenio.de/nicode_login.html');
   }, INACTIVITY_MS);
 }
 
@@ -7612,7 +7616,7 @@ resetInactivityTimer(); // Timer starten
 (async function(){
   const { data: { session } } = await sb.auth.getSession();
   if(!session){
-    window.location.href = 'https://curenio.de/nicode_login.html';
+    window.location.replace('https://curenio.de/nicode_login.html');
   }
 })();
 
@@ -7624,9 +7628,10 @@ if(state.showWuensche){
   if(btn){ btn.style.background='var(--red-soft)'; btn.style.borderColor='var(--red)'; btn.style.color='var(--red)'; }
 }
 render();
-// Safari BFCache Fix: verhindert dass Safari die Seite überhaupt cached
-// beforeunload-Listener deaktiviert BFCache in Safari/Chrome
-window.addEventListener('beforeunload', () => {});
+// BFCache Safety-Net: pageshow + replace() verhindert veralteten State
+window.addEventListener('pageshow', (e) => {
+  if(e.persisted) window.location.replace(window.location.href);
+});
 
 // Erst Unternehmen laden, dann Standorte, dann Daten
 (async()=>{
@@ -7639,14 +7644,24 @@ window.addEventListener('beforeunload', () => {});
     }
   });
 
-  // Session direkt prüfen – zuverlässigste Methode, unabhängig vom Event-Timing
+  // Session prüfen und serverseitig validieren (verhindert veralteten Cache)
   const sessRes = await sb.auth.getSession();
-  const session = sessRes?.data?.session;
+  let session = sessRes?.data?.session;
 
   if(!session){
-    window.location.href = 'https://curenio.de/nicode_login.html';
+    window.location.replace('https://curenio.de/nicode_login.html');
     return;
   }
+
+  // Token serverseitig auffrischen – stellt sicher dass der User wirklich eingeloggt ist
+  try {
+    const refreshed = await sb.auth.refreshSession();
+    if(refreshed.data?.session) session = refreshed.data.session;
+    else if(refreshed.error){
+      window.location.replace('https://curenio.de/nicode_login.html');
+      return;
+    }
+  } catch(e){ console.warn('refreshSession Fehler:', e); }
 
   // Kurz warten ob PASSWORD_RECOVERY Event eintrifft (PKCE Flow)
   await new Promise(r => setTimeout(r, 300));

@@ -279,7 +279,10 @@ if('serviceWorker' in navigator){
 
 <script>
 // Safari BFCache Fix
-window.addEventListener('beforeunload', () => {});
+// BFCache Safety-Net
+window.addEventListener('pageshow', (e) => {
+  if(e.persisted) window.location.replace(window.location.href);
+});
 
 const SUPABASE_URL = 'https://pxztxkqzvjkwvbfymbst.supabase.co';
 const sb = supabase.createClient(
@@ -291,7 +294,7 @@ let _resetEmail = '';
 
 // Bereits eingeloggt?
 sb.auth.getSession().then(({data:{session}})=>{
-  if(session) window.location.href = 'dienstplan.html';
+  if(session) window.location.replace('dienstplan.html');
 });
 
 // ── NAVIGATION ───────────────────────────────────────────────────
@@ -374,7 +377,7 @@ async function doLogin(){
         return;
       }
     }
-    window.location.href = 'dienstplan.html';
+    window.location.replace('dienstplan.html');
   }
 }
 
@@ -476,7 +479,7 @@ async function doForceChange(){
       await sb.from('user_profiles').update({ muss_passwort_aendern: false }).eq('user_id', session.user.id);
     }
 
-    window.location.href = 'dienstplan.html';
+    window.location.replace('dienstplan.html');
   } catch(e) {
     err.textContent = 'Verbindungsfehler: '+e.message;
     err.style.display = 'block';
