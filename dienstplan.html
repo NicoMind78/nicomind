@@ -6582,20 +6582,25 @@ async function loadUserRole(){
     }
     currentUserId = session.user.id;
 
-    // Profil laden: Username + Passwort-Änderungs-Flag
+    // Profil laden: Username + Passwort-Änderungs-Flag + Zugangsberechtigung
     const { data: profile } = await sb.from('user_profiles')
-      .select('name, vorname, muss_passwort_aendern')
+      .select('name, vorname, muss_passwort_aendern, unternehmen_id')
       .eq('user_id', currentUserId)
       .maybeSingle();
 
-    if(profile){
-      if(profile.name || profile.vorname)
-        _currentUserName = `${profile.vorname||''} ${profile.name||''}`.trim();
-      // Sicherheits-Check: forced password change
-      if(profile.muss_passwort_aendern){
-        window.location.href = 'https://curenio.de/nicode_login.html';
-        return;
-      }
+    if(!profile || !profile.unternehmen_id){
+      // Kein Profil oder keine Firmenzuweisung → ausloggen
+      await sb.auth.signOut({ scope: 'local' });
+      window.location.href = 'https://curenio.de/nicode_login.html';
+      return;
+    }
+
+    if(profile.name || profile.vorname)
+      _currentUserName = `${profile.vorname||''} ${profile.name||''}`.trim();
+
+    if(profile.muss_passwort_aendern){
+      window.location.href = 'https://curenio.de/nicode_login.html';
+      return;
     }
 
     // Rolle laden

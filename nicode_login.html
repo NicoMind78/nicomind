@@ -346,15 +346,25 @@ async function doLogin(){
     err.style.display = 'block';
     btn.textContent = 'Anmelden'; btn.disabled = false;
   } else {
-    // Prüfen ob Passwort-Änderung erzwungen wird
     const { data: { session } } = await sb.auth.getSession();
     if(session){
+      // Zugangsberechtigung prüfen: User muss in user_profiles existieren
       const { data: profile } = await sb.from('user_profiles')
-        .select('muss_passwort_aendern')
+        .select('muss_passwort_aendern, unternehmen_id')
         .eq('user_id', session.user.id)
         .maybeSingle();
-      if(profile?.muss_passwort_aendern){
-        // Forced Change anzeigen
+
+      if(!profile || !profile.unternehmen_id){
+        // Kein Profil oder keine Zuweisung → sofort ausloggen
+        await sb.auth.signOut({ scope: 'local' });
+        err.textContent = 'Kein Zugang. Bitte wenden Sie sich an Ihren Administrator.';
+        err.style.display = 'block';
+        btn.textContent = 'Anmelden'; btn.disabled = false;
+        return;
+      }
+
+      // Passwort-Änderung erzwungen?
+      if(profile.muss_passwort_aendern){
         document.getElementById('loginSection').style.display = 'none';
         document.getElementById('forceChangeSection').style.display = '';
         document.getElementById('forcePwInput').focus();
