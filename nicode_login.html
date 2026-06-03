@@ -415,7 +415,7 @@ if('serviceWorker' in navigator){
     </div>
 
     <div class="panel-footer">
-      © 2026 curenio &nbsp;·&nbsp; <a href="#">Datenschutz</a> &nbsp;·&nbsp; <a href="#">Nutzungsbedingungen</a>
+      © 2026 curenio &nbsp;·&nbsp; <a href="impressum.html">Impressum</a>
     </div>
   </div>
 
@@ -438,7 +438,24 @@ const SUPABASE_URL = 'https://pxztxkqzvjkwvbfymbst.supabase.co';
 const sb = supabase.createClient(SUPABASE_URL, 'sb_publishable_bpKLnvsUQYffH7XEQay1Bg_Y__1XWEL');
 let _resetEmail = '';
 
-sb.auth.getSession().then(function(r){ if(r.data.session) window.location.replace('dienstplan.html'); });
+// Maintenance-Mode prüfen (vor allem anderen)
+(async function(){
+  try {
+    var ms = await sb.from('system_settings').select('value').eq('key','maintenance_mode').maybeSingle();
+    if(ms && ms.data && ms.data.value === 'true'){
+      document.body.innerHTML = `
+        <div style="min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;background:#fff;font-family:'DM Sans',-apple-system,sans-serif;text-align:center;padding:32px">
+          <div style="font-size:48px;margin-bottom:24px">🔧</div>
+          <div style="font-size:28px;font-weight:700;color:#111318;margin-bottom:12px;font-family:'DM Serif Display',Georgia,serif">Demnächst verfügbar</div>
+          <div style="font-size:16px;color:#6b7280;max-width:400px;line-height:1.6;margin-bottom:32px">curenio wird gerade vorbereitet.<br>Wir sind bald für Sie da.</div>
+          <div style="font-size:13px;color:#9ca3af">Bei Fragen: <a href="mailto:info@curenio.de" style="color:#10b3b2;text-decoration:none">info@curenio.de</a></div>
+        </div>`;
+      return;
+    }
+  } catch(e){}
+  // Normal: Session prüfen
+  sb.auth.getSession().then(function(r){ if(r.data.session) window.location.replace('dienstplan.html'); });
+})();
 
 function hideAll(){
   ['step1','step2','resetStep1','resetStep2','forceChangeSection'].forEach(function(id){
