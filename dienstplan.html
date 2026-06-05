@@ -975,18 +975,18 @@ if('serviceWorker' in navigator){
 
 <div class="modal-overlay" id="passwortModal" onclick="if(event.target===this)closeModal('passwortModal')" style="z-index:3000">
   <div class="modal" style="width:360px">
-    <div class="modal-title">🔑 Zugangslink senden</div>
+    <div class="modal-title">Zugangslink senden</div>
     <div class="modal-sub" id="passwortModalSub">–</div>
 
     <div style="margin:16px 0">
       <div style="border:1.5px solid var(--border);border-radius:10px;padding:14px 16px;background:var(--surface2)">
-        <div style="font-size:13px;font-weight:600;color:var(--text);margin-bottom:8px">📧 Passwort-Link per E-Mail senden</div>
+        <div style="font-size:13px;font-weight:600;color:var(--text);margin-bottom:8px">Passwort-Link per E-Mail senden</div>
         <div style="font-size:12px;color:var(--text3);line-height:1.5;margin-bottom:12px">
           Der Mitarbeiter erhält einen sicheren Einmal-Link per E-Mail. Nach dem Klick kann er direkt ein eigenes Passwort vergeben.
         </div>
         <button onclick="zugangLinkSenden()" id="zugangLinkBtn"
           style="width:100%;padding:9px 14px;border:none;border-radius:8px;background:var(--accent);color:#fff;font-size:13px;font-weight:600;cursor:pointer">
-          🔗 Zugangslink senden
+          Zugangslink senden
         </button>
       </div>
     </div>
@@ -4174,7 +4174,7 @@ async function urlaubEntscheiden(id, status){
       const bis = new Date(antrag.bis_datum+'T12:00:00').toLocaleDateString('de-DE',{day:'numeric',month:'long',year:'numeric'});
       const icons = {genehmigt:'✅',abgelehnt:'❌',storniert:'🚫'};
       const labels = {genehmigt:'genehmigt',abgelehnt:'abgelehnt',storniert:'storniert'};
-      sendNotification(maEmail, `${icons[status]||''} Urlaubsantrag ${labels[status]||status}`,
+      sendNotification(maEmail, `Urlaubsantrag ${labels[status]||status}`,
         emailHtml(`Dein Urlaubsantrag wurde ${labels[status]||status}`, [
           `📅 ${von} – ${bis} (${antrag.tage} Werktag${antrag.tage!==1?'e':''})`,
           grund ? `Grund: <em>${grund}</em>` : '',
@@ -4832,7 +4832,7 @@ async function urlaubSelBestaetigen(){
     const name = _meinsStaff?.name || 'Ein Mitarbeiter';
     const von = new Date(sel.von+'T12:00:00').toLocaleDateString('de-DE',{day:'numeric',month:'long',year:'numeric'});
     const bis = new Date(sel.bis+'T12:00:00').toLocaleDateString('de-DE',{day:'numeric',month:'long',year:'numeric'});
-    sendNotification(adminEmails, `🏖️ Urlaubsantrag von ${name}`,
+    sendNotification(adminEmails, `Urlaubsantrag von ${name}`,
       emailHtml(`Neuer Urlaubsantrag`, [
         `<strong>${name}</strong> hat einen Urlaubsantrag gestellt:`,
         `📅 ${von} – ${bis} (${tage} Werktag${tage!==1?'e':''})`,
@@ -6097,7 +6097,7 @@ async function testEmailSenden(){
     headers: { 'Content-Type':'application/json', 'Authorization':`Bearer ${session.access_token}` },
     body: JSON.stringify({
       to: [email],
-      subject: '✅ Test-Email von curenio',
+      subject: 'Test-Email von curenio',
       html: emailHtml('Test erfolgreich!', [
         'Die E-Mail-Benachrichtigungen von curenio funktionieren.',
         `Gesendet an: <strong>${email}</strong>`
@@ -6200,18 +6200,23 @@ function openPasswortModal(){
 async function zugangLinkSenden(){
   if(!_editUserId){ showToast('Kein User ausgewählt'); return; }
 
-  const email = document.getElementById('euEmailAnzeige')?.textContent?.trim();
-  if(!email || email === '–'){
-    showToast('❌ Keine E-Mail-Adresse für diesen Mitarbeiter hinterlegt');
-    return;
-  }
-
   const btn = document.getElementById('zugangLinkBtn');
-  if(btn){ btn.disabled = true; btn.textContent = '⏳ Wird gesendet…'; }
+  if(btn){ btn.disabled = true; btn.textContent = 'Wird gesendet…'; }
 
   try {
-    // 1. Recovery-Link von Supabase generieren
     const { data: { session } } = await sb.auth.getSession();
+
+    // E-Mail direkt aus Auth laden – nicht aus DOM (verhindert State-Bug)
+    const emailRes = await fetch(`${SUPABASE_URL}/functions/v1/manage-roles`, {
+      method: 'POST',
+      headers: { 'Content-Type':'application/json', 'Authorization':`Bearer ${session.access_token}` },
+      body: JSON.stringify({ action: 'getEmail', user_id: _editUserId })
+    });
+    const emailResult = await emailRes.json();
+    const email = emailResult.email;
+    if(!email){ showToast('Keine E-Mail-Adresse fuer diesen Mitarbeiter hinterlegt'); return; }
+
+    // Recovery-Link von Supabase generieren
     const response = await fetch(`${SUPABASE_URL}/functions/v1/manage-roles`, {
       method: 'POST',
       headers: { 'Content-Type':'application/json', 'Authorization':`Bearer ${session.access_token}` },
@@ -6220,28 +6225,26 @@ async function zugangLinkSenden(){
     const result = await response.json();
     if(result.error){ showToast('Fehler: '+result.error); return; }
 
-    const link = result.link;
-
-    // 2. E-Mail mit Link an Mitarbeiter senden
+    // E-Mail mit Link senden (keine Emojis im Betreff)
     await sendNotification(
       email,
-      '🔑 Dein Zugang zu curenio',
+      'Dein Zugang zu curenio',
       emailHtml(
         'Willkommen bei curenio!',
         [
           'Ein Administrator hat dir einen Zugang eingerichtet.',
-          'Klicke auf den Button um dein persönliches Passwort zu vergeben.',
-          '<span style="font-size:11px;color:#9ca3af">Der Link ist 24 Stunden gültig und kann nur einmal verwendet werden.</span>'
+          'Klicke auf den Button um dein persoenliches Passwort zu vergeben.',
+          '<span style="font-size:11px;color:#9ca3af">Der Link ist 24 Stunden gueltig und kann nur einmal verwendet werden.</span>'
         ],
-        'Passwort vergeben →',
-        link
+        'Passwort vergeben',
+        result.link
       )
     );
 
     closeModal('passwortModal');
-    showToast(`✅ Zugangslink gesendet an ${email}`);
+    showToast('Zugangslink gesendet an ' + email);
   } finally {
-    if(btn){ btn.disabled = false; btn.textContent = '🔗 Zugangslink senden'; }
+    if(btn){ btn.disabled = false; btn.textContent = 'Zugangslink senden'; }
   }
 }
 
@@ -7683,6 +7686,21 @@ window.addEventListener('pageshow', (e) => {
   // Kurz warten ob PASSWORD_RECOVERY Event eintrifft (PKCE Flow)
   await new Promise(r => setTimeout(r, 300));
   if(_recoveryDetected) return; // App NICHT laden
+
+  // Sicherheitscheck: muss_passwort_aendern Flag prüfen BEVOR App lädt
+  const { data: { user: currentUser } } = await sb.auth.getUser();
+  if(currentUser) {
+    const { data: pwCheck } = await sb.from('user_profiles')
+      .select('muss_passwort_aendern')
+      .eq('user_id', currentUser.id)
+      .maybeSingle();
+    if(pwCheck && pwCheck.muss_passwort_aendern === true) {
+      // Kein Zugang zur App – zurück zur Login-Seite (Recovery-Flow dort)
+      await sb.auth.signOut({ scope: 'local' });
+      window.location.replace('https://curenio.de/nicode_login.html');
+      return;
+    }
+  }
 
   await loadUnternehmenData();
   await loadStandorteData();

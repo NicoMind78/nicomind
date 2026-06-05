@@ -438,6 +438,17 @@ const SUPABASE_URL = 'https://pxztxkqzvjkwvbfymbst.supabase.co';
 const sb = supabase.createClient(SUPABASE_URL, 'sb_publishable_bpKLnvsUQYffH7XEQay1Bg_Y__1XWEL');
 let _resetEmail = '';
 
+// ZUERST: PASSWORD_RECOVERY abfangen bevor getSession weiterleitet
+var _recoveryMode = false;
+sb.auth.onAuthStateChange(function(event, session) {
+  if(event === 'PASSWORD_RECOVERY') {
+    _recoveryMode = true;
+    hideAll();
+    document.getElementById('forceChangeSection').style.display = '';
+    document.getElementById('forcePwInput').focus();
+  }
+});
+
 // Maintenance-Mode prüfen (vor allem anderen)
 (async function(){
   try {
@@ -445,7 +456,7 @@ let _resetEmail = '';
     if(ms && ms.data && ms.data.value === 'true'){
       document.body.innerHTML = `
         <div style="min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;background:#fff;font-family:'DM Sans',-apple-system,sans-serif;text-align:center;padding:32px">
-          <div style="font-size:48px;margin-bottom:24px">🔧</div>
+          <div style="font-size:48px;margin-bottom:24px"></div>
           <div style="font-size:28px;font-weight:700;color:#111318;margin-bottom:12px;font-family:'DM Serif Display',Georgia,serif">Demnächst verfügbar</div>
           <div style="font-size:16px;color:#6b7280;max-width:400px;line-height:1.6;margin-bottom:32px">curenio wird gerade vorbereitet.<br>Wir sind bald für Sie da.</div>
           <div style="font-size:13px;color:#9ca3af">Bei Fragen: <a href="mailto:curenio.startup@gmail.com" style="color:#10b3b2;text-decoration:none">curenio.startup@gmail.com</a></div>
@@ -453,7 +464,9 @@ let _resetEmail = '';
       return;
     }
   } catch(e){}
-  // Normal: Session prüfen
+  // Normal: Session prüfen – aber NUR weiterleiten wenn kein Recovery-Modus
+  await new Promise(r => setTimeout(r, 200)); // kurz warten ob PASSWORD_RECOVERY Event eintrifft
+  if(_recoveryMode) return; // Recovery-Flow aktiv, nicht weiterleiten
   sb.auth.getSession().then(function(r){ if(r.data.session) window.location.replace('dienstplan.html'); });
 })();
 
