@@ -3943,8 +3943,7 @@ async function changeUserRole(userId, newRole){
 }
 
 async function deleteUser(userId){
-  if(!confirm('Benutzer wirklich vollständig entfernen?
-Dies löscht den Login, das Profil und alle Dienstplan-Einträge.')) return;
+  if(!confirm('Benutzer wirklich vollständig entfernen? Dies löscht den Login, das Profil und alle Dienstplan-Einträge.')) return;
 
   // 1. Profil laden um Name für Staff-Matching zu kennen
   const profile = await sb.from('user_profiles').select('name, vorname').eq('user_id', userId).maybeSingle();
