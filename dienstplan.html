@@ -6628,20 +6628,20 @@ async function loadUserRole(){
       .eq('user_id', currentUserId)
       .maybeSingle();
 
-    // Netzwerkfehler → nicht ausloggen, nur warnen
     if(profileErr){ console.warn('user_profiles Fehler:', profileErr.message); }
 
+    // Nur ausloggen wenn kein Fehler aber auch kein Profil oder keine Firmenzuweisung
     if(!profileErr && (!profile || !profile.unternehmen_id)){
-      // Kein Profil oder keine Firmenzuweisung → ausloggen
       await sb.auth.signOut({ scope: 'local' });
       window.location.replace('https://curenio.de/nicode_login.html');
       return;
     }
 
-    if(profile.name || profile.vorname)
+    // Null-Guard: profile kann null sein bei Netzwerkfehler
+    if(profile && (profile.name || profile.vorname))
       _currentUserName = `${profile.vorname||''} ${profile.name||''}`.trim();
 
-    if(profile.muss_passwort_aendern){
+    if(profile && profile.muss_passwort_aendern){
       document.getElementById('recoveryModal').style.display = 'flex';
       return;
     }
