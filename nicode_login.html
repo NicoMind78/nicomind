@@ -438,7 +438,7 @@ const SUPABASE_URL = 'https://pxztxkqzvjkwvbfymbst.supabase.co';
 const sb = supabase.createClient(SUPABASE_URL, 'sb_publishable_bpKLnvsUQYffH7XEQay1Bg_Y__1XWEL');
 let _resetEmail = '';
 
-// ZUERST: PASSWORD_RECOVERY abfangen bevor getSession weiterleitet
+// PASSWORD_RECOVERY abfangen BEVOR getSession weiterleitet
 var _recoveryMode = false;
 sb.auth.onAuthStateChange(function(event, session) {
   if(event === 'PASSWORD_RECOVERY') {
@@ -456,7 +456,6 @@ sb.auth.onAuthStateChange(function(event, session) {
     if(ms && ms.data && ms.data.value === 'true'){
       document.body.innerHTML = `
         <div style="min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;background:#fff;font-family:'DM Sans',-apple-system,sans-serif;text-align:center;padding:32px">
-          <div style="font-size:48px;margin-bottom:24px"></div>
           <div style="font-size:28px;font-weight:700;color:#111318;margin-bottom:12px;font-family:'DM Serif Display',Georgia,serif">Demnächst verfügbar</div>
           <div style="font-size:16px;color:#6b7280;max-width:400px;line-height:1.6;margin-bottom:32px">curenio wird gerade vorbereitet.<br>Wir sind bald für Sie da.</div>
           <div style="font-size:13px;color:#9ca3af">Bei Fragen: <a href="mailto:curenio.startup@gmail.com" style="color:#10b3b2;text-decoration:none">curenio.startup@gmail.com</a></div>
@@ -464,9 +463,10 @@ sb.auth.onAuthStateChange(function(event, session) {
       return;
     }
   } catch(e){}
-  // Normal: Session prüfen – aber NUR weiterleiten wenn kein Recovery-Modus
-  await new Promise(r => setTimeout(r, 200)); // kurz warten ob PASSWORD_RECOVERY Event eintrifft
-  if(_recoveryMode) return; // Recovery-Flow aktiv, nicht weiterleiten
+  // Kurz warten ob PASSWORD_RECOVERY eintrifft
+  await new Promise(function(r){ setTimeout(r, 200); });
+  if(_recoveryMode) return;
+  // Normal: Session prüfen – nur weiterleiten wenn kein Recovery
   sb.auth.getSession().then(function(r){ if(r.data.session) window.location.replace('dienstplan.html'); });
 })();
 
@@ -532,12 +532,14 @@ async function doLogin(){
     var s = await sb.auth.getSession();
     if(s.data.session){
       var p = await sb.from('user_profiles').select('muss_passwort_aendern, unternehmen_id').eq('user_id', s.data.session.user.id).maybeSingle();
-      if(!p.data || !p.data.unternehmen_id){
+      // Nur blockieren wenn Profil explizit da ist aber keine unternehmen_id hat
+      // Bei p.error oder p.data=null: trotzdem weiterleiten (RLS-Timing)
+      if(p.data && !p.data.unternehmen_id){
         await sb.auth.signOut({ scope: 'local' });
-        err.textContent='Kein Zugang. Bitte wenden Sie sich an Ihren Administrator.';
+        err.textContent='Kein Zugang. Bitte Administrator kontaktieren.';
         err.style.display='block'; btn.textContent='Anmelden'; btn.disabled=false; return;
       }
-      if(p.data.muss_passwort_aendern){
+      if(p.data && p.data.muss_passwort_aendern){
         hideAll();
         document.getElementById('forceChangeSection').style.display='';
         document.getElementById('forcePwInput').focus(); return;
