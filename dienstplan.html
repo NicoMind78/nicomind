@@ -4444,13 +4444,18 @@ async function openMeins(){
   const { data: { session } } = await sb.auth.getSession();
   if(!session){ showToast('Nicht eingeloggt'); return; }
 
-  const { data: profile } = await sb.from('user_profiles').select('*')
-    .eq('user_id', session.user.id).single();
+  const { data: profile, error: profileErr } = await sb.from('user_profiles').select('*')
+    .eq('user_id', session.user.id).maybeSingle();
+  if(profileErr) console.warn('openMeins profile Fehler:', profileErr.message);
 
   const staffName = profile ? `${profile.vorname||''} ${profile.name||''}`.trim() : '';
-  const staffRes = await sb.from('staff').select('*')
-    .eq('unternehmen_id', currentUnternehmenId).eq('name', staffName);
-  _meinsStaff = (staffRes.data && staffRes.data.length) ? staffRes.data[0] : null;
+  let staffResData = null;
+  if(staffName && currentUnternehmenId){
+    const staffRes = await sb.from('staff').select('*')
+      .eq('unternehmen_id', currentUnternehmenId).eq('name', staffName);
+    staffResData = (staffRes.data && staffRes.data.length) ? staffRes.data[0] : null;
+  }
+  _meinsStaff = staffResData;
   _meinsStaffId = _meinsStaff ? _meinsStaff.id : null;
 
   // Header befüllen
