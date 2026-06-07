@@ -440,7 +440,7 @@ let _resetEmail = '';
 
 // PASSWORD_RECOVERY abfangen BEVOR getSession weiterleitet
 var _recoveryMode = false;
-sb.auth.onAuthStateChange(function(event, session) {
+sb.auth.onAuthStateChange(function(event) {
   if(event === 'PASSWORD_RECOVERY') {
     _recoveryMode = true;
     hideAll();
@@ -449,7 +449,7 @@ sb.auth.onAuthStateChange(function(event, session) {
   }
 });
 
-// Maintenance-Mode prüfen (vor allem anderen)
+// Maintenance-Mode prüfen
 (async function(){
   try {
     var ms = await sb.from('system_settings').select('value').eq('key','maintenance_mode').maybeSingle();
@@ -463,10 +463,8 @@ sb.auth.onAuthStateChange(function(event, session) {
       return;
     }
   } catch(e){}
-  // Kurz warten ob PASSWORD_RECOVERY eintrifft
   await new Promise(function(r){ setTimeout(r, 200); });
   if(_recoveryMode) return;
-  // Normal: Session prüfen – nur weiterleiten wenn kein Recovery
   sb.auth.getSession().then(function(r){ if(r.data.session) window.location.replace('dienstplan.html'); });
 })();
 
@@ -532,8 +530,6 @@ async function doLogin(){
     var s = await sb.auth.getSession();
     if(s.data.session){
       var p = await sb.from('user_profiles').select('muss_passwort_aendern, unternehmen_id').eq('user_id', s.data.session.user.id).maybeSingle();
-      // Nur blockieren wenn Profil explizit da ist aber keine unternehmen_id hat
-      // Bei p.error oder p.data=null: trotzdem weiterleiten (RLS-Timing)
       if(p.data && !p.data.unternehmen_id){
         await sb.auth.signOut({ scope: 'local' });
         err.textContent='Kein Zugang. Bitte Administrator kontaktieren.';
