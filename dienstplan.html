@@ -7649,12 +7649,26 @@ async function deleteGruppe(id, name){
   if(currentGruppeId) loadFromSupabase();
 }
 
-// 1. Beim Verlassen der Seite ausloggen
-window.addEventListener('beforeunload', ()=>{ sb.auth.signOut(); });
+// ─── AUTO LOGOUT ───────────────────────────────────────────────────────────
+// 1. Beim Verlassen der Seite: nur bei externer Navigation ausloggen
+window.addEventListener('beforeunload', (e)=>{
+  const next = e.target?.activeElement?.href || '';
+  const isInternal = !next || next.startsWith('https://curenio.de') || next.startsWith('/') || next === '';
+  if(!isInternal){ sb.auth.signOut(); }
+});
 
-// 2. Nach 15 Minuten Inaktivität ausloggen
+// Zusätzlich: Navigation zu externer URL abfangen (Link-Klicks)
+document.addEventListener('click', (e)=>{
+  const a = e.target.closest('a[href]');
+  if(!a) return;
+  const href = a.href || '';
+  const isInternal = href.startsWith('https://curenio.de') || href.startsWith('/') || href.startsWith('#') || href === '';
+  if(!isInternal){ sb.auth.signOut(); }
+}, { capture: true });
+
+// 2. Nach 30 Minuten Inaktivität ausloggen
 let _inactivityTimer;
-const INACTIVITY_MS = 15 * 60 * 1000; // 15 Minuten
+const INACTIVITY_MS = 30 * 60 * 1000; // 30 Minuten
 
 function resetInactivityTimer(){
   clearTimeout(_inactivityTimer);
@@ -7670,6 +7684,7 @@ function resetInactivityTimer(){
 });
 
 resetInactivityTimer(); // Timer starten
+// ───────────────────────────────────────────────────────────────────────────
 
 // ─── AUTH GUARD ───
 (async function(){
