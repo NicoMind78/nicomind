@@ -4853,39 +4853,57 @@ async function stempelGehen(){
 let _meinsStaffId = null;
 let _meinsTab = 'dienste';
 let _meinsStaff = null;
+let _meinsLoaded = false; // Cache-Flag: Daten nur einmal laden
 
 async function openMeins(){
   const modal = document.getElementById('meinsModal');
+  // Sofort öffnen – kein Warten auf Netzwerk
   modal.style.display = 'flex';
 
-  // Eigenen Staff-Datensatz laden
+  if(_meinsLoaded && _meinsStaff){
+    // Cache hit: Header direkt aus gecachtem Datensatz befüllen, kein Netzwerk
+    const staffName = _meinsStaff.name || '';
+    document.getElementById('meinsName').textContent   = staffName;
+    document.getElementById('meinsRolle').textContent  = _meinsStaff.role || currentUserRole || '–';
+    document.getElementById('meinsAvatar').textContent = (staffName[0]||'M').toUpperCase();
+    meinsTab('daten');
+    return;
+  }
+
+  // Daten laden – session erst holen, dann profile + staff sequenziell
+  // (staff braucht staffName aus profile, daher keine Parallelisierung möglich)
   const { data: { session } } = await sb.auth.getSession();
   if(!session){ showToast('Nicht eingeloggt'); return; }
 
-  const { data: profile } = await sb.from('user_profiles').select('*')
+  const profileRes = await sb.from('user_profiles').select('*')
     .eq('user_id', session.user.id).maybeSingle();
-
+  const profile = profileRes.data;
   const staffName = profile ? `${profile.vorname||''} ${profile.name||''}`.trim() : '';
   const meinsUnternehmenId = (profile && profile.unternehmen_id) || currentUnternehmenId;
-  let _meinsStaffData = null;
+
   if(staffName && meinsUnternehmenId){
     const staffRes = await sb.from('staff').select('*')
       .eq('unternehmen_id', meinsUnternehmenId).eq('name', staffName);
-    _meinsStaffData = (staffRes.data && staffRes.data.length) ? staffRes.data[0] : null;
+    _meinsStaff   = (staffRes.data && staffRes.data.length) ? staffRes.data[0] : null;
+    _meinsStaffId = _meinsStaff ? _meinsStaff.id : null;
   }
-  _meinsStaff = _meinsStaffData;
-  _meinsStaffId = _meinsStaff ? _meinsStaff.id : null;
+  _meinsLoaded = true;
 
   // Header befüllen
-  document.getElementById('meinsName').textContent = staffName || session.user.email;
-  document.getElementById('meinsRolle').textContent = (_meinsStaff && _meinsStaff.role) || currentUserRole || '–';
+  document.getElementById('meinsName').textContent   = staffName || session.user.email;
+  document.getElementById('meinsRolle').textContent  = (_meinsStaff && _meinsStaff.role) || currentUserRole || '–';
   document.getElementById('meinsAvatar').textContent = (staffName[0]||'M').toUpperCase();
 
   meinsTab('daten');
 }
 
+// Cache invalidieren wenn Admin Daten ändert (z.B. nach saveEditUser)
+function invalidateMeinsCache(){ _meinsLoaded = false; _meinsStaff = null; _meinsStaffId = null; }
+
 function closeMeins(){
-  document.getElementById('meinsModal').style.display = 'none';
+  // Sofort visuell ausblenden ohne Verzögerung
+  const modal = document.getElementById('meinsModal');
+  modal.style.display = 'none';
 }
 
 function meinsTab(tab){
@@ -7499,6 +7517,7 @@ async function saveEditUser(){
 
   showToast('✅ Gespeichert');
   closeModal('editUserModal');
+  invalidateMeinsCache(); // Meine Daten neu laden falls eigenes Profil geändert
   loadUserList();
   loadFromSupabase();
 }
