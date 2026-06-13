@@ -1332,114 +1332,17 @@ if('serviceWorker' in navigator){
       <button class="modal-close-apple" onclick="closeModal('userMgmtModal')"></button>
       <div class="modal-title" style="margin-bottom:0">Benutzerverwaltung</div>
     </div>
-    <div class="modal-sub">Benutzer einladen und Rollen verwalten</div>
+    <div class="modal-sub">Benutzer und Rollen verwalten</div>
+
+    <!-- Toolbar: Neuer Benutzer Button -->
+    <div style="margin-bottom:14px;flex-shrink:0">
+      <button class="btn btn-primary btn-sm" onclick="openInviteUserModal()" style="display:flex;align-items:center;gap:6px;padding:8px 16px;font-size:13px">
+        <span style="font-size:16px;line-height:1">+</span> Neuen Benutzer anlegen
+      </button>
+    </div>
 
     <!-- Scrollbarer Inhalt -->
     <div style="overflow-y:auto;flex:1;padding-right:4px">
-
-      <!-- Invite new user -->
-      <div style="background:var(--surface2);border-radius:10px;padding:14px;margin-bottom:16px">
-        <div style="font-size:11px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:12px">Neuen Benutzer anlegen</div>
-
-        <!-- Zeile 1: E-Mail + Rechte -->
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
-          <div>
-            <div style="font-size:11px;color:var(--text3);margin-bottom:3px">E-Mail <span style="color:var(--text3);font-weight:400">(optional)</span></div>
-            <input type="email" id="inviteEmail" placeholder="Später hinzufügbar" style="width:100%;padding:7px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:12px;background:var(--surface);color:var(--text)">
-          </div>
-          <div>
-            <div style="font-size:11px;color:var(--text3);margin-bottom:3px">Rechte *</div>
-            <select id="inviteRole" style="width:100%;padding:7px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:12px;background:var(--surface);color:var(--text)">
-              <option value="mitarbeiter">Mitarbeiter</option>
-              <option value="planer">Planer</option>
-              <option value="betriebsrat">Betriebsrat</option>
-              <option value="personal">Personalabteilung</option>
-              <option value="admin">Admin</option>
-              <option value="master_admin">Master Admin</option>
-            </select>
-          </div>
-        </div>
-
-        <!-- Zeile 2: Name, Vorname, Funktion -->
-        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:8px">
-          <div>
-            <div style="font-size:11px;color:var(--text3);margin-bottom:3px">Name</div>
-            <input type="text" id="inviteName" placeholder="Nachname" style="width:100%;padding:7px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:12px;background:var(--surface);color:var(--text)">
-          </div>
-          <div>
-            <div style="font-size:11px;color:var(--text3);margin-bottom:3px">Vorname</div>
-            <input type="text" id="inviteVorname" placeholder="Vorname" style="width:100%;padding:7px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:12px;background:var(--surface);color:var(--text)">
-          </div>
-          <div>
-            <div style="font-size:11px;color:var(--text3);margin-bottom:3px">Funktion</div>
-            <div style="display:flex;gap:4px">
-              <select id="invitePosition" style="flex:1;padding:7px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:12px;background:var(--surface);color:var(--text)">
-                <option value="">– wählen –</option>
-                <option>Pflegefachkraft</option>
-                <option>Pflegehilfskraft</option>
-                <option>Ärztin/Arzt</option>
-                <option>Fallsteuerung</option>
-                <option>PDL</option>
-                <option>Hauswirtschaft</option>
-              </select>
-              <button onclick="addPositionOption()" title="Neue Funktion" style="padding:0 8px;border:1.5px solid var(--border);border-radius:8px;background:var(--surface);color:var(--text2);cursor:pointer;font-size:16px">+</button>
-            </div>
-          </div>
-        </div>
-
-        <!-- Zeile 3: Standorte (Checkboxen) -->
-        <div style="margin-bottom:8px">
-          <div style="font-size:11px;color:var(--text3);margin-bottom:6px">Standort(e)</div>
-          <div id="inviteStandortCheckboxes" style="display:flex;flex-wrap:wrap;gap:8px"></div>
-        </div>
-
-        <!-- Zeile 3b: Gruppen (Checkboxen, gefiltert) -->
-        <div style="margin-bottom:8px">
-          <div style="font-size:11px;color:var(--text3);margin-bottom:6px">Gruppe(n)</div>
-          <div id="inviteGruppeCheckboxes" style="display:flex;flex-wrap:wrap;gap:8px"></div>
-        </div>
-
-        <!-- Zeile 4: Handy, Kostenstelle, Wöchentliche Arbeitszeit -->
-        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:8px">
-          <div>
-            <div style="font-size:11px;color:var(--text3);margin-bottom:3px">Handy</div>
-            <input type="tel" id="inviteHandy" placeholder="+49 ..." style="width:100%;padding:7px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:12px;background:var(--surface);color:var(--text)">
-          </div>
-          <div>
-            <div style="font-size:11px;color:var(--text3);margin-bottom:3px">Kostenstelle</div>
-            <input type="text" id="inviteKostenstelle" placeholder="z.B. 1234" style="width:100%;padding:7px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:12px;background:var(--surface);color:var(--text)">
-          </div>
-          <div>
-            <div style="font-size:11px;color:var(--text3);margin-bottom:3px">Wöchtl. Arbeitszeit (h)</div>
-            <input type="number" id="inviteSoll" placeholder="z.B. 38.5" min="0" max="60" step="0.5" style="width:100%;padding:7px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:12px;background:var(--surface);color:var(--text)">
-          </div>
-        </div>
-
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
-          <div>
-            <div style="font-size:11px;color:var(--text3);margin-bottom:3px">Urlaubstage/Jahr</div>
-            <input type="number" id="inviteUrlaubstage" value="30" min="0" max="60" style="width:100%;padding:7px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:12px;background:var(--surface);color:var(--text)">
-          </div>
-          <div>
-            <div style="font-size:11px;color:var(--text3);margin-bottom:3px">Stundenlohn (€)</div>
-            <input type="number" id="inviteStundenlohn" value="0" min="0" max="200" step="0.01" style="width:100%;padding:7px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:12px;background:var(--surface);color:var(--text)">
-          </div>
-        </div>
-
-        <!-- Zeile 5: Checkboxen Auto -->
-        <div style="display:flex;gap:24px;align-items:center;margin-bottom:12px">
-          <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text);cursor:pointer">
-            <input type="checkbox" id="inviteAuto1" style="width:15px;height:15px;cursor:pointer">
-            1% Auto
-          </label>
-          <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text);cursor:pointer">
-            <input type="checkbox" id="invitePoolAuto" style="width:15px;height:15px;cursor:pointer">
-            Pool Auto
-          </label>
-        </div>
-
-        <button class="btn btn-primary btn-sm" onclick="inviteUser()" style="width:100%">+ Benutzer anlegen</button>
-      </div>
 
       <!-- User list -->
       <div style="font-size:11px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">Alle Benutzer</div>
@@ -1449,6 +1352,123 @@ if('serviceWorker' in navigator){
 
     <div class="modal-actions" style="margin-top:16px;border-top:1px solid var(--border);padding-top:14px;flex-shrink:0">
       <button class="btn btn-secondary" onclick="closeModal('userMgmtModal')">Schließen</button>
+    </div>
+  </div>
+</div>
+
+<!-- Invite User Modal (neues separates Fenster) -->
+<div class="modal-overlay" id="inviteUserModal" onclick="if(event.target===this)closeModal('inviteUserModal')">
+  <div class="modal modal-wide" style="max-height:90vh;display:flex;flex-direction:column">
+    <div class="modal-header-apple">
+      <button class="modal-close-apple" onclick="closeModal('inviteUserModal')"></button>
+      <div class="modal-title" style="margin-bottom:0">Neuen Benutzer anlegen</div>
+    </div>
+    <div class="modal-sub">Alle Felder ausfüllen und Benutzer speichern</div>
+
+    <div style="overflow-y:auto;flex:1;padding-right:4px">
+
+      <!-- Zeile 1: E-Mail + Rechte -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
+        <div>
+          <div style="font-size:11px;color:var(--text3);margin-bottom:3px">E-Mail <span style="color:var(--text3);font-weight:400">(optional)</span></div>
+          <input type="email" id="inviteEmail" placeholder="Später hinzufügbar" style="width:100%;padding:7px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:12px;background:var(--surface);color:var(--text)">
+        </div>
+        <div>
+          <div style="font-size:11px;color:var(--text3);margin-bottom:3px">Rechte *</div>
+          <select id="inviteRole" style="width:100%;padding:7px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:12px;background:var(--surface);color:var(--text)">
+            <option value="mitarbeiter">Mitarbeiter</option>
+            <option value="planer">Planer</option>
+            <option value="betriebsrat">Betriebsrat</option>
+            <option value="personal">Personalabteilung</option>
+            <option value="admin">Admin</option>
+            <option value="master_admin">Master Admin</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Zeile 2: Name, Vorname, Funktion -->
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:8px">
+        <div>
+          <div style="font-size:11px;color:var(--text3);margin-bottom:3px">Name</div>
+          <input type="text" id="inviteName" placeholder="Nachname" style="width:100%;padding:7px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:12px;background:var(--surface);color:var(--text)">
+        </div>
+        <div>
+          <div style="font-size:11px;color:var(--text3);margin-bottom:3px">Vorname</div>
+          <input type="text" id="inviteVorname" placeholder="Vorname" style="width:100%;padding:7px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:12px;background:var(--surface);color:var(--text)">
+        </div>
+        <div>
+          <div style="font-size:11px;color:var(--text3);margin-bottom:3px">Funktion</div>
+          <div style="display:flex;gap:4px">
+            <select id="invitePosition" style="flex:1;padding:7px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:12px;background:var(--surface);color:var(--text)">
+              <option value="">– wählen –</option>
+              <option>Pflegefachkraft</option>
+              <option>Pflegehilfskraft</option>
+              <option>Ärztin/Arzt</option>
+              <option>Fallsteuerung</option>
+              <option>PDL</option>
+              <option>Hauswirtschaft</option>
+            </select>
+            <button onclick="addPositionOption()" title="Neue Funktion" style="padding:0 8px;border:1.5px solid var(--border);border-radius:8px;background:var(--surface);color:var(--text2);cursor:pointer;font-size:16px">+</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Zeile 3: Standorte (Checkboxen) -->
+      <div style="margin-bottom:8px">
+        <div style="font-size:11px;color:var(--text3);margin-bottom:6px">Standort(e)</div>
+        <div id="inviteStandortCheckboxes" style="display:flex;flex-wrap:wrap;gap:8px"></div>
+      </div>
+
+      <!-- Zeile 3b: Gruppen (Checkboxen, gefiltert) -->
+      <div style="margin-bottom:8px">
+        <div style="font-size:11px;color:var(--text3);margin-bottom:6px">Gruppe(n)</div>
+        <div id="inviteGruppeCheckboxes" style="display:flex;flex-wrap:wrap;gap:8px"></div>
+      </div>
+
+      <!-- Zeile 4: Handy, Kostenstelle, Wöchentliche Arbeitszeit -->
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:8px">
+        <div>
+          <div style="font-size:11px;color:var(--text3);margin-bottom:3px">Handy</div>
+          <input type="tel" id="inviteHandy" placeholder="+49 ..." style="width:100%;padding:7px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:12px;background:var(--surface);color:var(--text)">
+        </div>
+        <div>
+          <div style="font-size:11px;color:var(--text3);margin-bottom:3px">Kostenstelle</div>
+          <input type="text" id="inviteKostenstelle" placeholder="z.B. 1234" style="width:100%;padding:7px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:12px;background:var(--surface);color:var(--text)">
+        </div>
+        <div>
+          <div style="font-size:11px;color:var(--text3);margin-bottom:3px">Wöchtl. Arbeitszeit (h)</div>
+          <input type="number" id="inviteSoll" placeholder="z.B. 38.5" min="0" max="60" step="0.5" style="width:100%;padding:7px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:12px;background:var(--surface);color:var(--text)">
+        </div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
+        <div>
+          <div style="font-size:11px;color:var(--text3);margin-bottom:3px">Urlaubstage/Jahr</div>
+          <input type="number" id="inviteUrlaubstage" value="30" min="0" max="60" style="width:100%;padding:7px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:12px;background:var(--surface);color:var(--text)">
+        </div>
+        <div>
+          <div style="font-size:11px;color:var(--text3);margin-bottom:3px">Stundenlohn (€)</div>
+          <input type="number" id="inviteStundenlohn" value="0" min="0" max="200" step="0.01" style="width:100%;padding:7px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:12px;background:var(--surface);color:var(--text)">
+        </div>
+      </div>
+
+      <!-- Zeile 5: Checkboxen Auto -->
+      <div style="display:flex;gap:24px;align-items:center;margin-bottom:12px">
+        <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text);cursor:pointer">
+          <input type="checkbox" id="inviteAuto1" style="width:15px;height:15px;cursor:pointer">
+          1% Auto
+        </label>
+        <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text);cursor:pointer">
+          <input type="checkbox" id="invitePoolAuto" style="width:15px;height:15px;cursor:pointer">
+          Pool Auto
+        </label>
+      </div>
+
+    </div><!-- end scrollable -->
+
+    <div class="modal-actions" style="margin-top:16px;border-top:1px solid var(--border);padding-top:14px;flex-shrink:0">
+      <button class="btn btn-secondary" onclick="closeModal('inviteUserModal')">Abbrechen</button>
+      <button class="btn btn-primary" onclick="inviteUser()">+ Benutzer anlegen</button>
     </div>
   </div>
 </div>
@@ -3645,9 +3665,21 @@ document.addEventListener('click', e=>{
 
 function openUserManagement(){
   document.getElementById('settingsMenu').style.display = 'none';
-  renderStandortCheckboxes();
   loadUserList();
   openModal('userMgmtModal');
+}
+
+function openInviteUserModal(){
+  renderStandortCheckboxes();
+  // Felder leeren
+  ['inviteEmail','inviteName','inviteVorname','invitePosition','inviteHandy','inviteKostenstelle','inviteSoll'].forEach(id=>{
+    const el=document.getElementById(id); if(el) el.value='';
+  });
+  const u = document.getElementById('inviteUrlaubstage'); if(u) u.value='30';
+  const s = document.getElementById('inviteStundenlohn'); if(s) s.value='0';
+  const a1 = document.getElementById('inviteAuto1'); if(a1) a1.checked=false;
+  const pa = document.getElementById('invitePoolAuto'); if(pa) pa.checked=false;
+  openModal('inviteUserModal');
 }
 
 function renderStandortCheckboxes(){
@@ -3742,6 +3774,7 @@ async function inviteUser(){
     document.getElementById('inviteAuto1').checked=false;
     document.getElementById('invitePoolAuto').checked=false;
 
+    closeModal('inviteUserModal');
     await loadUserList();
     await loadFromSupabase();
     return;
@@ -3781,6 +3814,7 @@ async function inviteUser(){
   } else {
     showToast(`✅ ${vorname} ${name} als ${ROLE_LABELS[role]} angelegt`);
   }
+  closeModal('inviteUserModal');
   loadUserList();
   // Dienstplan neu laden damit neuer Mitarbeiter erscheint
   loadFromSupabase();
