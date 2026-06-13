@@ -7214,8 +7214,8 @@ async function openEditUser(userId){
     const staffRes = await sb.from('staff').select('*').eq('unternehmen_id', currentUnternehmenId).eq('name', staffName);
     staffData = (staffRes.data && staffRes.data.length) ? staffRes.data[0] : null;
   }
-  document.getElementById('euUrlaubstage').value = (staffData && staffData.urlaubstage_jahr) || 30;
-  document.getElementById('euStundenlohn').value = (staffData && staffData.stundenlohn) || 0;
+  // Urlaubstage + Stundenlohn werden via loadEuRules() aus staffData befüllt
+  // (euUrlaubJahr in Tab2 Planungsregeln, euStundenlohn in Tab1)
   // E-Mail aus manage-roles laden (hat Zugriff auf auth.users)
   const rolesRes = await callManageRoles('getAll');
   const userRole = (rolesRes.data||[]).find(u=>u.user_id===userId);
@@ -7264,7 +7264,7 @@ async function openEditStaffOnly(staffId){
   document.getElementById('euSoll').value        = s.soll || 38.5;
   document.getElementById('euAuto1').checked     = false;
   document.getElementById('euPoolAuto').checked  = false;
-  document.getElementById('euUrlaubstage').value = s.urlaubstage_jahr || 30;
+  // Urlaubstage werden via loadEuRules() befüllt
   document.getElementById('euStundenlohn').value = s.stundenlohn || 0;
   const sel = document.getElementById('euPosition');
   sel.value = s.role || '';
