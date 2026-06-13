@@ -426,6 +426,9 @@ if('serviceWorker' in navigator){
 
   /* KI PREVIEW MODAL */
   .modal-wide { width: 680px; max-width: 96vw; max-height: 88vh; display: flex; flex-direction: column; }
+  .right-cb-label { display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--text);cursor:pointer;padding:5px 8px;border-radius:6px;transition:background .12s; }
+  .right-cb-label:hover { background:var(--surface2); }
+  .right-cb-label input[type=checkbox] { width:15px;height:15px;cursor:pointer;flex-shrink:0;accent-color:var(--accent); }
   .ki-preview-scroll { flex: 1; overflow-y: auto; margin: 0 -4px; padding: 0 4px; }
   .ki-staff-block { margin-bottom: 18px; }
   .ki-staff-header {
@@ -1358,111 +1361,203 @@ if('serviceWorker' in navigator){
 
 <!-- Invite User Modal (neues separates Fenster) -->
 <div class="modal-overlay" id="inviteUserModal" onclick="if(event.target===this)closeModal('inviteUserModal')">
-  <div class="modal modal-wide" style="max-height:90vh;display:flex;flex-direction:column">
+  <div class="modal" style="width:780px;max-width:96vw;max-height:92vh;display:flex;flex-direction:column">
     <div class="modal-header-apple">
       <button class="modal-close-apple" onclick="closeModal('inviteUserModal')"></button>
       <div class="modal-title" style="margin-bottom:0">Neuen Benutzer anlegen</div>
     </div>
-    <div class="modal-sub">Alle Felder ausfüllen und Benutzer speichern</div>
+    <div class="modal-sub">Stammdaten erfassen und Zugriffsrechte festlegen</div>
+
+    <!-- Tab-Navigation -->
+    <div style="display:flex;gap:0;border-bottom:1.5px solid var(--border);margin-bottom:16px;flex-shrink:0">
+      <button id="inviteTab1Btn" onclick="switchInviteTab(1)"
+        style="padding:8px 20px;font-size:13px;font-weight:600;border:none;background:none;cursor:pointer;color:var(--accent);border-bottom:2.5px solid var(--accent);margin-bottom:-1.5px;transition:all .15s">
+        👤 Stammdaten
+      </button>
+      <button id="inviteTab2Btn" onclick="switchInviteTab(2)"
+        style="padding:8px 20px;font-size:13px;font-weight:500;border:none;background:none;cursor:pointer;color:var(--text2);border-bottom:2.5px solid transparent;margin-bottom:-1.5px;transition:all .15s">
+        🔐 Rechte &amp; Zugriff
+      </button>
+    </div>
 
     <div style="overflow-y:auto;flex:1;padding-right:4px">
 
-      <!-- Zeile 1: E-Mail + Rechte -->
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
-        <div>
-          <div style="font-size:11px;color:var(--text3);margin-bottom:3px">E-Mail <span style="color:var(--text3);font-weight:400">(optional)</span></div>
-          <input type="email" id="inviteEmail" placeholder="Später hinzufügbar" style="width:100%;padding:7px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:12px;background:var(--surface);color:var(--text)">
-        </div>
-        <div>
-          <div style="font-size:11px;color:var(--text3);margin-bottom:3px">Rechte *</div>
-          <select id="inviteRole" style="width:100%;padding:7px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:12px;background:var(--surface);color:var(--text)">
-            <option value="mitarbeiter">Mitarbeiter</option>
-            <option value="planer">Planer</option>
-            <option value="betriebsrat">Betriebsrat</option>
-            <option value="personal">Personalabteilung</option>
-            <option value="admin">Admin</option>
-            <option value="master_admin">Master Admin</option>
-          </select>
-        </div>
-      </div>
+      <!-- ── TAB 1: Stammdaten ── -->
+      <div id="inviteTab1">
 
-      <!-- Zeile 2: Name, Vorname, Funktion -->
-      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:8px">
-        <div>
-          <div style="font-size:11px;color:var(--text3);margin-bottom:3px">Name</div>
-          <input type="text" id="inviteName" placeholder="Nachname" style="width:100%;padding:7px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:12px;background:var(--surface);color:var(--text)">
-        </div>
-        <div>
-          <div style="font-size:11px;color:var(--text3);margin-bottom:3px">Vorname</div>
-          <input type="text" id="inviteVorname" placeholder="Vorname" style="width:100%;padding:7px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:12px;background:var(--surface);color:var(--text)">
-        </div>
-        <div>
-          <div style="font-size:11px;color:var(--text3);margin-bottom:3px">Funktion</div>
-          <div style="display:flex;gap:4px">
-            <select id="invitePosition" style="flex:1;padding:7px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:12px;background:var(--surface);color:var(--text)">
-              <option value="">– wählen –</option>
-              <option>Pflegefachkraft</option>
-              <option>Pflegehilfskraft</option>
-              <option>Ärztin/Arzt</option>
-              <option>Fallsteuerung</option>
-              <option>PDL</option>
-              <option>Hauswirtschaft</option>
+        <!-- Zeile 1: E-Mail + Rolle -->
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
+          <div>
+            <div style="font-size:11px;color:var(--text3);margin-bottom:3px">E-Mail <span style="font-weight:400">(optional)</span></div>
+            <input type="email" id="inviteEmail" placeholder="Später hinzufügbar" style="width:100%;padding:7px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:12px;background:var(--surface);color:var(--text)">
+          </div>
+          <div>
+            <div style="font-size:11px;color:var(--text3);margin-bottom:3px">Rolle *</div>
+            <select id="inviteRole" onchange="applyRoleDefaults()" style="width:100%;padding:7px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:12px;background:var(--surface);color:var(--text)">
+              <option value="mitarbeiter">Mitarbeiter</option>
+              <option value="planer">Planer</option>
+              <option value="betriebsrat">Betriebsrat</option>
+              <option value="personal">Personalabteilung</option>
+              <option value="admin">Admin</option>
+              <option value="master_admin">Master Admin</option>
             </select>
-            <button onclick="addPositionOption()" title="Neue Funktion" style="padding:0 8px;border:1.5px solid var(--border);border-radius:8px;background:var(--surface);color:var(--text2);cursor:pointer;font-size:16px">+</button>
           </div>
         </div>
-      </div>
 
-      <!-- Zeile 3: Standorte (Checkboxen) -->
-      <div style="margin-bottom:8px">
-        <div style="font-size:11px;color:var(--text3);margin-bottom:6px">Standort(e)</div>
-        <div id="inviteStandortCheckboxes" style="display:flex;flex-wrap:wrap;gap:8px"></div>
-      </div>
+        <!-- Zeile 2: Name, Vorname, Funktion -->
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:8px">
+          <div>
+            <div style="font-size:11px;color:var(--text3);margin-bottom:3px">Name</div>
+            <input type="text" id="inviteName" placeholder="Nachname" style="width:100%;padding:7px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:12px;background:var(--surface);color:var(--text)">
+          </div>
+          <div>
+            <div style="font-size:11px;color:var(--text3);margin-bottom:3px">Vorname</div>
+            <input type="text" id="inviteVorname" placeholder="Vorname" style="width:100%;padding:7px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:12px;background:var(--surface);color:var(--text)">
+          </div>
+          <div>
+            <div style="font-size:11px;color:var(--text3);margin-bottom:3px">Funktion</div>
+            <div style="display:flex;gap:4px">
+              <select id="invitePosition" style="flex:1;padding:7px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:12px;background:var(--surface);color:var(--text)">
+                <option value="">– wählen –</option>
+                <option>Pflegefachkraft</option>
+                <option>Pflegehilfskraft</option>
+                <option>Ärztin/Arzt</option>
+                <option>Fallsteuerung</option>
+                <option>PDL</option>
+                <option>Hauswirtschaft</option>
+              </select>
+              <button onclick="addPositionOption()" title="Neue Funktion" style="padding:0 8px;border:1.5px solid var(--border);border-radius:8px;background:var(--surface);color:var(--text2);cursor:pointer;font-size:16px">+</button>
+            </div>
+          </div>
+        </div>
 
-      <!-- Zeile 3b: Gruppen (Checkboxen, gefiltert) -->
-      <div style="margin-bottom:8px">
-        <div style="font-size:11px;color:var(--text3);margin-bottom:6px">Gruppe(n)</div>
-        <div id="inviteGruppeCheckboxes" style="display:flex;flex-wrap:wrap;gap:8px"></div>
-      </div>
+        <!-- Standorte -->
+        <div style="margin-bottom:8px">
+          <div style="font-size:11px;color:var(--text3);margin-bottom:6px">Standort(e)</div>
+          <div id="inviteStandortCheckboxes" style="display:flex;flex-wrap:wrap;gap:8px"></div>
+        </div>
 
-      <!-- Zeile 4: Handy, Kostenstelle, Wöchentliche Arbeitszeit -->
-      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:8px">
-        <div>
-          <div style="font-size:11px;color:var(--text3);margin-bottom:3px">Handy</div>
-          <input type="tel" id="inviteHandy" placeholder="+49 ..." style="width:100%;padding:7px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:12px;background:var(--surface);color:var(--text)">
+        <!-- Gruppen -->
+        <div style="margin-bottom:8px">
+          <div style="font-size:11px;color:var(--text3);margin-bottom:6px">Gruppe(n)</div>
+          <div id="inviteGruppeCheckboxes" style="display:flex;flex-wrap:wrap;gap:8px"></div>
         </div>
-        <div>
-          <div style="font-size:11px;color:var(--text3);margin-bottom:3px">Kostenstelle</div>
-          <input type="text" id="inviteKostenstelle" placeholder="z.B. 1234" style="width:100%;padding:7px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:12px;background:var(--surface);color:var(--text)">
-        </div>
-        <div>
-          <div style="font-size:11px;color:var(--text3);margin-bottom:3px">Wöchtl. Arbeitszeit (h)</div>
-          <input type="number" id="inviteSoll" placeholder="z.B. 38.5" min="0" max="60" step="0.5" style="width:100%;padding:7px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:12px;background:var(--surface);color:var(--text)">
-        </div>
-      </div>
 
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
-        <div>
-          <div style="font-size:11px;color:var(--text3);margin-bottom:3px">Urlaubstage/Jahr</div>
-          <input type="number" id="inviteUrlaubstage" value="30" min="0" max="60" style="width:100%;padding:7px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:12px;background:var(--surface);color:var(--text)">
+        <!-- Handy, Kostenstelle, Arbeitszeit -->
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:8px">
+          <div>
+            <div style="font-size:11px;color:var(--text3);margin-bottom:3px">Handy</div>
+            <input type="tel" id="inviteHandy" placeholder="+49 ..." style="width:100%;padding:7px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:12px;background:var(--surface);color:var(--text)">
+          </div>
+          <div>
+            <div style="font-size:11px;color:var(--text3);margin-bottom:3px">Kostenstelle</div>
+            <input type="text" id="inviteKostenstelle" placeholder="z.B. 1234" style="width:100%;padding:7px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:12px;background:var(--surface);color:var(--text)">
+          </div>
+          <div>
+            <div style="font-size:11px;color:var(--text3);margin-bottom:3px">Wöchtl. Arbeitszeit (h)</div>
+            <input type="number" id="inviteSoll" placeholder="z.B. 38.5" min="0" max="60" step="0.5" style="width:100%;padding:7px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:12px;background:var(--surface);color:var(--text)">
+          </div>
         </div>
-        <div>
-          <div style="font-size:11px;color:var(--text3);margin-bottom:3px">Stundenlohn (€)</div>
-          <input type="number" id="inviteStundenlohn" value="0" min="0" max="200" step="0.01" style="width:100%;padding:7px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:12px;background:var(--surface);color:var(--text)">
-        </div>
-      </div>
 
-      <!-- Zeile 5: Checkboxen Auto -->
-      <div style="display:flex;gap:24px;align-items:center;margin-bottom:12px">
-        <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text);cursor:pointer">
-          <input type="checkbox" id="inviteAuto1" style="width:15px;height:15px;cursor:pointer">
-          1% Auto
-        </label>
-        <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text);cursor:pointer">
-          <input type="checkbox" id="invitePoolAuto" style="width:15px;height:15px;cursor:pointer">
-          Pool Auto
-        </label>
-      </div>
+        <!-- Urlaub + Stundenlohn -->
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
+          <div>
+            <div style="font-size:11px;color:var(--text3);margin-bottom:3px">Urlaubstage/Jahr</div>
+            <input type="number" id="inviteUrlaubstage" value="30" min="0" max="60" style="width:100%;padding:7px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:12px;background:var(--surface);color:var(--text)">
+          </div>
+          <div>
+            <div style="font-size:11px;color:var(--text3);margin-bottom:3px">Stundenlohn (€)</div>
+            <input type="number" id="inviteStundenlohn" value="0" min="0" max="200" step="0.01" style="width:100%;padding:7px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:12px;background:var(--surface);color:var(--text)">
+          </div>
+        </div>
+
+        <!-- Auto-Checkboxen -->
+        <div style="display:flex;gap:24px;align-items:center;margin-bottom:4px">
+          <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text);cursor:pointer">
+            <input type="checkbox" id="inviteAuto1" style="width:15px;height:15px;cursor:pointer"> 1% Auto
+          </label>
+          <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text);cursor:pointer">
+            <input type="checkbox" id="invitePoolAuto" style="width:15px;height:15px;cursor:pointer"> Pool Auto
+          </label>
+        </div>
+
+      </div><!-- end tab1 -->
+
+      <!-- ── TAB 2: Rechte & Zugriff ── -->
+      <div id="inviteTab2" style="display:none">
+
+        <div style="background:var(--surface2);border-radius:8px;padding:10px 12px;margin-bottom:14px;font-size:11.5px;color:var(--text2)">
+          ℹ️ Die Vorauswahl basiert auf der gewählten Rolle. Einzelne Rechte können individuell angepasst werden.
+        </div>
+
+        <!-- Kategorie: Benutzerverwaltung -->
+        <div style="margin-bottom:16px">
+          <div style="font-size:11px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;padding-bottom:4px;border-bottom:1px solid var(--border)">👥 Benutzerverwaltung</div>
+          <div style="display:flex;flex-direction:column;gap:6px">
+            <label class="right-cb-label"><input type="checkbox" class="invite-right-cb" value="bv_vollzugriff" onchange="onRightChange(this)"> Benutzerverwaltung – Vollzugriff</label>
+            <label class="right-cb-label"><input type="checkbox" class="invite-right-cb" value="bv_lesen" onchange="onRightChange(this)"> Benutzerverwaltung – nur lesen</label>
+            <label class="right-cb-label"><input type="checkbox" class="invite-right-cb" value="bv_anlegen"> Benutzer anlegen</label>
+            <label class="right-cb-label"><input type="checkbox" class="invite-right-cb" value="bv_loeschen"> Benutzer löschen</label>
+            <label class="right-cb-label"><input type="checkbox" class="invite-right-cb" value="bv_rechte_vergeben"> Rechte vergeben</label>
+          </div>
+        </div>
+
+        <!-- Kategorie: Dienstplan -->
+        <div style="margin-bottom:16px">
+          <div style="font-size:11px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;padding-bottom:4px;border-bottom:1px solid var(--border)">📅 Dienstplan</div>
+          <div style="display:flex;flex-direction:column;gap:6px">
+            <label class="right-cb-label"><input type="checkbox" class="invite-right-cb" value="dp_lesen"> Dienstplan lesen</label>
+            <label class="right-cb-label"><input type="checkbox" class="invite-right-cb" value="dp_aendern"> Dienstplan ändern</label>
+            <label class="right-cb-label"><input type="checkbox" class="invite-right-cb" value="dp_festschreiben"> Dienstplan festschreiben</label>
+            <label class="right-cb-label"><input type="checkbox" class="invite-right-cb" value="dp_exportieren"> Dienstplan exportieren</label>
+            <label class="right-cb-label"><input type="checkbox" class="invite-right-cb" value="dp_alle_standorte"> Dienstplan anderer Standorte einsehen</label>
+          </div>
+        </div>
+
+        <!-- Kategorie: Wunschplan -->
+        <div style="margin-bottom:16px">
+          <div style="font-size:11px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;padding-bottom:4px;border-bottom:1px solid var(--border)">🙋 Wunschplan</div>
+          <div style="display:flex;flex-direction:column;gap:6px">
+            <label class="right-cb-label"><input type="checkbox" class="invite-right-cb" value="wp_lesen"> Wunschplan lesen</label>
+            <label class="right-cb-label"><input type="checkbox" class="invite-right-cb" value="wp_bearbeiten"> Wunschplan bearbeiten</label>
+            <label class="right-cb-label"><input type="checkbox" class="invite-right-cb" value="wp_genehmigen"> Wunschplan genehmigen</label>
+          </div>
+        </div>
+
+        <!-- Kategorie: Genehmigungen -->
+        <div style="margin-bottom:16px">
+          <div style="font-size:11px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;padding-bottom:4px;border-bottom:1px solid var(--border)">✅ Genehmigungen</div>
+          <div style="display:flex;flex-direction:column;gap:6px">
+            <label class="right-cb-label"><input type="checkbox" class="invite-right-cb" value="gen_urlaub"> Urlaubsplan genehmigen</label>
+            <label class="right-cb-label"><input type="checkbox" class="invite-right-cb" value="gen_ueberstunden"> Überstunden genehmigen</label>
+            <label class="right-cb-label"><input type="checkbox" class="invite-right-cb" value="gen_minusstunden"> Minusstunden genehmigen</label>
+            <label class="right-cb-label"><input type="checkbox" class="invite-right-cb" value="gen_krank"> Krankmeldungen einsehen</label>
+          </div>
+        </div>
+
+        <!-- Kategorie: Stunden & Auswertungen -->
+        <div style="margin-bottom:16px">
+          <div style="font-size:11px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;padding-bottom:4px;border-bottom:1px solid var(--border)">📊 Stunden &amp; Auswertungen</div>
+          <div style="display:flex;flex-direction:column;gap:6px">
+            <label class="right-cb-label"><input type="checkbox" class="invite-right-cb" value="std_eigene"> Stundenzettel einsehen (eigene)</label>
+            <label class="right-cb-label"><input type="checkbox" class="invite-right-cb" value="std_alle"> Stundenzettel einsehen (alle Mitarbeiter)</label>
+            <label class="right-cb-label"><input type="checkbox" class="invite-right-cb" value="std_uebersicht"> Stundenübersicht</label>
+            <label class="right-cb-label"><input type="checkbox" class="invite-right-cb" value="std_kosten"> Kostenübersicht / Lohnkosten</label>
+          </div>
+        </div>
+
+        <!-- Kategorie: Administration -->
+        <div style="margin-bottom:8px">
+          <div style="font-size:11px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;padding-bottom:4px;border-bottom:1px solid var(--border)">🏢 Administration</div>
+          <div style="display:flex;flex-direction:column;gap:6px">
+            <label class="right-cb-label"><input type="checkbox" class="invite-right-cb" value="adm_standorte"> Standorte &amp; Gruppen verwalten</label>
+            <label class="right-cb-label"><input type="checkbox" class="invite-right-cb" value="adm_einstellungen"> Unternehmenseinstellungen ändern</label>
+            <label class="right-cb-label"><input type="checkbox" class="invite-right-cb" value="adm_ki"> KI-Assist nutzen</label>
+            <label class="right-cb-label"><input type="checkbox" class="invite-right-cb" value="adm_raumplanung"> Raumplanung nutzen</label>
+          </div>
+        </div>
+
+      </div><!-- end tab2 -->
 
     </div><!-- end scrollable -->
 
@@ -3679,7 +3774,49 @@ function openInviteUserModal(){
   const s = document.getElementById('inviteStundenlohn'); if(s) s.value='0';
   const a1 = document.getElementById('inviteAuto1'); if(a1) a1.checked=false;
   const pa = document.getElementById('invitePoolAuto'); if(pa) pa.checked=false;
+  // Tab 1 aktiv, Rechte-Vorauswahl anwenden
+  switchInviteTab(1);
+  applyRoleDefaults();
   openModal('inviteUserModal');
+}
+
+function switchInviteTab(n){
+  document.getElementById('inviteTab1').style.display = n===1 ? '' : 'none';
+  document.getElementById('inviteTab2').style.display = n===2 ? '' : 'none';
+  const b1 = document.getElementById('inviteTab1Btn');
+  const b2 = document.getElementById('inviteTab2Btn');
+  if(b1){ b1.style.color = n===1 ? 'var(--accent)' : 'var(--text2)'; b1.style.borderBottomColor = n===1 ? 'var(--accent)' : 'transparent'; b1.style.fontWeight = n===1 ? '600' : '500'; }
+  if(b2){ b2.style.color = n===2 ? 'var(--accent)' : 'var(--text2)'; b2.style.borderBottomColor = n===2 ? 'var(--accent)' : 'transparent'; b2.style.fontWeight = n===2 ? '600' : '500'; }
+}
+
+// Rechte-Vorauswahl je Rolle
+const ROLE_DEFAULT_RIGHTS = {
+  mitarbeiter: ['dp_lesen','wp_bearbeiten','std_eigene'],
+  planer:      ['dp_lesen','dp_aendern','dp_festschreiben','dp_exportieren','wp_lesen','wp_bearbeiten','wp_genehmigen','gen_urlaub','std_eigene','std_uebersicht'],
+  betriebsrat: ['dp_lesen','wp_lesen','std_uebersicht','gen_urlaub','gen_ueberstunden','gen_minusstunden'],
+  personal:    ['bv_lesen','bv_anlegen','dp_lesen','wp_lesen','gen_urlaub','gen_ueberstunden','gen_minusstunden','gen_krank','std_alle','std_uebersicht','std_kosten'],
+  admin:       ['bv_vollzugriff','bv_anlegen','bv_loeschen','bv_rechte_vergeben','dp_lesen','dp_aendern','dp_festschreiben','dp_exportieren','dp_alle_standorte','wp_lesen','wp_bearbeiten','wp_genehmigen','gen_urlaub','gen_ueberstunden','gen_minusstunden','gen_krank','std_alle','std_uebersicht','std_kosten','adm_standorte','adm_einstellungen','adm_ki','adm_raumplanung'],
+  master_admin:['bv_vollzugriff','bv_anlegen','bv_loeschen','bv_rechte_vergeben','dp_lesen','dp_aendern','dp_festschreiben','dp_exportieren','dp_alle_standorte','wp_lesen','wp_bearbeiten','wp_genehmigen','gen_urlaub','gen_ueberstunden','gen_minusstunden','gen_krank','std_alle','std_uebersicht','std_kosten','adm_standorte','adm_einstellungen','adm_ki','adm_raumplanung'],
+};
+
+function applyRoleDefaults(){
+  const role = document.getElementById('inviteRole')?.value || 'mitarbeiter';
+  const defaults = ROLE_DEFAULT_RIGHTS[role] || [];
+  document.querySelectorAll('.invite-right-cb').forEach(cb=>{
+    cb.checked = defaults.includes(cb.value);
+  });
+}
+
+function onRightChange(cb){
+  // bv_vollzugriff und bv_lesen gegenseitig ausschließen
+  if(cb.value === 'bv_vollzugriff' && cb.checked){
+    const lesen = document.querySelector('.invite-right-cb[value="bv_lesen"]');
+    if(lesen) lesen.checked = false;
+  }
+  if(cb.value === 'bv_lesen' && cb.checked){
+    const voll = document.querySelector('.invite-right-cb[value="bv_vollzugriff"]');
+    if(voll) voll.checked = false;
+  }
 }
 
 function renderStandortCheckboxes(){
@@ -3738,6 +3875,7 @@ async function inviteUser(){
   const poolAuto = document.getElementById('invitePoolAuto').checked;
   const standortIds = [...document.querySelectorAll('.inv-standort-cb:checked')].map(c=>c.value);
   const gruppeIds   = [...document.querySelectorAll('.inv-gruppe-cb:checked')].map(c=>c.value);
+  const extraRights = [...document.querySelectorAll('.invite-right-cb:checked')].map(c=>c.value);
 
   if(!name && !vorname){ showToast('Bitte mindestens Name oder Vorname eingeben'); return; }
 
@@ -3762,6 +3900,7 @@ async function inviteUser(){
       gruppe_id: gruppeIds[0] || null,
       standort_ids: standortIds,
       gruppe_ids: gruppeIds,
+      extra_rights: extraRights,
     });
 
     if(error){ showToast('Fehler: ' + error.message); return; }
@@ -3799,7 +3938,8 @@ async function inviteUser(){
     await sb.from('user_profiles').upsert({
       user_id: result.user_id, name, vorname, position,
       handy, kostenstelle, soll, auto1, pool_auto: poolAuto,
-      standort_ids: standortIds, gruppe_ids: gruppeIds, email
+      standort_ids: standortIds, gruppe_ids: gruppeIds, email,
+      extra_rights: extraRights,
     });
   }
 
