@@ -1376,6 +1376,10 @@ if('serviceWorker' in navigator){
       </button>
       <button id="inviteTab2Btn" onclick="switchInviteTab(2)"
         style="padding:8px 20px;font-size:13px;font-weight:500;border:none;background:none;cursor:pointer;color:var(--text2);border-bottom:2.5px solid transparent;margin-bottom:-1.5px;transition:all .15s">
+        📋 Planungsregeln
+      </button>
+      <button id="inviteTab3Btn" onclick="switchInviteTab(3)"
+        style="padding:8px 20px;font-size:13px;font-weight:500;border:none;background:none;cursor:pointer;color:var(--text2);border-bottom:2.5px solid transparent;margin-bottom:-1.5px;transition:all .15s">
         🔐 Rechte &amp; Zugriff
       </button>
     </div>
@@ -1441,7 +1445,7 @@ if('serviceWorker' in navigator){
         </div>
         <div>
           <div style="font-size:11px;color:var(--text3);margin-bottom:3px">Urlaubstage / Jahr</div>
-          <input type="number" id="inviteUrlaubstage" value="30" min="0" max="60" style="width:100%;padding:7px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:12px;background:var(--surface);color:var(--text)">
+          <input type="number" id="inviteUrlaubJahr" value="30" min="0" max="60" style="width:100%;padding:7px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:12px;background:var(--surface);color:var(--text)">
         </div>
         <div>
           <div style="font-size:11px;color:var(--text3);margin-bottom:3px">Stundenlohn (€)</div>
@@ -1482,15 +1486,63 @@ if('serviceWorker' in navigator){
 
     </div><!-- end tab1 -->
 
-    <!-- ── TAB 2: Rechte & Zugriff ── -->
+    <!-- ── TAB 2: Planungsregeln ── -->
     <div id="inviteTab2" style="display:none;overflow-y:auto;flex:1">
+
+      <!-- Vertragliche Arbeitstage -->
+      <div style="margin-bottom:16px">
+        <div style="font-size:11px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">Vertragliche Arbeitstage</div>
+        <div style="font-size:11px;color:var(--text3);margin-bottom:8px">Angehakt = Arbeitstag. Bei Wunsch, Feiertag oder Tausch trotzdem planbar.</div>
+        <div id="inviteFreitagBox" style="display:flex;gap:6px;flex-wrap:wrap"></div>
+      </div>
+
+      <!-- Urlaub -->
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:16px">
+        <div>
+          <div style="font-size:11px;color:var(--text3);margin-bottom:3px">Urlaubstage / Jahr</div>
+          <input type="number" id="inviteUrlaubJahr" value="30" min="0" max="60" style="width:100%;padding:7px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:12px;background:var(--surface);color:var(--text)">
+        </div>
+        <div>
+          <div style="font-size:11px;color:var(--text3);margin-bottom:3px">Resturlaub Vorjahr</div>
+          <input type="number" id="inviteUrlaubVorjahr" value="0" min="0" max="60" style="width:100%;padding:7px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:12px;background:var(--surface);color:var(--text)">
+        </div>
+      </div>
+
+      <!-- Optionen -->
+      <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px">
+        <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text);cursor:pointer;padding:5px 12px;border:1.5px solid var(--border);border-radius:8px;background:var(--surface)">
+          <input type="checkbox" id="inviteRbErlaubt" checked style="width:15px;height:15px;cursor:pointer;accent-color:var(--accent)"> RB erlaubt
+        </label>
+        <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text);cursor:pointer;padding:5px 12px;border:1.5px solid var(--border);border-radius:8px;background:var(--surface)">
+          <input type="checkbox" id="inviteFzaVorUrlaub" style="width:15px;height:15px;cursor:pointer;accent-color:var(--accent)"> FZA vor Urlaub
+        </label>
+        <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text);cursor:pointer;padding:5px 12px;border:1.5px solid var(--border);border-radius:8px;background:var(--surface)">
+          <input type="checkbox" id="inviteFzaNachUrlaub" style="width:15px;height:15px;cursor:pointer;accent-color:var(--accent)"> FZA nach Urlaub
+        </label>
+      </div>
+
+      <!-- Qualifikationen -->
+      <div>
+        <div style="font-size:11px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">Qualifikationen</div>
+        <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
+          <label style="display:flex;align-items:center;gap:4px;font-size:12px;padding:5px 12px;border:1.5px solid var(--border);border-radius:8px;cursor:pointer;background:var(--surface)">
+            <input type="checkbox" id="inviteQualiWunde" style="cursor:pointer;accent-color:var(--accent)"> Wundversorgung
+          </label>
+          <div id="inviteQualiExtraBox" style="display:flex;flex-wrap:wrap;gap:6px"></div>
+          <button onclick="addInviteQualifikation()" style="padding:5px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:12px;background:var(--surface);color:var(--text2);cursor:pointer">+ Neu</button>
+        </div>
+      </div>
+
+    </div><!-- end inviteTab2 -->
+
+    <!-- ── TAB 3: Rechte & Zugriff ── -->
+    <div id="inviteTab3" style="display:none;overflow-y:auto;flex:1">
 
       <div style="background:var(--surface2);border-radius:8px;padding:10px 12px;margin-bottom:14px;font-size:11.5px;color:var(--text2)">
         ℹ️ Die Vorauswahl basiert auf der gewählten Rolle. Einzelne Rechte können individuell angepasst werden.
       </div>
 
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
-
         <div>
           <div style="font-size:11px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;padding-bottom:4px;border-bottom:1px solid var(--border)">👥 Benutzerverwaltung</div>
           <div style="display:flex;flex-direction:column;gap:4px">
@@ -1501,7 +1553,6 @@ if('serviceWorker' in navigator){
             <label class="right-cb-label"><input type="checkbox" class="invite-right-cb" value="bv_rechte_vergeben"> Rechte vergeben</label>
           </div>
         </div>
-
         <div>
           <div style="font-size:11px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;padding-bottom:4px;border-bottom:1px solid var(--border)">📅 Dienstplan</div>
           <div style="display:flex;flex-direction:column;gap:4px">
@@ -1512,7 +1563,6 @@ if('serviceWorker' in navigator){
             <label class="right-cb-label"><input type="checkbox" class="invite-right-cb" value="dp_alle_standorte"> Alle Standorte einsehen</label>
           </div>
         </div>
-
         <div>
           <div style="font-size:11px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;padding-bottom:4px;border-bottom:1px solid var(--border)">🙋 Wunschplan</div>
           <div style="display:flex;flex-direction:column;gap:4px">
@@ -1521,7 +1571,6 @@ if('serviceWorker' in navigator){
             <label class="right-cb-label"><input type="checkbox" class="invite-right-cb" value="wp_genehmigen"> Genehmigen</label>
           </div>
         </div>
-
         <div>
           <div style="font-size:11px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;padding-bottom:4px;border-bottom:1px solid var(--border)">✅ Genehmigungen</div>
           <div style="display:flex;flex-direction:column;gap:4px">
@@ -1531,7 +1580,6 @@ if('serviceWorker' in navigator){
             <label class="right-cb-label"><input type="checkbox" class="invite-right-cb" value="gen_krank"> Krankmeldungen einsehen</label>
           </div>
         </div>
-
         <div>
           <div style="font-size:11px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;padding-bottom:4px;border-bottom:1px solid var(--border)">📊 Stunden &amp; Auswertungen</div>
           <div style="display:flex;flex-direction:column;gap:4px">
@@ -1541,7 +1589,6 @@ if('serviceWorker' in navigator){
             <label class="right-cb-label"><input type="checkbox" class="invite-right-cb" value="std_kosten"> Kostenübersicht / Lohnkosten</label>
           </div>
         </div>
-
         <div>
           <div style="font-size:11px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;padding-bottom:4px;border-bottom:1px solid var(--border)">🏢 Administration</div>
           <div style="display:flex;flex-direction:column;gap:4px">
@@ -1551,9 +1598,8 @@ if('serviceWorker' in navigator){
             <label class="right-cb-label"><input type="checkbox" class="invite-right-cb" value="adm_raumplanung"> Raumplanung nutzen</label>
           </div>
         </div>
-
       </div>
-    </div><!-- end tab2 -->
+    </div><!-- end inviteTab3 -->
 
     <div class="modal-actions" style="margin-top:14px;border-top:1px solid var(--border);padding-top:12px;flex-shrink:0">
       <button class="btn btn-secondary" onclick="closeModal('inviteUserModal')">Abbrechen</button>
@@ -1565,14 +1611,36 @@ if('serviceWorker' in navigator){
 
 <!-- Edit User Modal -->
 <div class="modal-overlay" id="editUserModal" onclick="if(event.target===this)closeModal('editUserModal')">
-  <div class="modal modal-wide" style="max-height:85vh;display:flex;flex-direction:column">
-    <div class="modal-title">✎ Benutzer bearbeiten</div>
+  <div class="modal" style="width:960px;max-width:97vw;max-height:94vh;display:flex;flex-direction:column">
+    <div class="modal-header-apple">
+      <button class="modal-close-apple" onclick="closeModal('editUserModal')"></button>
+      <div class="modal-title" style="margin-bottom:0">✎ Benutzer bearbeiten</div>
+    </div>
     <div class="modal-sub" id="editUserSub">–</div>
-    <div style="overflow-y:auto;flex:1;padding-right:4px">
 
-      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:8px">
+    <!-- Tab-Navigation -->
+    <div style="display:flex;gap:0;border-bottom:1.5px solid var(--border);margin-bottom:14px;flex-shrink:0">
+      <button id="euTab1Btn" onclick="switchEuTab(1)"
+        style="padding:8px 20px;font-size:13px;font-weight:600;border:none;background:none;cursor:pointer;color:var(--accent);border-bottom:2.5px solid var(--accent);margin-bottom:-1.5px;transition:all .15s">
+        👤 Stammdaten
+      </button>
+      <button id="euTab2Btn" onclick="switchEuTab(2)"
+        style="padding:8px 20px;font-size:13px;font-weight:500;border:none;background:none;cursor:pointer;color:var(--text2);border-bottom:2.5px solid transparent;margin-bottom:-1.5px;transition:all .15s">
+        📋 Planungsregeln
+      </button>
+      <button id="euTab3Btn" onclick="switchEuTab(3)"
+        style="padding:8px 20px;font-size:13px;font-weight:500;border:none;background:none;cursor:pointer;color:var(--text2);border-bottom:2.5px solid transparent;margin-bottom:-1.5px;transition:all .15s">
+        🔐 Rechte &amp; Zugriff
+      </button>
+    </div>
+
+    <!-- ── TAB 1: Stammdaten ── -->
+    <div id="euTab1" style="display:flex;flex-direction:column;gap:10px;flex:1;min-height:0">
+
+      <!-- Zeile 1: Nachname, Vorname, Rolle -->
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px">
         <div>
-          <div style="font-size:11px;color:var(--text3);margin-bottom:3px">Name</div>
+          <div style="font-size:11px;color:var(--text3);margin-bottom:3px">Nachname</div>
           <input type="text" id="euName" style="width:100%;padding:7px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:12px;background:var(--surface);color:var(--text)">
         </div>
         <div>
@@ -1580,7 +1648,42 @@ if('serviceWorker' in navigator){
           <input type="text" id="euVorname" style="width:100%;padding:7px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:12px;background:var(--surface);color:var(--text)">
         </div>
         <div>
-          <div style="font-size:11px;color:var(--text3);margin-bottom:3px">Position</div>
+          <div style="font-size:11px;color:var(--text3);margin-bottom:3px">Rolle</div>
+          <select id="euRole" style="width:100%;padding:7px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:12px;background:var(--surface);color:var(--text)">
+            <option value="mitarbeiter">Mitarbeiter</option>
+            <option value="planer">Planer</option>
+            <option value="betriebsrat">Betriebsrat</option>
+            <option value="personal">Personalabteilung</option>
+            <option value="admin">Admin</option>
+            <option value="master_admin">Master Admin</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Zeile 2: E-Mail (+ Passwort-Reset nur bei Auth-User), Handy, Funktion -->
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px">
+        <div>
+          <div style="font-size:11px;color:var(--text3);margin-bottom:3px">Login E-Mail</div>
+          <div id="euEmailZeile" style="display:none">
+            <div style="display:flex;gap:4px">
+              <input type="email" id="euEmailAnzeige" placeholder="E-Mail-Adresse"
+                style="flex:1;padding:7px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:12px;background:var(--surface);color:var(--text);outline:none">
+              <button onclick="openPasswortModal()" title="Neues Passwort per Link senden"
+                style="padding:0 8px;border:1.5px solid var(--red);border-radius:8px;background:var(--red-soft,rgba(255,59,48,.08));color:var(--red);font-size:13px;cursor:pointer;white-space:nowrap">
+                🔑
+              </button>
+            </div>
+          </div>
+          <div id="euKeinLoginHinweis" style="display:none;padding:7px 10px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;font-size:11px;color:var(--text3)">
+            ⏳ Kein Login-Account
+          </div>
+        </div>
+        <div>
+          <div style="font-size:11px;color:var(--text3);margin-bottom:3px">Handy</div>
+          <input type="tel" id="euHandy" style="width:100%;padding:7px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:12px;background:var(--surface);color:var(--text)">
+        </div>
+        <div>
+          <div style="font-size:11px;color:var(--text3);margin-bottom:3px">Funktion</div>
           <div style="display:flex;gap:4px">
             <select id="euPosition" style="flex:1;padding:7px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:12px;background:var(--surface);color:var(--text)">
               <option value="">– wählen –</option>
@@ -1596,115 +1699,168 @@ if('serviceWorker' in navigator){
         </div>
       </div>
 
-      <!-- E-Mail + Passwort Reset (nur für Auth-User) -->
-      <div id="euEmailZeile" style="display:none;margin-bottom:8px">
-        <div style="display:grid;grid-template-columns:1fr auto;gap:8px;align-items:end">
-          <div>
-            <div style="font-size:11px;color:var(--text3);margin-bottom:3px">Login E-Mail</div>
-            <input type="email" id="euEmailAnzeige" placeholder="E-Mail-Adresse"
-              style="padding:7px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:12px;background:var(--surface);color:var(--text);width:100%;outline:none">
-          </div>
-          <button onclick="openPasswortModal()"
-            style="padding:7px 14px;border:1.5px solid var(--red);border-radius:8px;background:var(--red-soft,rgba(255,59,48,.08));color:var(--red);font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap;height:34px">
-            🔑 Neues Passwort
-          </button>
-        </div>
-      </div>
-      <div id="euKeinLoginHinweis" style="display:none;margin-bottom:8px;padding:8px 10px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;font-size:11px;color:var(--text3)">
-        ⚠️ Kein Login-Account – kein Passwort-Reset möglich
-      </div>
-
-      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:8px">
-        <div>
-          <div style="font-size:11px;color:var(--text3);margin-bottom:3px">Handy</div>
-          <input type="tel" id="euHandy" style="width:100%;padding:7px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:12px;background:var(--surface);color:var(--text)">
-        </div>
-        <div>
-          <div style="font-size:11px;color:var(--text3);margin-bottom:3px">Kostenstelle</div>
-          <input type="text" id="euKostenstelle" style="width:100%;padding:7px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:12px;background:var(--surface);color:var(--text)">
-        </div>
+      <!-- Zeile 3: Arbeitszeit, Stundenlohn, Kostenstelle -->
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px">
         <div>
           <div style="font-size:11px;color:var(--text3);margin-bottom:3px">Wöchtl. Arbeitszeit (h)</div>
           <input type="number" id="euSoll" min="0" max="60" step="0.5" style="width:100%;padding:7px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:12px;background:var(--surface);color:var(--text)">
-        </div>
-      </div>
-
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
-        <div>
-          <div style="font-size:11px;color:var(--text3);margin-bottom:3px">Urlaubstage/Jahr</div>
-          <input type="number" id="euUrlaubstage" value="30" min="0" max="60" style="width:100%;padding:7px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:12px;background:var(--surface);color:var(--text)">
         </div>
         <div>
           <div style="font-size:11px;color:var(--text3);margin-bottom:3px">Stundenlohn (€)</div>
           <input type="number" id="euStundenlohn" value="0" min="0" max="200" step="0.01" style="width:100%;padding:7px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:12px;background:var(--surface);color:var(--text)">
         </div>
-      </div>
-
-      <div style="margin-bottom:8px">
-        <div style="font-size:11px;color:var(--text3);margin-bottom:6px">Standort(e)</div>
-        <div id="euStandortCheckboxes" style="display:flex;flex-wrap:wrap;gap:8px"></div>
-      </div>
-      <div style="margin-bottom:8px">
-        <div style="font-size:11px;color:var(--text3);margin-bottom:6px">Gruppe(n)</div>
-        <div id="euGruppeCheckboxes" style="display:flex;flex-wrap:wrap;gap:8px"></div>
-      </div>
-
-      <div style="display:flex;gap:24px;align-items:center;margin-bottom:12px">
-        <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text);cursor:pointer">
-          <input type="checkbox" id="euAuto1" style="width:15px;height:15px;cursor:pointer"> 1% Auto
-        </label>
-        <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text);cursor:pointer">
-          <input type="checkbox" id="euPoolAuto" style="width:15px;height:15px;cursor:pointer"> Pool Auto
-        </label>
-      </div>
-
-      <!-- Ebene 3: Individuelle Planungsregeln -->
-      <div style="background:var(--surface2);border-radius:10px;padding:14px;margin-bottom:10px">
-        <div style="font-size:11px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:12px">🗓️ Individuelle Planungsregeln</div>
-
-        <div style="margin-bottom:8px">
-          <div style="font-size:11px;color:var(--text3);margin-bottom:6px">Vertragliche Arbeitstage</div>
-          <div style="font-size:9px;color:var(--text3);margin-bottom:6px">Bei Wunsch, Feiertag oder Tausch trotzdem planbar</div>
-          <div id="euFreitagBox" style="display:flex;gap:6px;flex-wrap:wrap"></div>
-        </div>
-
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
-          <div>
-            <div style="font-size:11px;color:var(--text3);margin-bottom:3px">Urlaubstage/Jahr</div>
-            <input type="number" id="euUrlaubJahr" value="30" min="0" max="60" style="width:100%;padding:7px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:12px;background:var(--surface);color:var(--text)">
-          </div>
-          <div>
-            <div style="font-size:11px;color:var(--text3);margin-bottom:3px">Resturlaub Vorjahr</div>
-            <input type="number" id="euUrlaubVorjahr" value="0" min="0" max="60" style="width:100%;padding:7px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:12px;background:var(--surface);color:var(--text)">
-          </div>
-        </div>
-
-        <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:8px">
-          <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text);cursor:pointer;padding:4px 10px;border:1.5px solid var(--border);border-radius:8px;background:var(--surface)">
-            <input type="checkbox" id="euRbErlaubt" style="width:15px;height:15px;cursor:pointer"> RB erlaubt
-          </label>
-          <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text);cursor:pointer;padding:4px 10px;border:1.5px solid var(--border);border-radius:8px;background:var(--surface)">
-            <input type="checkbox" id="euFzaVorUrlaub" style="width:15px;height:15px;cursor:pointer"> FZA vor Urlaub
-          </label>
-          <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text);cursor:pointer;padding:4px 10px;border:1.5px solid var(--border);border-radius:8px;background:var(--surface)">
-            <input type="checkbox" id="euFzaNachUrlaub" style="width:15px;height:15px;cursor:pointer"> FZA nach Urlaub
-          </label>
-        </div>
-
         <div>
-          <div style="font-size:11px;color:var(--text3);margin-bottom:4px">Qualifikationen</div>
-          <div style="display:flex;gap:4px;align-items:center;flex-wrap:wrap">
-            <label style="display:flex;align-items:center;gap:4px;font-size:12px;padding:4px 10px;border:1.5px solid var(--border);border-radius:8px;cursor:pointer;background:var(--surface)">
-              <input type="checkbox" id="euQualiWunde" style="cursor:pointer"> Wundversorgung
+          <div style="font-size:11px;color:var(--text3);margin-bottom:3px">Kostenstelle</div>
+          <input type="text" id="euKostenstelle" style="width:100%;padding:7px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:12px;background:var(--surface);color:var(--text)">
+        </div>
+      </div>
+
+      <!-- Zeile 4: Fahrzeug -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;align-items:end">
+        <div>
+          <div style="font-size:11px;color:var(--text3);margin-bottom:6px">Fahrzeug</div>
+          <div style="display:flex;gap:6px">
+            <label style="flex:1;display:flex;align-items:center;justify-content:center;gap:6px;font-size:12px;color:var(--text);cursor:pointer;padding:7px 10px;border:1.5px solid var(--border);border-radius:8px;background:var(--surface);transition:border-color .15s" id="euAuto1Label">
+              <input type="checkbox" id="euAuto1" onchange="syncAutoCheck('euAuto1','euPoolAuto','euAuto1Label','euPoolAutoLabel')" style="width:14px;height:14px;cursor:pointer;accent-color:var(--accent)">
+              1% Auto
             </label>
-            <div id="euQualiExtraBox" style="display:flex;flex-wrap:wrap;gap:6px"></div>
-            <button onclick="addEuQualifikation()" style="padding:4px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:12px;background:var(--surface);color:var(--text2);cursor:pointer">+ Neu</button>
+            <label style="flex:1;display:flex;align-items:center;justify-content:center;gap:6px;font-size:12px;color:var(--text);cursor:pointer;padding:7px 10px;border:1.5px solid var(--border);border-radius:8px;background:var(--surface);transition:border-color .15s" id="euPoolAutoLabel">
+              <input type="checkbox" id="euPoolAuto" onchange="syncAutoCheck('euPoolAuto','euAuto1','euPoolAutoLabel','euAuto1Label')" style="width:14px;height:14px;cursor:pointer;accent-color:var(--accent)">
+              Pool Auto
+            </label>
           </div>
         </div>
       </div>
-    </div>
 
-    <div class="modal-actions" style="margin-top:16px;border-top:1px solid var(--border);padding-top:14px;flex-shrink:0">
+      <!-- Zeile 5: Standorte + Gruppen -->
+      <div style="flex:1;min-height:0;border-top:1px solid var(--border);padding-top:10px">
+        <div style="font-size:11px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.4px;margin-bottom:8px">Standort(e)</div>
+        <div id="euStandortCheckboxes" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:10px"></div>
+        <div id="euGruppeWrapper" style="display:none">
+          <div style="font-size:11px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.4px;margin-bottom:8px">Gruppe(n)</div>
+          <div id="euGruppeCheckboxes" style="display:flex;flex-wrap:wrap;gap:8px"></div>
+        </div>
+      </div>
+
+    </div><!-- end euTab1 -->
+
+    <!-- ── TAB 2: Planungsregeln ── -->
+    <div id="euTab2" style="display:none;overflow-y:auto;flex:1">
+
+      <!-- Vertragliche Arbeitstage -->
+      <div style="margin-bottom:16px">
+        <div style="font-size:11px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">Vertragliche Arbeitstage</div>
+        <div style="font-size:11px;color:var(--text3);margin-bottom:8px">Angehakt = Arbeitstag. Bei Wunsch, Feiertag oder Tausch trotzdem planbar.</div>
+        <div id="euFreitagBox" style="display:flex;gap:6px;flex-wrap:wrap"></div>
+      </div>
+
+      <!-- Urlaub -->
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:16px">
+        <div>
+          <div style="font-size:11px;color:var(--text3);margin-bottom:3px">Urlaubstage / Jahr</div>
+          <input type="number" id="euUrlaubJahr" value="30" min="0" max="60" style="width:100%;padding:7px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:12px;background:var(--surface);color:var(--text)">
+        </div>
+        <div>
+          <div style="font-size:11px;color:var(--text3);margin-bottom:3px">Resturlaub Vorjahr</div>
+          <input type="number" id="euUrlaubVorjahr" value="0" min="0" max="60" style="width:100%;padding:7px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:12px;background:var(--surface);color:var(--text)">
+        </div>
+      </div>
+
+      <!-- Optionen -->
+      <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px">
+        <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text);cursor:pointer;padding:5px 12px;border:1.5px solid var(--border);border-radius:8px;background:var(--surface)">
+          <input type="checkbox" id="euRbErlaubt" style="width:15px;height:15px;cursor:pointer;accent-color:var(--accent)"> RB erlaubt
+        </label>
+        <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text);cursor:pointer;padding:5px 12px;border:1.5px solid var(--border);border-radius:8px;background:var(--surface)">
+          <input type="checkbox" id="euFzaVorUrlaub" style="width:15px;height:15px;cursor:pointer;accent-color:var(--accent)"> FZA vor Urlaub
+        </label>
+        <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text);cursor:pointer;padding:5px 12px;border:1.5px solid var(--border);border-radius:8px;background:var(--surface)">
+          <input type="checkbox" id="euFzaNachUrlaub" style="width:15px;height:15px;cursor:pointer;accent-color:var(--accent)"> FZA nach Urlaub
+        </label>
+      </div>
+
+      <!-- Qualifikationen -->
+      <div>
+        <div style="font-size:11px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">Qualifikationen</div>
+        <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
+          <label style="display:flex;align-items:center;gap:4px;font-size:12px;padding:5px 12px;border:1.5px solid var(--border);border-radius:8px;cursor:pointer;background:var(--surface)">
+            <input type="checkbox" id="euQualiWunde" style="cursor:pointer;accent-color:var(--accent)"> Wundversorgung
+          </label>
+          <div id="euQualiExtraBox" style="display:flex;flex-wrap:wrap;gap:6px"></div>
+          <button onclick="addEuQualifikation()" style="padding:5px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:12px;background:var(--surface);color:var(--text2);cursor:pointer">+ Neu</button>
+        </div>
+      </div>
+
+    </div><!-- end euTab2 -->
+
+    <!-- ── TAB 3: Rechte & Zugriff ── -->
+    <div id="euTab3" style="display:none;overflow-y:auto;flex:1">
+
+      <div style="background:var(--surface2);border-radius:8px;padding:10px 12px;margin-bottom:14px;font-size:11.5px;color:var(--text2)">
+        ℹ️ Gespeicherte Rechte dieses Benutzers. Änderungen werden sofort beim Speichern übernommen.
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+        <div>
+          <div style="font-size:11px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;padding-bottom:4px;border-bottom:1px solid var(--border)">👥 Benutzerverwaltung</div>
+          <div style="display:flex;flex-direction:column;gap:4px">
+            <label class="right-cb-label"><input type="checkbox" class="eu-right-cb" value="bv_vollzugriff" onchange="onEuRightChange(this)"> Vollzugriff</label>
+            <label class="right-cb-label"><input type="checkbox" class="eu-right-cb" value="bv_lesen" onchange="onEuRightChange(this)"> Nur lesen</label>
+            <label class="right-cb-label"><input type="checkbox" class="eu-right-cb" value="bv_anlegen"> Benutzer anlegen</label>
+            <label class="right-cb-label"><input type="checkbox" class="eu-right-cb" value="bv_loeschen"> Benutzer löschen</label>
+            <label class="right-cb-label"><input type="checkbox" class="eu-right-cb" value="bv_rechte_vergeben"> Rechte vergeben</label>
+          </div>
+        </div>
+        <div>
+          <div style="font-size:11px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;padding-bottom:4px;border-bottom:1px solid var(--border)">📅 Dienstplan</div>
+          <div style="display:flex;flex-direction:column;gap:4px">
+            <label class="right-cb-label"><input type="checkbox" class="eu-right-cb" value="dp_lesen"> Lesen</label>
+            <label class="right-cb-label"><input type="checkbox" class="eu-right-cb" value="dp_aendern"> Ändern</label>
+            <label class="right-cb-label"><input type="checkbox" class="eu-right-cb" value="dp_festschreiben"> Festschreiben</label>
+            <label class="right-cb-label"><input type="checkbox" class="eu-right-cb" value="dp_exportieren"> Exportieren</label>
+            <label class="right-cb-label"><input type="checkbox" class="eu-right-cb" value="dp_alle_standorte"> Alle Standorte einsehen</label>
+          </div>
+        </div>
+        <div>
+          <div style="font-size:11px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;padding-bottom:4px;border-bottom:1px solid var(--border)">🙋 Wunschplan</div>
+          <div style="display:flex;flex-direction:column;gap:4px">
+            <label class="right-cb-label"><input type="checkbox" class="eu-right-cb" value="wp_lesen"> Lesen</label>
+            <label class="right-cb-label"><input type="checkbox" class="eu-right-cb" value="wp_bearbeiten"> Bearbeiten</label>
+            <label class="right-cb-label"><input type="checkbox" class="eu-right-cb" value="wp_genehmigen"> Genehmigen</label>
+          </div>
+        </div>
+        <div>
+          <div style="font-size:11px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;padding-bottom:4px;border-bottom:1px solid var(--border)">✅ Genehmigungen</div>
+          <div style="display:flex;flex-direction:column;gap:4px">
+            <label class="right-cb-label"><input type="checkbox" class="eu-right-cb" value="gen_urlaub"> Urlaubsplan genehmigen</label>
+            <label class="right-cb-label"><input type="checkbox" class="eu-right-cb" value="gen_ueberstunden"> Überstunden genehmigen</label>
+            <label class="right-cb-label"><input type="checkbox" class="eu-right-cb" value="gen_minusstunden"> Minusstunden genehmigen</label>
+            <label class="right-cb-label"><input type="checkbox" class="eu-right-cb" value="gen_krank"> Krankmeldungen einsehen</label>
+          </div>
+        </div>
+        <div>
+          <div style="font-size:11px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;padding-bottom:4px;border-bottom:1px solid var(--border)">📊 Stunden &amp; Auswertungen</div>
+          <div style="display:flex;flex-direction:column;gap:4px">
+            <label class="right-cb-label"><input type="checkbox" class="eu-right-cb" value="std_eigene"> Stundenzettel (eigene)</label>
+            <label class="right-cb-label"><input type="checkbox" class="eu-right-cb" value="std_alle"> Stundenzettel (alle)</label>
+            <label class="right-cb-label"><input type="checkbox" class="eu-right-cb" value="std_uebersicht"> Stundenübersicht</label>
+            <label class="right-cb-label"><input type="checkbox" class="eu-right-cb" value="std_kosten"> Kostenübersicht / Lohnkosten</label>
+          </div>
+        </div>
+        <div>
+          <div style="font-size:11px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;padding-bottom:4px;border-bottom:1px solid var(--border)">🏢 Administration</div>
+          <div style="display:flex;flex-direction:column;gap:4px">
+            <label class="right-cb-label"><input type="checkbox" class="eu-right-cb" value="adm_standorte"> Standorte &amp; Gruppen verwalten</label>
+            <label class="right-cb-label"><input type="checkbox" class="eu-right-cb" value="adm_einstellungen"> Unternehmenseinstellungen</label>
+            <label class="right-cb-label"><input type="checkbox" class="eu-right-cb" value="adm_ki"> KI-Assist nutzen</label>
+            <label class="right-cb-label"><input type="checkbox" class="eu-right-cb" value="adm_raumplanung"> Raumplanung nutzen</label>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- end euTab3 -->
+
+    <div class="modal-actions" style="margin-top:14px;border-top:1px solid var(--border);padding-top:12px;flex-shrink:0">
       <button class="btn btn-secondary" onclick="closeModal('editUserModal')">Abbrechen</button>
       <button class="btn btn-primary" onclick="saveEditUser()">Speichern</button>
     </div>
@@ -3765,23 +3921,59 @@ function openInviteUserModal(){
   ['inviteEmail','inviteName','inviteVorname','invitePosition','inviteHandy','inviteKostenstelle','inviteSoll'].forEach(id=>{
     const el=document.getElementById(id); if(el) el.value='';
   });
-  const u = document.getElementById('inviteUrlaubstage'); if(u) u.value='30';
-  const s = document.getElementById('inviteStundenlohn'); if(s) s.value='0';
+  const uj = document.getElementById('inviteUrlaubJahr'); if(uj) uj.value='30';
+  const uv = document.getElementById('inviteUrlaubVorjahr'); if(uv) uv.value='0';
+  const s  = document.getElementById('inviteStundenlohn'); if(s) s.value='0';
   const a1 = document.getElementById('inviteAuto1'); if(a1) a1.checked=false;
   const pa = document.getElementById('invitePoolAuto'); if(pa) pa.checked=false;
-  // Tab 1 aktiv, Rechte-Vorauswahl anwenden
+  const rb = document.getElementById('inviteRbErlaubt'); if(rb) rb.checked=true;
+  const fv = document.getElementById('inviteFzaVorUrlaub'); if(fv) fv.checked=false;
+  const fn = document.getElementById('inviteFzaNachUrlaub'); if(fn) fn.checked=false;
+  const qw = document.getElementById('inviteQualiWunde'); if(qw) qw.checked=false;
+  const qe = document.getElementById('inviteQualiExtraBox'); if(qe) qe.innerHTML='';
+  // FreitagBox: Mo–Fr angehakt, Sa+So nicht
+  const fb = document.getElementById('inviteFreitagBox');
+  if(fb) fb.innerHTML = ['Mo','Di','Mi','Do','Fr','Sa','So'].map((t,i)=>`
+    <label style="display:flex;align-items:center;gap:4px;font-size:12px;padding:4px 10px;border:1.5px solid var(--border);border-radius:8px;cursor:pointer;background:var(--surface)">
+      <input type="checkbox" class="invite-freitag-cb" value="${i+1}" ${i<5?'checked':''} style="cursor:pointer;accent-color:var(--accent)"> ${t}
+    </label>`).join('');
+  // Tab 1 aktiv, Rechte-Vorauswahl
   switchInviteTab(1);
   applyRoleDefaults();
   openModal('inviteUserModal');
 }
 
 function switchInviteTab(n){
-  document.getElementById('inviteTab1').style.display = n===1 ? '' : 'none';
-  document.getElementById('inviteTab2').style.display = n===2 ? '' : 'none';
-  const b1 = document.getElementById('inviteTab1Btn');
-  const b2 = document.getElementById('inviteTab2Btn');
-  if(b1){ b1.style.color = n===1 ? 'var(--accent)' : 'var(--text2)'; b1.style.borderBottomColor = n===1 ? 'var(--accent)' : 'transparent'; b1.style.fontWeight = n===1 ? '600' : '500'; }
-  if(b2){ b2.style.color = n===2 ? 'var(--accent)' : 'var(--text2)'; b2.style.borderBottomColor = n===2 ? 'var(--accent)' : 'transparent'; b2.style.fontWeight = n===2 ? '600' : '500'; }
+  [1,2,3].forEach(i=>{
+    const tab = document.getElementById('inviteTab'+i);
+    const btn = document.getElementById('inviteTab'+i+'Btn');
+    if(tab) tab.style.display = n===i ? (i===1?'flex':'block') : 'none';
+    if(i===1 && tab) tab.style.flexDirection = 'column';
+    if(btn){
+      btn.style.color = n===i ? 'var(--accent)' : 'var(--text2)';
+      btn.style.borderBottomColor = n===i ? 'var(--accent)' : 'transparent';
+      btn.style.fontWeight = n===i ? '600' : '500';
+    }
+  });
+  // Tab1 braucht flex layout
+  const t1 = document.getElementById('inviteTab1');
+  if(t1 && n===1){ t1.style.display='flex'; t1.style.flexDirection='column'; }
+}
+
+function switchEuTab(n){
+  [1,2,3].forEach(i=>{
+    const tab = document.getElementById('euTab'+i);
+    const btn = document.getElementById('euTab'+i+'Btn');
+    if(tab) tab.style.display = n===i ? (i===1?'flex':'block') : 'none';
+    if(i===1 && tab && n===1){ tab.style.flexDirection='column'; }
+    if(btn){
+      btn.style.color = n===i ? 'var(--accent)' : 'var(--text2)';
+      btn.style.borderBottomColor = n===i ? 'var(--accent)' : 'transparent';
+      btn.style.fontWeight = n===i ? '600' : '500';
+    }
+  });
+  const t1 = document.getElementById('euTab1');
+  if(t1 && n===1){ t1.style.display='flex'; t1.style.flexDirection='column'; }
 }
 
 // Rechte-Vorauswahl je Rolle
@@ -3875,6 +4067,28 @@ function addPositionOption(){
   sel.appendChild(opt);
 }
 
+function addInviteQualifikation(){
+  const name = prompt('Neue Qualifikation:');
+  if(!name || !name.trim()) return;
+  const box = document.getElementById('inviteQualiExtraBox');
+  if(!box) return;
+  const label = document.createElement('label');
+  label.style.cssText = 'display:flex;align-items:center;gap:4px;font-size:12px;padding:5px 12px;border:1.5px solid var(--border);border-radius:8px;cursor:pointer;background:var(--surface)';
+  label.innerHTML = `<input type="checkbox" class="invite-quali-extra-cb" value="${name.trim()}" checked style="cursor:pointer;accent-color:var(--accent)"> ${name.trim()}`;
+  box.appendChild(label);
+}
+
+function onEuRightChange(cb){
+  if(cb.value === 'bv_vollzugriff' && cb.checked){
+    const lesen = document.querySelector('.eu-right-cb[value="bv_lesen"]');
+    if(lesen) lesen.checked = false;
+  }
+  if(cb.value === 'bv_lesen' && cb.checked){
+    const voll = document.querySelector('.eu-right-cb[value="bv_vollzugriff"]');
+    if(voll) voll.checked = false;
+  }
+}
+
 async function inviteUser(){
   const email    = document.getElementById('inviteEmail').value.trim();
   const role     = document.getElementById('inviteRole').value;
@@ -3884,13 +4098,21 @@ async function inviteUser(){
   const handy    = document.getElementById('inviteHandy').value.trim();
   const kostenstelle = document.getElementById('inviteKostenstelle').value.trim();
   const soll     = parseFloat(document.getElementById('inviteSoll').value)||38.5;
-  const urlaubstageInvite = parseInt(document.getElementById('inviteUrlaubstage').value)||30;
+  const urlaubstageInvite = parseInt(document.getElementById('inviteUrlaubJahr')?.value)||30;
+  const urlaubVorjahrInvite = parseInt(document.getElementById('inviteUrlaubVorjahr')?.value)||0;
   const stundenlohnInvite = parseFloat(document.getElementById('inviteStundenlohn').value)||0;
   const auto1    = document.getElementById('inviteAuto1').checked;
   const poolAuto = document.getElementById('invitePoolAuto').checked;
   const standortIds = [...document.querySelectorAll('.inv-standort-cb:checked')].map(c=>c.value);
   const gruppeIds   = [...document.querySelectorAll('.inv-gruppe-cb:checked')].map(c=>c.value);
   const extraRights = [...document.querySelectorAll('.invite-right-cb:checked')].map(c=>c.value);
+  const inviteRbErlaubt    = document.getElementById('inviteRbErlaubt')?.checked ?? true;
+  const inviteFzaVorUrlaub = document.getElementById('inviteFzaVorUrlaub')?.checked ?? false;
+  const inviteFzaNachUrlaub= document.getElementById('inviteFzaNachUrlaub')?.checked ?? false;
+  const inviteQualiWunde   = document.getElementById('inviteQualiWunde')?.checked ?? false;
+  const inviteQualiExtra   = [...document.querySelectorAll('.invite-quali-extra-cb:checked')].map(c=>c.value);
+  const inviteQualifikationen = [...(inviteQualiWunde?['Wundversorgung']:[]), ...inviteQualiExtra];
+  const inviteFesteFrei    = [1,2,3,4,5,6,7].filter(v=>!document.querySelector(`.invite-freitag-cb[value="${v}"]:checked`));
 
   if(!name && !vorname){ showToast('Bitte mindestens Name oder Vorname eingeben'); return; }
 
@@ -3908,7 +4130,8 @@ async function inviteUser(){
       id: nextId,
       name: fullName,
       role: position || 'Mitarbeiter',
-      soll, urlaubstage_jahr: urlaubstageInvite, stundenlohn: stundenlohnInvite,
+      soll, urlaubstage_jahr: urlaubstageInvite, urlaubstage_vorjahr: urlaubVorjahrInvite,
+      stundenlohn: stundenlohnInvite,
       color, notes: '', rules: {},
       unternehmen_id: currentUnternehmenId,
       standort_id: standortIds[0] || null,
@@ -3916,6 +4139,11 @@ async function inviteUser(){
       standort_ids: standortIds,
       gruppe_ids: gruppeIds,
       extra_rights: extraRights,
+      rb_erlaubt: inviteRbErlaubt,
+      fza_vor_urlaub: inviteFzaVorUrlaub,
+      fza_nach_urlaub: inviteFzaNachUrlaub,
+      qualifikationen: inviteQualifikationen,
+      feste_freitage: inviteFesteFrei,
     });
 
     if(error){ showToast('Fehler: ' + error.message); return; }
@@ -3955,6 +4183,12 @@ async function inviteUser(){
       handy, kostenstelle, soll, auto1, pool_auto: poolAuto,
       standort_ids: standortIds, gruppe_ids: gruppeIds, email,
       extra_rights: extraRights,
+      rb_erlaubt: inviteRbErlaubt,
+      fza_vor_urlaub: inviteFzaVorUrlaub,
+      fza_nach_urlaub: inviteFzaNachUrlaub,
+      qualifikationen: inviteQualifikationen,
+      feste_freitage: inviteFesteFrei,
+      urlaubstage_vorjahr: urlaubVorjahrInvite,
     });
   }
 
@@ -7003,7 +7237,14 @@ async function openEditUser(userId){
     if(euKeinLoginHinweis) euKeinLoginHinweis.style.display = 'block';
   }
 
+  // Rolle befüllen (nur bei Auth-User)
+  const euRoleSel = document.getElementById('euRole');
+  if(euRoleSel && userRole){ euRoleSel.value = userRole.role || 'mitarbeiter'; euRoleSel.disabled = false; }
+  // extra_rights befüllen
+  const savedRights = (profile && profile.extra_rights) || [];
+  document.querySelectorAll('.eu-right-cb').forEach(cb=>{ cb.checked = savedRights.includes(cb.value); });
   loadEuRules(staffData);
+  switchEuTab(1);
   openModal('editUserModal');
 }
 
@@ -7028,7 +7269,13 @@ async function openEditStaffOnly(staffId){
   const sel = document.getElementById('euPosition');
   sel.value = s.role || '';
   renderEuCheckboxes(s.standort_ids||[], s.gruppe_ids||[]);
+  // Rolle deaktivieren (kein Auth-User)
+  const euRoleSel = document.getElementById('euRole');
+  if(euRoleSel){ euRoleSel.value = 'mitarbeiter'; euRoleSel.disabled = true; }
+  // extra_rights leeren
+  document.querySelectorAll('.eu-right-cb').forEach(cb=>{ cb.checked = false; });
   loadEuRules(s);
+  switchEuTab(1);
   openModal('editUserModal');
 }
 
@@ -7083,9 +7330,21 @@ function renderEuCheckboxes(selectedStandortIds, selectedGruppeIds){
 
 function updateEuGruppeCheckboxes(selectedGruppeIdsStr){
   const gBox = document.getElementById('euGruppeCheckboxes');
+  const wrapper = document.getElementById('euGruppeWrapper');
   const selectedGruppeIds = selectedGruppeIdsStr ? selectedGruppeIdsStr.split(',').filter(Boolean) : [];
   const selectedStandorte = [...document.querySelectorAll('.eu-standort-cb:checked')].map(c=>c.value);
-  const filtered = selectedStandorte.length ? allGruppen.filter(g=>selectedStandorte.includes(g.standort_id)) : allGruppen;
+  if(!selectedStandorte.length){
+    gBox.innerHTML='';
+    if(wrapper) wrapper.style.display='none';
+    return;
+  }
+  const filtered = allGruppen.filter(g=>selectedStandorte.includes(g.standort_id));
+  if(!filtered.length){
+    gBox.innerHTML='<span style="font-size:12px;color:var(--text3)">– Keine Gruppen –</span>';
+    if(wrapper) wrapper.style.display='';
+    return;
+  }
+  if(wrapper) wrapper.style.display='';
   gBox.innerHTML = filtered.map(g=>{
     const s = allStandorte.find(s=>s.id===g.standort_id);
     return `<label style="display:flex;align-items:center;gap:5px;font-size:12px;color:var(--text);cursor:pointer;padding:5px 10px;border:1.5px solid ${selectedGruppeIds.includes(g.id)?'var(--accent)':'var(--border)'};border-radius:8px;background:var(--surface)">
@@ -7108,15 +7367,18 @@ async function saveEditUser(){
   const name        = document.getElementById('euName').value.trim();
   const vorname     = document.getElementById('euVorname').value.trim();
   const position    = document.getElementById('euPosition').value;
+  const role        = document.getElementById('euRole')?.value || 'mitarbeiter';
   const handy       = document.getElementById('euHandy').value.trim();
   const kostenstelle= document.getElementById('euKostenstelle').value.trim();
   const soll        = parseFloat(document.getElementById('euSoll').value)||38.5;
   const auto1       = document.getElementById('euAuto1').checked;
   const poolAuto    = document.getElementById('euPoolAuto').checked;
-  const urlaubstage = parseInt(document.getElementById('euUrlaubstage').value)||30;
+  // Bug fix: nur euUrlaubJahr (Tab2 Planungsregeln) als Single Source of Truth
+  const urlaubstage = parseInt(document.getElementById('euUrlaubJahr')?.value)||30;
   const stundenlohn = parseFloat(document.getElementById('euStundenlohn').value)||0;
   const standortIds = [...document.querySelectorAll('.eu-standort-cb:checked')].map(c=>c.value);
   const gruppeIds   = [...document.querySelectorAll('.eu-gruppe-cb:checked')].map(c=>c.value);
+  const extraRightsEu = [...document.querySelectorAll('.eu-right-cb:checked')].map(c=>c.value);
   const fullName    = `${vorname} ${name}`.trim();
 
   // Individuelle Planungsregeln
@@ -7158,10 +7420,16 @@ async function saveEditUser(){
         if(updateData.error){ showToast('Fehler E-Mail: ' + updateData.error); return; }
       }
     }
+    // Rolle aktualisieren via manage-roles
+    const euRoleSel = document.getElementById('euRole');
+    if(euRoleSel && !euRoleSel.disabled && role){
+      await callManageRoles('update', { user_id: _editUserId, role });
+    }
     const { error } = await sb.from('user_profiles').upsert({
       user_id: _editUserId, name, vorname, position, handy, kostenstelle,
       soll, auto1, pool_auto: poolAuto, standort_ids: standortIds, gruppe_ids: gruppeIds,
       unternehmen_id: currentUnternehmenId,
+      extra_rights: extraRightsEu,
       ...(emailVal ? {email: emailVal} : {email: null})
     });
     if(error){ showToast('Fehler Profil: ' + error.message); return; }
