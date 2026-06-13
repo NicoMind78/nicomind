@@ -7112,7 +7112,7 @@ async function loadUserRole(){
       return;
     }
 
-    // Rolle laden
+    // Rolle laden – user_roles ist primäre Quelle, manage-roles als Fallback
     const roleRes = await sb.from('user_roles').select('role')
       .eq('user_id', currentUserId).maybeSingle();
     if(roleRes?.data?.role){
@@ -7122,6 +7122,14 @@ async function loadUserRole(){
         const result = await callManageRoles('getOwn');
         if(result?.role) currentUserRole = result.role;
       } catch(e){ console.warn('callManageRoles Fehler:', e); }
+    }
+
+    // Sicherheitsnetz: owner-E-Mail immer als owner behandeln
+    // (greift wenn user_roles leer oder Netzwerkfehler)
+    const OWNER_EMAIL = 'nicoboerner78@googlemail.com';
+    if(!currentUserRole && session.user.email === OWNER_EMAIL){
+      currentUserRole = 'owner';
+      console.warn('⚠️ Rolle via owner-Email-Fallback gesetzt');
     }
 
     console.log('Rolle geladen:', currentUserRole || '(keine)');
