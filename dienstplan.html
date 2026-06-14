@@ -3816,6 +3816,7 @@ function kiApplyAccepted(){
 
 // ─── WÜNSCHE ───
 function toggleWuensche(){
+  console.time('[Perf] toggleWuensche total');
   state.showWuensche = !state.showWuensche;
   if(!state.wishes) state.wishes={};
   const btn=document.getElementById('btnWuensche');
@@ -3830,7 +3831,13 @@ function toggleWuensche(){
       btn.style.color='var(--text2)';
     }
   }
-  saveData(); render();
+  console.time('[Perf] saveData');
+  saveData();
+  console.timeEnd('[Perf] saveData');
+  console.time('[Perf] render');
+  render();
+  console.timeEnd('[Perf] render');
+  console.timeEnd('[Perf] toggleWuensche total');
 }
 
 let _wishStaffId=null, _wishDate=null, _wishPrio=null;
