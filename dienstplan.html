@@ -2141,15 +2141,8 @@ async function syncToSupabase(){
     if(entryRows.length){
       await sb.from('entries').upsert(entryRows);
     }
-    // Upsert releases
-    const releaseRows = Object.entries(state.releases||{}).map(([key,val])=>({
-      key,
-      date: val.date,
-      note: val.note||''
-    }));
-    if(releaseRows.length){
-      await sb.from('releases').upsert(releaseRows);
-    }
+    // Releases werden jetzt gezielt über upsertRelease()/removeRelease() synchronisiert,
+    // nicht mehr pauschal hier (sonst fehlen gruppe_id/jahr/monat -> RLS/Constraint-Fehler)
   } catch(e){
     console.warn('Supabase sync error:', e.message);
   }
@@ -2298,7 +2291,7 @@ function fmtDate(d){ return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(
 function fmtDisp(d){ return d.toLocaleDateString('de-DE',{day:'2-digit',month:'2-digit'}); }
 function addDays(d,n){ const r=new Date(d); r.setDate(r.getDate()+n); return r; }
 function daysInMonth(y,m){ return new Date(y,m+1,0).getDate(); }
-function monthKey(y,m){ return `${y}-${String(m+1).padStart(2,'0')}`; }
+function monthKey(y,m,gruppeId=null){ const gid=gruppeId||currentGruppeId||''; return `${y}-${String(m+1).padStart(2,'0')}_${gid}`; }
 
 // ─── MONTH SLIDER ───
 
@@ -2859,14 +2852,44 @@ function openReleaseModal(){
   document.getElementById('releaseNote').value='';
   openModal('releaseModal');
 }
-function releaseMonth(){
+async function releaseMonth(){
   if(['mitarbeiter','betriebsrat'].includes(currentUserRole)){ return; }
   const mk=monthKey(currentYear,currentMonth);
   const firstDay=new Date(currentYear,currentMonth,1);
   const sixWeeks=addDays(firstDay,-42);
   if(TODAY<sixWeeks){ showToast(`Freigabe erst ab ${sixWeeks.toLocaleDateString('de-DE')} möglich`); return; }
-  state.releases[mk]={date:new Date().toISOString(),note:document.getElementById('releaseNote').value.trim()};
-  saveData(); closeModal('releaseModal'); render(); showToast('Plan freigegeben ✓');
+  const note = document.getElementById('releaseNote').value.trim();
+  state.releases[mk]={date:new Date().toISOString(),note};
+  await upsertRelease(note);
+  closeModal('releaseModal'); render(); showToast('Plan freigegeben ✓');
+}
+
+// Zentrale Funktion: Release-Eintrag für aktuelle Gruppe/Monat schreiben
+async function upsertRelease(note=''){
+  if(!currentGruppeId || !currentUnternehmenId) return;
+  const mk = monthKey(currentYear,currentMonth);
+  const payload = {
+    key: mk,
+    date: new Date().toISOString(),
+    note: note||'',
+    unternehmen_id: currentUnternehmenId,
+    gruppe_id: currentGruppeId,
+    jahr: currentYear,
+    monat: currentMonth
+  };
+  const {error} = await sb.from('releases').upsert(payload, {onConflict:'gruppe_id,jahr,monat'});
+  if(error){ console.warn('Release-Upsert Fehler:', error.message); showToast('⚠️ Freigabe-Speicherfehler: '+error.message); return; }
+  state.releases[mk] = {date: payload.date, note: payload.note};
+}
+
+// Zentrale Funktion: Release-Eintrag entfernen (bei Entsperren)
+async function removeRelease(){
+  if(!currentGruppeId) return;
+  const mk = monthKey(currentYear,currentMonth);
+  const {error} = await sb.from('releases').delete()
+    .eq('gruppe_id', currentGruppeId).eq('jahr', currentYear).eq('monat', currentMonth);
+  if(error){ console.warn('Release-Delete Fehler:', error.message); return; }
+  delete state.releases[mk];
 }
 
 // ─── TOAST ───
@@ -6817,7 +6840,9 @@ async function toggleMonatSperre(){
       entsperrt_am: new Date().toISOString(),
       entsperrt_notiz: notiz.trim()
     }).eq('id', _monatsSperre.id);
+    await removeRelease(); // Plan-Freigabe zurücknehmen (Drei-Punkte -> gelb/grau)
     showToast('✅ Monat entsperrt');
+    render();
   } else {
     if(!confirm(`Monat ${MONTH_NAMES[currentMonth]} ${currentYear} sperren?\n\nNach dem Sperren kann nur noch Perso/Admin entsperren.`)) return;
     const { data: { session } } = await sb.auth.getSession();
@@ -6846,6 +6871,8 @@ async function toggleMonatSperre(){
     }
     showToast('🔒 Monat gesperrt');
     await logFreigabe(); // Freigabe als Start der Änderungshistorie dokumentieren
+    await upsertRelease(); // Plan gleichzeitig freigeben (Drei-Punkte -> grün)
+    render();
   }
   // Neu laden
   const sperrRes = await sb.from('monats_sperren')
