@@ -2642,8 +2642,29 @@ function calcMonthSoll(soll, year, month){
   }
   return workdays * (soll / 5);
 }
-function prevMonth(){ currentMonth--; if(currentMonth<0){currentMonth=11;currentYear--;} _monatsSperre=null; render(); }
-function nextMonth(){ currentMonth++; if(currentMonth>11){currentMonth=0;currentYear++;} _monatsSperre=null; render(); }
+async function prevMonth(){
+  currentMonth--; if(currentMonth<0){currentMonth=11;currentYear--;}
+  _monatsSperre=null;
+  render();
+  await ladeMonatsSperre();
+  render(); // erneut rendern damit Sperr-Status (Banner/Buttons) korrekt greift
+}
+async function nextMonth(){
+  currentMonth++; if(currentMonth>11){currentMonth=0;currentYear++;}
+  _monatsSperre=null;
+  render();
+  await ladeMonatsSperre();
+  render();
+}
+
+// Zentrale Funktion zum Laden der Monatssperre für den aktuell angezeigten Monat
+async function ladeMonatsSperre(){
+  if(!currentGruppeId){ _monatsSperre = null; return; }
+  const sperrRes = await sb.from('monats_sperren').select('*')
+    .eq('gruppe_id', currentGruppeId)
+    .eq('jahr', currentYear).eq('monat', currentMonth).maybeSingle();
+  _monatsSperre = sperrRes.data || null;
+}
 
 // ─── MODALS ───
 function openModal(id){ document.getElementById(id).classList.add('open'); }
@@ -6407,11 +6428,12 @@ async function logAenderung(key, altDienst, neuDienst, tauschAntragId=null){
       const ds = key.split('_')[1];
       if(!ds) return;
       const [y,m] = ds.split('-').map(Number);
-      // Alle möglichen Sperren für diese Gruppe laden (ignoriert Monat-Indexing-Probleme)
+      // m (1-12 aus Datum) → JS-Monatsindex (0-11) für monats_sperren.monat
       const {data} = await sb.from('monats_sperren').select('*')
         .eq('gruppe_id', currentGruppeId)
         .eq('gesperrt', true)
         .eq('jahr', y)
+        .eq('monat', m-1)
         .maybeSingle();
       sperre = data || null;
       if(sperre) _monatsSperre = sperre;
