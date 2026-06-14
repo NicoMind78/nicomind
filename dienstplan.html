@@ -3816,7 +3816,6 @@ function kiApplyAccepted(){
 
 // ─── WÜNSCHE ───
 function toggleWuensche(){
-  console.time('[Perf] toggleWuensche total');
   state.showWuensche = !state.showWuensche;
   if(!state.wishes) state.wishes={};
   const btn=document.getElementById('btnWuensche');
@@ -3831,13 +3830,10 @@ function toggleWuensche(){
       btn.style.color='var(--text2)';
     }
   }
-  console.time('[Perf] saveData');
-  saveData();
-  console.timeEnd('[Perf] saveData');
-  console.time('[Perf] render');
+  // Nur lokale UI-Einstellung – kein Server-Sync von staff/entries nötig
+  // (Wunschplan-Leiste ist read-only, zeigt nur Mitarbeiter-Wünsche aus state.wishes)
+  try { localStorage.setItem('pflegeplan_v3', JSON.stringify(state)); } catch(e){}
   render();
-  console.timeEnd('[Perf] render');
-  console.timeEnd('[Perf] toggleWuensche total');
 }
 
 let _wishStaffId=null, _wishDate=null, _wishPrio=null;
