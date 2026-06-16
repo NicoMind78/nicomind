@@ -764,15 +764,16 @@ if('serviceWorker' in navigator){
 <!-- Release Modal -->
 <div class="modal-overlay" id="releaseModal">
   <div class="modal">
-    <div class="modal-title">Plan freigeben</div>
-    <div class="modal-sub">Dienstplan für den ausgewählten Monat freigeben</div>
-    <div class="release-info" id="releaseInfo"></div>
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:4px">
+      <button class="modal-close-apple" onclick="closeModal('releaseModal')"></button>
+      <div class="modal-title" style="margin-bottom:0">Plan freigeben</div>
+    </div>
+    <div class="release-info" id="releaseInfo" style="margin-top:12px"></div>
     <div class="form-group">
       <label class="form-label">Notiz zur Freigabe (optional)</label>
       <textarea class="form-textarea" id="releaseNote" placeholder="z.B. Alle Dienste besetzt, KW-Planung abgeschlossen…"></textarea>
     </div>
     <div class="modal-actions">
-      <button class="btn btn-secondary" onclick="closeModal('releaseModal')">Abbrechen</button>
       <button class="btn btn-primary" id="btnJetztFreigeben" onclick="releaseMonth()">✅ Jetzt freigeben</button>
     </div>
   </div>
@@ -2936,7 +2937,7 @@ async function confirmDelete(){
 }
 
 // ─── RELEASE ───
-function openReleaseModal(){
+async function openReleaseModal(){
   if(['mitarbeiter','betriebsrat'].includes(currentUserRole)){ return; }
   const released = !!(_monatsSperre && _monatsSperre.gesperrt);
   const firstDay=new Date(currentYear,currentMonth,1);
@@ -2948,12 +2949,19 @@ function openReleaseModal(){
     return d.toLocaleDateString('de-DE',{day:'numeric',month:'short',year:'numeric'})
       + ' ' + d.toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'}) + ' Uhr';
   };
+  // Fallback für ältere Einträge ohne gespeicherten Namen: über gesperrt_von (User-ID) nachladen
+  let freigegebenVonName = released ? (_monatsSperre.gesperrt_von_name || null) : null;
+  if(released && !freigegebenVonName && _monatsSperre.gesperrt_von){
+    const {data: p} = await sb.from('user_profiles').select('name, vorname')
+      .eq('user_id', _monatsSperre.gesperrt_von).maybeSingle();
+    if(p) freigegebenVonName = `${p.vorname||''} ${p.name||''}`.trim() || null;
+  }
   document.getElementById('releaseInfo').innerHTML=`
     <div class="release-info-row"><span>Monat:</span><strong>${MONTH_NAMES[currentMonth]} ${currentYear}</strong></div>
     <div class="release-info-row"><span>Früheste Freigabe:</span><strong>${sixWeeks.toLocaleDateString('de-DE')}</strong></div>
     <div class="release-info-row"><span>Status:</span><strong style="color:${released?'var(--green)':canRelease?'var(--accent)':'var(--orange)'}">${released?'Bereits freigegeben':canRelease?'Freigabe möglich':'Noch gesperrt'}</strong></div>
     ${released?`
-    <div class="release-info-row"><span>Freigegeben von:</span><strong>${_monatsSperre.gesperrt_von_name||'–'}</strong></div>
+    <div class="release-info-row"><span>Freigegeben von:</span><strong>${freigegebenVonName||'–'}</strong></div>
     <div class="release-info-row"><span>Freigegeben am:</span><strong>${fmtTs(_monatsSperre.gesperrt_am)}</strong></div>
     `:''}
   `;
