@@ -7861,7 +7861,8 @@ async function syncShiftsFromGruppe(){
 
 // ─── UNTERNEHMEN ───
 async function loadUnternehmenData(){
-  const { data } = await sb.from('unternehmen').select('*').order('name');
+  const { data, error } = await sb.from('unternehmen').select('*').order('name');
+  if(error){ console.warn('unternehmen Query Fehler:', error.message); }
   if(data) allUnternehmen = data;
 
   if(!currentUnternehmenId && allUnternehmen.length){
