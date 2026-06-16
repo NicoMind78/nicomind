@@ -773,7 +773,7 @@ if('serviceWorker' in navigator){
     </div>
     <div class="modal-actions">
       <button class="btn btn-secondary" onclick="closeModal('releaseModal')">Abbrechen</button>
-      <button class="btn btn-primary" onclick="releaseMonth()">✅ Jetzt freigeben</button>
+      <button class="btn btn-primary" id="btnJetztFreigeben" onclick="releaseMonth()">✅ Jetzt freigeben</button>
     </div>
   </div>
 </div>
@@ -1598,6 +1598,7 @@ if('serviceWorker' in navigator){
           <div style="display:flex;flex-direction:column;gap:4px">
             <label class="right-cb-label"><input type="checkbox" class="invite-right-cb" value="dp_lesen"> Lesen</label>
             <label class="right-cb-label"><input type="checkbox" class="invite-right-cb" value="dp_aendern"> Ändern</label>
+            <label class="right-cb-label"><input type="checkbox" class="invite-right-cb" value="dp_aendern_nach_freigabe"> Ändern nach Freigabe (mit Begründung)</label>
             <label class="right-cb-label"><input type="checkbox" class="invite-right-cb" value="dp_festschreiben"> Festschreiben</label>
             <label class="right-cb-label"><input type="checkbox" class="invite-right-cb" value="dp_exportieren"> Exportieren</label>
             <label class="right-cb-label"><input type="checkbox" class="invite-right-cb" value="dp_alle_standorte"> Alle Standorte einsehen</label>
@@ -1861,6 +1862,7 @@ if('serviceWorker' in navigator){
           <div style="display:flex;flex-direction:column;gap:4px">
             <label class="right-cb-label"><input type="checkbox" class="eu-right-cb" value="dp_lesen"> Lesen</label>
             <label class="right-cb-label"><input type="checkbox" class="eu-right-cb" value="dp_aendern"> Ändern</label>
+            <label class="right-cb-label"><input type="checkbox" class="eu-right-cb" value="dp_aendern_nach_freigabe"> Ändern nach Freigabe (mit Begründung)</label>
             <label class="right-cb-label"><input type="checkbox" class="eu-right-cb" value="dp_festschreiben"> Festschreiben</label>
             <label class="right-cb-label"><input type="checkbox" class="eu-right-cb" value="dp_exportieren"> Exportieren</label>
             <label class="right-cb-label"><input type="checkbox" class="eu-right-cb" value="dp_alle_standorte"> Alle Standorte einsehen</label>
@@ -2199,13 +2201,9 @@ async function loadFromSupabase(){
 
     // Staff nach aktuellem Unternehmen + Standort/Gruppe filtern
     let staffQuery = sb.from('staff').select('*').eq('unternehmen_id', currentUnternehmenId);
-    // Lade alle Staff und filtere clientseitig nach standort_ids/gruppe_ids
-    const [staffRes, releasesRes] = await Promise.all([
-      staffQuery,
-      sb.from('releases').select('*'),
-    ]);
+    const staffRes = await staffQuery;
 
-    if(staffRes.error || releasesRes.error){
+    if(staffRes.error){
       console.warn('Supabase load error – using local data');
       return;
     }
@@ -2261,11 +2259,6 @@ async function loadFromSupabase(){
       });
     } else {
       state.entries = {};
-    }
-
-    if(releasesRes.data){
-      state.releases = {};
-      releasesRes.data.forEach(r=>{ state.releases[r.key]={date:r.date,note:r.note||''}; });
     }
 
     // Wünsche laden
@@ -2417,8 +2410,7 @@ function render(){
 function updateDraftStatus(){
   const dots=document.querySelectorAll('#btnDraftStatus circle');
   if(!dots.length) return;
-  const mk=monthKey(currentYear,currentMonth);
-  const released=state.releases[mk];
+  const released = !!(_monatsSperre && _monatsSperre.gesperrt);
   const days=daysInMonth(currentYear,currentMonth);
   let hasEntries=false;
   for(let d=1;d<=days;d++){
@@ -2808,6 +2800,30 @@ async function saveEntry(){
 
   // Alt-Dienst für Audit-Trail vor Änderung merken
   const altDienst = state.entries[key]?.shift || null;
+  const neuDienstPreCheck = _selectedShift || null;
+
+  // Sperr-Prüfung: Monat des bearbeiteten Tages ermitteln (kann vom aktuell angezeigten Monat abweichen)
+  let grundFuerAenderung = null;
+  if(altDienst !== neuDienstPreCheck){
+    const [dY, dM] = dateStr.split('-').map(Number); // dM ist 1-12
+    let sperreDesTages = (_monatsSperre && _monatsSperre.jahr === dY && _monatsSperre.monat === dM-1)
+      ? _monatsSperre : null;
+    if(!sperreDesTages){
+      const {data} = await sb.from('monats_sperren').select('*')
+        .eq('gruppe_id', currentGruppeId)
+        .eq('jahr', dY).eq('monat', dM-1).maybeSingle();
+      sperreDesTages = data || null;
+    }
+    if(sperreDesTages && sperreDesTages.gesperrt){
+      if(!hasRight('dp_aendern_nach_freigabe')){
+        showToast('🔒 Plan ist freigegeben – keine Berechtigung für Änderungen danach');
+        return;
+      }
+      const grund = prompt('Dieser Monat ist bereits freigegeben.\nGrund für die Änderung (Pflicht, wird protokolliert):');
+      if(!grund || !grund.trim()){ showToast('Bitte Grund angeben'); return; }
+      grundFuerAenderung = grund.trim();
+    }
+  }
 
   // Konflikt-Prüfung: ist dieser Mitarbeiter an diesem Tag woanders eingeplant?
   if(_selectedShift && hasConflict(staffId, dateStr)){
@@ -2834,7 +2850,7 @@ async function saveEntry(){
   saveData(); closeModal('entryModal'); showToast('Dienst gespeichert ✓');
   // Audit-Trail: Änderung nach Freigabe loggen – erst dann render() damit Badge sofort erscheint
   const neuDienst = _selectedShift || null;
-  if(altDienst !== neuDienst) await logAenderung(key, altDienst, neuDienst);
+  if(altDienst !== neuDienst) await logAenderung(key, altDienst, neuDienst, null, grundFuerAenderung);
   render();
 }
 
@@ -2855,17 +2871,64 @@ function saveStaff(){
 }
 
 let _deleteStaffId=null;
-function confirmDelete(){
+async function confirmDelete(){
   const staff=state.staff.find(s=>s.id==_deleteStaffId);
   const scope=document.getElementById('deleteScope').value;
+
+  // Sperr-Prüfung: betroffene Monate ermitteln und ggf. Recht/Begründung einholen
+  const monateZuPruefen = [];
   if(scope==='all'){
+    Object.keys(state.entries).forEach(k=>{
+      if(k.startsWith(_deleteStaffId+'_')){
+        const ds = k.split('_')[1];
+        if(ds){ const [y,m] = ds.split('-').map(Number); monateZuPruefen.push(`${y}-${m-1}`); }
+      }
+    });
+  } else {
+    monateZuPruefen.push(`${currentYear}-${currentMonth}`);
+  }
+  const eindeutigeMonate = [...new Set(monateZuPruefen)];
+  let grundFuerLoeschung = null;
+  for(const mk of eindeutigeMonate){
+    const [y,m] = mk.split('-').map(Number);
+    let sperre = (_monatsSperre && _monatsSperre.jahr===y && _monatsSperre.monat===m) ? _monatsSperre : null;
+    if(!sperre){
+      const {data} = await sb.from('monats_sperren').select('*')
+        .eq('gruppe_id', currentGruppeId).eq('jahr', y).eq('monat', m).maybeSingle();
+      sperre = data || null;
+    }
+    if(sperre && sperre.gesperrt){
+      if(!hasRight('dp_aendern_nach_freigabe')){
+        showToast('🔒 Mindestens ein betroffener Monat ist freigegeben – keine Berechtigung für Änderungen danach');
+        return;
+      }
+      if(!grundFuerLoeschung){
+        const grund = prompt('Mindestens ein betroffener Monat ist bereits freigegeben.\nGrund für die Löschung (Pflicht, wird protokolliert):');
+        if(!grund || !grund.trim()){ showToast('Bitte Grund angeben'); return; }
+        grundFuerLoeschung = grund.trim();
+      }
+    }
+  }
+
+  if(scope==='all'){
+    if(grundFuerLoeschung){
+      for(const k of Object.keys(state.entries)){
+        if(k.startsWith(_deleteStaffId+'_')){
+          await logAenderung(k, state.entries[k]?.shift||null, null, null, grundFuerLoeschung);
+        }
+      }
+    }
     state.staff=state.staff.filter(s=>s.id!=_deleteStaffId);
     Object.keys(state.entries).forEach(k=>{ if(k.startsWith(_deleteStaffId+'_')) delete state.entries[k]; });
     showToast(`${staff.name} vollständig entfernt`);
   } else {
     const days=daysInMonth(currentYear,currentMonth);
     for(let d=1;d<=days;d++){
-      delete state.entries[`${_deleteStaffId}_${fmtDate(new Date(currentYear,currentMonth,d))}`];
+      const k = `${_deleteStaffId}_${fmtDate(new Date(currentYear,currentMonth,d))}`;
+      if(grundFuerLoeschung && state.entries[k]){
+        await logAenderung(k, state.entries[k].shift||null, null, null, grundFuerLoeschung);
+      }
+      delete state.entries[k];
     }
     showToast(`Einträge für ${MONTH_NAMES[currentMonth]} gelöscht`);
   }
@@ -2875,57 +2938,44 @@ function confirmDelete(){
 // ─── RELEASE ───
 function openReleaseModal(){
   if(['mitarbeiter','betriebsrat'].includes(currentUserRole)){ return; }
-  const mk=monthKey(currentYear,currentMonth);
-  const released=state.releases[mk];
+  const released = !!(_monatsSperre && _monatsSperre.gesperrt);
   const firstDay=new Date(currentYear,currentMonth,1);
   const sixWeeks=addDays(firstDay,-42);
   const canRelease=TODAY>=sixWeeks;
+  const fmtTs = (ts) => {
+    if(!ts) return '–';
+    const d = new Date(ts);
+    return d.toLocaleDateString('de-DE',{day:'numeric',month:'short',year:'numeric'})
+      + ' ' + d.toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'}) + ' Uhr';
+  };
   document.getElementById('releaseInfo').innerHTML=`
     <div class="release-info-row"><span>Monat:</span><strong>${MONTH_NAMES[currentMonth]} ${currentYear}</strong></div>
     <div class="release-info-row"><span>Früheste Freigabe:</span><strong>${sixWeeks.toLocaleDateString('de-DE')}</strong></div>
     <div class="release-info-row"><span>Status:</span><strong style="color:${released?'var(--green)':canRelease?'var(--accent)':'var(--orange)'}">${released?'Bereits freigegeben':canRelease?'Freigabe möglich':'Noch gesperrt'}</strong></div>
+    ${released?`
+    <div class="release-info-row"><span>Freigegeben von:</span><strong>${_monatsSperre.gesperrt_von_name||'–'}</strong></div>
+    <div class="release-info-row"><span>Freigegeben am:</span><strong>${fmtTs(_monatsSperre.gesperrt_am)}</strong></div>
+    `:''}
   `;
+  const noteGroup = document.getElementById('releaseNote')?.closest('.form-group');
+  const btnFreigeben = document.getElementById('btnJetztFreigeben');
+  if(noteGroup) noteGroup.style.display = released ? 'none' : '';
+  if(btnFreigeben) btnFreigeben.style.display = released ? 'none' : '';
   document.getElementById('releaseNote').value='';
   openModal('releaseModal');
 }
 async function releaseMonth(){
   if(['mitarbeiter','betriebsrat'].includes(currentUserRole)){ return; }
-  const mk=monthKey(currentYear,currentMonth);
+  // Doppel-Freigabe-Schutz: bereits gesperrt/freigegeben? Dann abbrechen.
+  if(_monatsSperre && _monatsSperre.gesperrt){
+    showToast('⚠️ Plan ist bereits freigegeben – keine erneute Freigabe möglich');
+    return;
+  }
   const firstDay=new Date(currentYear,currentMonth,1);
   const sixWeeks=addDays(firstDay,-42);
   if(TODAY<sixWeeks){ showToast(`Freigabe erst ab ${sixWeeks.toLocaleDateString('de-DE')} möglich`); return; }
-  const note = document.getElementById('releaseNote').value.trim();
-  state.releases[mk]={date:new Date().toISOString(),note};
-  await upsertRelease(note);
-  closeModal('releaseModal'); render(); showToast('Plan freigegeben ✓');
-}
-
-// Zentrale Funktion: Release-Eintrag für aktuelle Gruppe/Monat schreiben
-async function upsertRelease(note=''){
-  if(!currentGruppeId || !currentUnternehmenId) return;
-  const mk = monthKey(currentYear,currentMonth);
-  const payload = {
-    key: mk,
-    date: new Date().toISOString(),
-    note: note||'',
-    unternehmen_id: currentUnternehmenId,
-    gruppe_id: currentGruppeId,
-    jahr: currentYear,
-    monat: currentMonth
-  };
-  const {error} = await sb.from('releases').upsert(payload, {onConflict:'gruppe_id,jahr,monat'});
-  if(error){ console.warn('Release-Upsert Fehler:', error.message); showToast('⚠️ Freigabe-Speicherfehler: '+error.message); return; }
-  state.releases[mk] = {date: payload.date, note: payload.note};
-}
-
-// Zentrale Funktion: Release-Eintrag entfernen (bei Entsperren)
-async function removeRelease(){
-  if(!currentGruppeId) return;
-  const mk = monthKey(currentYear,currentMonth);
-  const {error} = await sb.from('releases').delete()
-    .eq('gruppe_id', currentGruppeId).eq('jahr', currentYear).eq('monat', currentMonth);
-  if(error){ console.warn('Release-Delete Fehler:', error.message); return; }
-  delete state.releases[mk];
+  closeModal('releaseModal');
+  await toggleMonatSperre(true);
 }
 
 // ─── TOAST ───
@@ -3833,6 +3883,12 @@ function kiApplyAccepted(){
   const accepted = _kiProposal.filter(p=>p.status==='accepted');
   if(!accepted.length){ showToast('Keine akzeptierten Einträge'); return; }
 
+  // Sperr-Prüfung: KI-Vollanwendung ist nach Freigabe nicht erlaubt (kein Pflicht-Begründungs-Flow für Massenänderungen)
+  if(_monatsSperre && _monatsSperre.gesperrt){
+    showToast('🔒 Plan ist freigegeben – KI-Vorschläge können nicht mehr automatisch übernommen werden. Bitte einzelne Dienste manuell mit Begründung ändern.');
+    return;
+  }
+
   // Alle Einträge des aktuellen Monats für diese Gruppe zuerst löschen
   const monthPrefix = `${currentYear}-${String(currentMonth+1).padStart(2,'0')}`;
   Object.keys(state.entries||{}).forEach(key=>{
@@ -4074,8 +4130,8 @@ const ROLE_DEFAULT_RIGHTS = {
   planer:      ['dp_lesen','dp_aendern','dp_festschreiben','dp_exportieren','wp_lesen','wp_bearbeiten','wp_genehmigen','gen_urlaub','std_eigene','std_uebersicht'],
   betriebsrat: ['dp_lesen','wp_lesen','std_uebersicht','gen_urlaub','gen_ueberstunden','gen_minusstunden'],
   personal:    ['bv_lesen','bv_anlegen','dp_lesen','wp_lesen','gen_urlaub','gen_ueberstunden','gen_minusstunden','gen_krank','std_alle','std_uebersicht','std_kosten'],
-  admin:       ['bv_vollzugriff','bv_anlegen','bv_loeschen','bv_rechte_vergeben','dp_lesen','dp_aendern','dp_festschreiben','dp_exportieren','dp_alle_standorte','wp_lesen','wp_bearbeiten','wp_genehmigen','gen_urlaub','gen_ueberstunden','gen_minusstunden','gen_krank','std_alle','std_uebersicht','std_kosten','adm_standorte','adm_einstellungen','adm_ki','adm_raumplanung'],
-  master_admin:['bv_vollzugriff','bv_anlegen','bv_loeschen','bv_rechte_vergeben','dp_lesen','dp_aendern','dp_festschreiben','dp_exportieren','dp_alle_standorte','wp_lesen','wp_bearbeiten','wp_genehmigen','gen_urlaub','gen_ueberstunden','gen_minusstunden','gen_krank','std_alle','std_uebersicht','std_kosten','adm_standorte','adm_einstellungen','adm_ki','adm_raumplanung'],
+  admin:       ['bv_vollzugriff','bv_anlegen','bv_loeschen','bv_rechte_vergeben','dp_lesen','dp_aendern','dp_aendern_nach_freigabe','dp_festschreiben','dp_exportieren','dp_alle_standorte','wp_lesen','wp_bearbeiten','wp_genehmigen','gen_urlaub','gen_ueberstunden','gen_minusstunden','gen_krank','std_alle','std_uebersicht','std_kosten','adm_standorte','adm_einstellungen','adm_ki','adm_raumplanung'],
+  master_admin:['bv_vollzugriff','bv_anlegen','bv_loeschen','bv_rechte_vergeben','dp_lesen','dp_aendern','dp_aendern_nach_freigabe','dp_festschreiben','dp_exportieren','dp_alle_standorte','wp_lesen','wp_bearbeiten','wp_genehmigen','gen_urlaub','gen_ueberstunden','gen_minusstunden','gen_krank','std_alle','std_uebersicht','std_kosten','adm_standorte','adm_einstellungen','adm_ki','adm_raumplanung'],
 };
 
 function applyRoleDefaults(){
@@ -4307,6 +4363,37 @@ async function inviteUser(){
 
 async function deleteStaffOnly(staffId, staffName){
   if(!confirm(`„${staffName}" wirklich aus dem Dienstplan entfernen?\nAlle Einträge dieses Mitarbeiters werden ebenfalls gelöscht.`)) return;
+
+  // Sperr-Prüfung: betroffene Monate des zu löschenden Mitarbeiters ermitteln
+  const { data: entriesVorLoeschung } = await sb.from('entries').select('key').like('key', `${staffId}_%`);
+  const betroffeneMonate = new Set();
+  (entriesVorLoeschung||[]).forEach(e=>{
+    const ds = e.key.split('_')[1];
+    if(ds){ const [y,m] = ds.split('-').map(Number); betroffeneMonate.add(`${y}-${m-1}`); }
+  });
+  let grundFuerLoeschung = null;
+  for(const mk of betroffeneMonate){
+    const [y,m] = mk.split('-').map(Number);
+    const {data: sperre} = await sb.from('monats_sperren').select('*')
+      .eq('gruppe_id', currentGruppeId).eq('jahr', y).eq('monat', m).maybeSingle();
+    if(sperre && sperre.gesperrt){
+      if(!hasRight('dp_aendern_nach_freigabe')){
+        showToast('🔒 Mindestens ein betroffener Monat ist freigegeben – keine Berechtigung für diese Löschung');
+        return;
+      }
+      if(!grundFuerLoeschung){
+        const grund = prompt('Mindestens ein betroffener Monat ist bereits freigegeben.\nGrund für die Löschung (Pflicht, wird protokolliert):');
+        if(!grund || !grund.trim()){ showToast('Bitte Grund angeben'); return; }
+        grundFuerLoeschung = grund.trim();
+      }
+    }
+  }
+  if(grundFuerLoeschung){
+    for(const e of (entriesVorLoeschung||[])){
+      await logAenderung(e.key, null, null, null, `Mitarbeiter entfernt: ${grundFuerLoeschung}`);
+    }
+  }
+
   // Staff löschen
   const { error } = await sb.from('staff').delete().eq('id', staffId);
   if(error){ showToast('Fehler: ' + error.message); return; }
@@ -4459,18 +4546,53 @@ async function deleteUser(userId){
   if(!confirm('Benutzer wirklich vollstaendig entfernen? Dies loescht den Login, das Profil und alle Dienstplan-Eintraege.')) return;
   const profile = await sb.from('user_profiles').select('name, vorname').eq('user_id', userId).maybeSingle();
   const profileData = profile.data;
-  const result = await callManageRoles('delete', { user_id: userId });
-  if(result.error){ showToast('Fehler: ' + result.error); return; }
+
+  // Sperr-Prüfung VOR dem eigentlichen Löschen, damit kein inkonsistenter Zwischenzustand entsteht
+  let staffMatchVorab = null;
+  let grundFuerLoeschung = null;
   if(profileData){
     const fullName = `${profileData.vorname||''} ${profileData.name||''}`.trim();
     if(fullName){
-      const { data: staffMatch } = await sb.from('staff')
+      const { data: sm } = await sb.from('staff')
         .select('id').eq('name', fullName).eq('unternehmen_id', currentUnternehmenId).maybeSingle();
-      if(staffMatch){
-        await sb.from('entries').delete().like('key', `${staffMatch.id}_%`);
-        await sb.from('staff').delete().eq('id', staffMatch.id);
+      staffMatchVorab = sm || null;
+      if(staffMatchVorab){
+        const { data: entriesVorLoeschung } = await sb.from('entries').select('key').like('key', `${staffMatchVorab.id}_%`);
+        const betroffeneMonate = new Set();
+        (entriesVorLoeschung||[]).forEach(e=>{
+          const ds = e.key.split('_')[1];
+          if(ds){ const [y,m] = ds.split('-').map(Number); betroffeneMonate.add(`${y}-${m-1}`); }
+        });
+        for(const mk of betroffeneMonate){
+          const [y,m] = mk.split('-').map(Number);
+          const {data: sperre} = await sb.from('monats_sperren').select('*')
+            .eq('gruppe_id', currentGruppeId).eq('jahr', y).eq('monat', m).maybeSingle();
+          if(sperre && sperre.gesperrt){
+            if(!hasRight('dp_aendern_nach_freigabe')){
+              showToast('🔒 Mindestens ein betroffener Monat ist freigegeben – keine Berechtigung für diese Löschung');
+              return;
+            }
+            if(!grundFuerLoeschung){
+              const grund = prompt('Mindestens ein betroffener Monat ist bereits freigegeben.\nGrund für die Löschung (Pflicht, wird protokolliert):');
+              if(!grund || !grund.trim()){ showToast('Bitte Grund angeben'); return; }
+              grundFuerLoeschung = grund.trim();
+            }
+          }
+        }
+        if(grundFuerLoeschung){
+          for(const e of (entriesVorLoeschung||[])){
+            await logAenderung(e.key, null, null, null, `Benutzer entfernt: ${grundFuerLoeschung}`);
+          }
+        }
       }
     }
+  }
+
+  const result = await callManageRoles('delete', { user_id: userId });
+  if(result.error){ showToast('Fehler: ' + result.error); return; }
+  if(staffMatchVorab){
+    await sb.from('entries').delete().like('key', `${staffMatchVorab.id}_%`);
+    await sb.from('staff').delete().eq('id', staffMatchVorab.id);
   }
   showToast('Benutzer entfernt');
   loadUserList();
@@ -6435,17 +6557,18 @@ async function vollzieheTausch(antrag){
   }).eq('id',antrag.id);
   if(e3) console.warn('Audit-Trail Update Fehler:',e3.message);
 
-  // 5. Änderungshistorie für beide betroffenen Einträge loggen
-  await logAenderung(newKeyA, shiftA, shiftB, antrag.id);
-  await logAenderung(newKeyB, shiftB, shiftA, antrag.id);
+  // 5. Änderungshistorie für beide betroffenen Einträge loggen – inkl. Tauschpartner & Genehmiger
+  const nameA = (state.staff.find(s=>s.id===idA)||{}).name || `MA#${idA}`;
+  const nameB = (state.staff.find(s=>s.id===idB)||{}).name || `MA#${idB}`;
+  const tauschGrund = `Tausch zwischen ${nameA} und ${nameB}, genehmigt von ${_currentUserName||'–'}`;
+  await logAenderung(newKeyA, shiftA, shiftB, antrag.id, tauschGrund);
+  await logAenderung(newKeyB, shiftB, shiftA, antrag.id, tauschGrund);
 
   // 6. Beide Mitarbeiter per E-Mail benachrichtigen
   const fmtD = (d) => new Date(d+'T12:00:00').toLocaleDateString('de-DE',{weekday:'short',day:'numeric',month:'long'});
   const emailA = await getEmailForStaff(idA);
   const emailB = await getEmailForStaff(idB);
   const beide = [...new Set([emailA, emailB].filter(Boolean))];
-  const nameA = state.staff.find(s=>s.id==idA)?.name||'MA A';
-  const nameB = state.staff.find(s=>s.id==idB)?.name||'MA B';
   if(beide.length) sendNotification(beide, '✅ Diensttausch vollzogen',
     emailHtml('Euer Diensttausch wurde genehmigt & vollzogen',[
       `Der Tausch zwischen <strong>${nameA}</strong> und <strong>${nameB}</strong> wurde genehmigt.`,
@@ -6481,7 +6604,7 @@ async function loadDienstplanAenderungen(){
   } catch(e){ console.warn('loadDienstplanAenderungen:', e.message); }
 }
 
-async function logAenderung(key, altDienst, neuDienst, tauschAntragId=null){
+async function logAenderung(key, altDienst, neuDienst, tauschAntragId=null, grund=null){
   const isTausch = !!tauschAntragId;
   // Bei manueller Änderung: Sperre prüfen
   if(!isTausch){
@@ -6520,7 +6643,8 @@ async function logAenderung(key, altDienst, neuDienst, tauschAntragId=null){
     gruppe_id:          currentGruppeId,
     jahr:               y,
     monat:              m - 1,
-    unternehmen_id:     currentUnternehmenId
+    unternehmen_id:     currentUnternehmenId,
+    grund:              grund || null
   };
   try {
     const {data, error} = await sb.from('dienstplan_aenderungen').insert(payload).select().single();
@@ -6867,7 +6991,7 @@ function updateSperrBadge(){
   }
 }
 
-async function toggleMonatSperre(){
+async function toggleMonatSperre(skipConfirm=false){
   const istGesperrt = _monatsSperre && _monatsSperre.gesperrt;
   if(istGesperrt){
     const notiz = prompt('Grund für Entsperrung (Pflicht):');
@@ -6877,14 +7001,14 @@ async function toggleMonatSperre(){
     await sb.from('monats_sperren').update({
       gesperrt: false,
       entsperrt_von: userId,
+      entsperrt_von_name: _currentUserName || '–',
       entsperrt_am: new Date().toISOString(),
       entsperrt_notiz: notiz.trim()
     }).eq('id', _monatsSperre.id);
-    await removeRelease(); // Plan-Freigabe zurücknehmen (Drei-Punkte -> gelb/grau)
     showToast('✅ Monat entsperrt');
     render();
   } else {
-    if(!confirm(`Monat ${MONTH_NAMES[currentMonth]} ${currentYear} sperren?\n\nNach dem Sperren kann nur noch Perso/Admin entsperren.`)) return;
+    if(!skipConfirm && !confirm(`Monat ${MONTH_NAMES[currentMonth]} ${currentYear} sperren?\n\nNach dem Sperren kann nur noch Perso/Admin entsperren.`)) return;
     const { data: { session } } = await sb.auth.getSession();
     const userId = session && session.user && session.user.id;
     const payload = {
@@ -6894,8 +7018,10 @@ async function toggleMonatSperre(){
       monat: currentMonth,
       gesperrt: true,
       gesperrt_von: userId,
+      gesperrt_von_name: _currentUserName || '–',
       gesperrt_am: new Date().toISOString(),
       entsperrt_von: null,
+      entsperrt_von_name: null,
       entsperrt_am: null,
       entsperrt_notiz: null
     };
@@ -6911,7 +7037,6 @@ async function toggleMonatSperre(){
     }
     showToast('🔒 Monat gesperrt');
     await logFreigabe(); // Freigabe als Start der Änderungshistorie dokumentieren
-    await upsertRelease(); // Plan gleichzeitig freigeben (Drei-Punkte -> grün)
     render();
   }
   // Neu laden
@@ -7166,6 +7291,20 @@ async function deleteZuschlag(id){
 // ─── ROLLE ───
 let currentUserRole = null;
 let currentUserId = null;
+let currentUserRights = [];
+
+// Prüft ob der eingeloggte User ein bestimmtes Recht hat.
+// Quelle 1: individuell gespeicherte currentUserRights (extra_rights aus user_profiles).
+// Fallback: falls für den User noch keine individuellen Rechte gepflegt sind (leeres Array),
+// greift die Default-Rechte-Liste der Rolle (ROLE_DEFAULT_RIGHTS), damit niemand durch
+// fehlende Pflege plötzlich Rechte verliert, die seiner Rolle eigentlich zustehen.
+function hasRight(code){
+  if(currentUserRights.includes(code)) return true;
+  if(currentUserRights.length > 0) return false; // explizit gepflegt, aber Recht fehlt
+  const roleKey = currentUserRole === 'owner' ? 'master_admin' : currentUserRole;
+  const fallback = ROLE_DEFAULT_RIGHTS[roleKey] || [];
+  return fallback.includes(code);
+}
 
 async function loadUserRole(){
   try {
@@ -7177,9 +7316,9 @@ async function loadUserRole(){
     }
     currentUserId = session.user.id;
 
-    // Profil laden: Username + Passwort-Änderungs-Flag + Zugangsberechtigung
+    // Profil laden: Username + Passwort-Änderungs-Flag + Zugangsberechtigung + individuelle Rechte
     const { data: profile, error: profileErr } = await sb.from('user_profiles')
-      .select('name, vorname, muss_passwort_aendern, unternehmen_id')
+      .select('name, vorname, muss_passwort_aendern, unternehmen_id, extra_rights')
       .eq('user_id', currentUserId)
       .maybeSingle();
 
@@ -7191,6 +7330,9 @@ async function loadUserRole(){
       window.location.replace('https://curenio.de/login.html');
       return;
     }
+
+    // Individuelle Rechte übernehmen (Array von Rechte-Kürzeln, z.B. 'dp_aendern_nach_freigabe')
+    currentUserRights = (profile && Array.isArray(profile.extra_rights)) ? profile.extra_rights : [];
 
     // Null-Guard: profile kann null sein bei Netzwerkfehler
     if(profile && (profile.name || profile.vorname))
