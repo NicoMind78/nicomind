@@ -297,6 +297,27 @@ if('serviceWorker' in navigator){
   .modal-close-apple::after  { transform: rotate(-45deg); }
   .modal-close-apple:hover::before,
   .modal-close-apple:hover::after { background: rgba(0,0,0,0.55); }
+  .meins-close-btn {
+    width: 13px; height: 13px; border-radius: 50%;
+    background: #ff5f57; border: none; cursor: pointer;
+    flex-shrink: 0; position: relative; display: inline-flex;
+    align-items: center; justify-content: center;
+    box-shadow: 0 0 0 1px rgba(0,0,0,.15);
+    transition: background .15s;
+  }
+  .meins-close-btn::before,
+  .meins-close-btn::after {
+    content: '';
+    position: absolute;
+    width: 7px; height: 1.3px;
+    background: rgba(0,0,0,0); border-radius: 1px;
+    transition: background .12s;
+  }
+  .meins-close-btn::before { transform: rotate(45deg); }
+  .meins-close-btn::after  { transform: rotate(-45deg); }
+  .meins-close-btn:hover { background: #ffb3ad; }
+  .meins-close-btn:hover::before,
+  .meins-close-btn:hover::after { background: #800000; }
   .modal-header-apple {
     display: flex; align-items: center; gap: 10px; margin-bottom: 4px;
   }
@@ -850,11 +871,7 @@ if('serviceWorker' in navigator){
   <!-- Header -->
   <div style="display:flex;align-items:center;gap:12px;padding:14px 20px;background:var(--surface);border-bottom:1px solid var(--border);flex-shrink:0">
     <!-- Roter Apple-Schließen-Punkt -->
-    <div onclick="closeMeins()" title="Schließen"
-      style="width:13px;height:13px;border-radius:50%;background:#ff5f57;cursor:pointer;flex-shrink:0;box-shadow:0 0 0 1px rgba(0,0,0,.15);transition:background .15s;position:relative;display:flex;align-items:center;justify-content:center"
-      onmouseover="this.style.background='#ffb3ad';this.innerHTML='<svg width=7 height=7 viewBox=\'0 0 10 10\'><line x1=2 y1=2 x2=8 y2=8 stroke=\'#800000\' stroke-width=1.5/><line x1=8 y1=2 x2=2 y2=8 stroke=\'#800000\' stroke-width=1.5/></svg>'"
-      onmouseout="this.style.background='#ff5f57';this.innerHTML=''">
-    </div>
+    <button onclick="closeMeins()" title="Schließen" class="meins-close-btn"></button>
     <!-- Name & Rolle rechts -->
     <div style="flex:1;display:flex;align-items:center;gap:10px;justify-content:flex-end">
       <div style="text-align:right">
