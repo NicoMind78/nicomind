@@ -851,9 +851,9 @@ if('serviceWorker' in navigator){
   <div style="display:flex;align-items:center;gap:12px;padding:14px 20px;background:var(--surface);border-bottom:1px solid var(--border);flex-shrink:0">
     <!-- Roter Apple-Schließen-Punkt -->
     <div onclick="closeMeins()" title="Schließen"
-      style="width:13px;height:13px;border-radius:50%;background:#ff5f57;cursor:pointer;flex-shrink:0;box-shadow:0 0 0 1px rgba(0,0,0,.15);transition:opacity .15s"
-      onmouseover="this.innerHTML='<svg width=7 height=7 viewBox=\'0 0 10 10\' style=\'position:absolute;margin-top:-3.5px;margin-left:-3.5px\'><line x1=2 y1=2 x2=8 y2=8 stroke=\'#800000\' stroke-width=1.5/><line x1=8 y1=2 x2=2 y2=8 stroke=\'#800000\' stroke-width=1.5/></svg>'"
-      onmouseout="this.innerHTML=''">
+      style="width:13px;height:13px;border-radius:50%;background:#ff5f57;cursor:pointer;flex-shrink:0;box-shadow:0 0 0 1px rgba(0,0,0,.15);transition:background .15s;position:relative;display:flex;align-items:center;justify-content:center"
+      onmouseover="this.style.background='#ffb3ad';this.innerHTML='<svg width=7 height=7 viewBox=\'0 0 10 10\'><line x1=2 y1=2 x2=8 y2=8 stroke=\'#800000\' stroke-width=1.5/><line x1=8 y1=2 x2=2 y2=8 stroke=\'#800000\' stroke-width=1.5/></svg>'"
+      onmouseout="this.style.background='#ff5f57';this.innerHTML=''">
     </div>
     <!-- Name & Rolle rechts -->
     <div style="flex:1;display:flex;align-items:center;gap:10px;justify-content:flex-end">
