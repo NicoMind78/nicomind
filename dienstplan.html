@@ -4514,10 +4514,7 @@ async function loadUserList(){
           <div style="font-size:11px;color:var(--text3)">${subLabel} · 🔑 Login aktiv</div>
         </div>
         ${canEdit ? `
-        <button onclick="openEditUser('${u.user_id}')" style="font-size:11px;padding:4px 8px;border:1px solid var(--border);border-radius:6px;background:var(--surface);color:var(--text2);cursor:pointer">✎</button>
-        <select onchange="changeUserRole('${u.user_id}', this.value)" style="font-size:11px;padding:4px 8px;border:1px solid var(--border);border-radius:6px;background:var(--surface);color:var(--text)">
-          ${Object.entries(ROLE_LABELS).map(([v,l])=>`<option value="${v}"${u.role===v?' selected':''}>${l}</option>`).join('')}
-        </select>
+        <button onclick="openEditUser('${u.user_id}')" style="font-size:11px;padding:4px 8px;border:1px solid var(--border);border-radius:6px;background:var(--surface);color:var(--text2);cursor:pointer">✎ Bearbeiten</button>
         ${!isMe ? `<button onclick="deleteUser('${u.user_id}')" style="width:26px;height:26px;border:none;background:var(--red-soft);color:var(--red);border-radius:6px;cursor:pointer;font-size:14px;flex-shrink:0">✕</button>` : ''}
         ` : ''}
       </div>`;
@@ -4557,12 +4554,6 @@ async function loadUserList(){
 
   const allHtml = [...authUsers, ...staffOnlyHtml];
   list.innerHTML = allHtml.length ? allHtml.join('') : '<div style="color:var(--text3);font-size:12px;padding:8px">Keine Benutzer gefunden</div>';
-}
-
-async function changeUserRole(userId, newRole){
-  const result = await callManageRoles('update', { user_id: userId, role: newRole });
-  if(result.error){ showToast('Fehler: ' + result.error); return; }
-  showToast('✅ Rolle aktualisiert');
 }
 
 async function deleteUser(userId){
