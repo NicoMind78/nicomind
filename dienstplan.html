@@ -2154,10 +2154,14 @@ let state = loadData();
 
 // ─── SUPABASE SYNC ───
 async function syncToSupabase(){
+  if(!currentUnternehmenId){
+    console.warn('syncToSupabase: currentUnternehmenId noch nicht gesetzt – Sync übersprungen');
+    return;
+  }
   try {
     // Upsert staff
     if(state.staff && state.staff.length){
-      await sb.from('staff').upsert(
+      const {error: staffErr} = await sb.from('staff').upsert(
         state.staff.map(s=>({
           id: s.id,
           name: s.name,
@@ -2165,9 +2169,14 @@ async function syncToSupabase(){
           soll: s.soll,
           color: s.color,
           notes: s.notes||'',
-          rules: s.rules||{}
+          rules: s.rules||{},
+          unternehmen_id: currentUnternehmenId
         }))
       );
+      if(staffErr){
+        console.warn('Staff-Sync Fehler:', staffErr.message);
+        showToast('⚠️ Speichern fehlgeschlagen: '+staffErr.message);
+      }
     }
     // Upsert entries
     const entryRows = Object.entries(state.entries||{}).map(([key,val])=>({
@@ -2176,14 +2185,20 @@ async function syncToSupabase(){
       info: val.info||'',
       gruppe_id: val.gruppe_id || currentGruppeId || null,
       standort_id: val.standort_id || currentStandortId || null,
+      unternehmen_id: currentUnternehmenId,
     }));
     if(entryRows.length){
-      await sb.from('entries').upsert(entryRows);
+      const {error: entriesErr} = await sb.from('entries').upsert(entryRows);
+      if(entriesErr){
+        console.warn('Entries-Sync Fehler:', entriesErr.message);
+        showToast('⚠️ Speichern fehlgeschlagen: '+entriesErr.message);
+      }
     }
     // Releases werden jetzt gezielt über upsertRelease()/removeRelease() synchronisiert,
     // nicht mehr pauschal hier (sonst fehlen gruppe_id/jahr/monat -> RLS/Constraint-Fehler)
   } catch(e){
     console.warn('Supabase sync error:', e.message);
+    showToast('⚠️ Speichern fehlgeschlagen: '+e.message);
   }
 }
 
