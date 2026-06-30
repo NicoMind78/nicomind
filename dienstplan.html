@@ -733,6 +733,10 @@ if('serviceWorker' in navigator){
       <label class="form-label">Wochensoll-Stunden</label>
       <input type="number" class="form-input" id="newSoll" value="38.5" min="1" max="60" step="0.5">
     </div>
+    <div class="form-group">
+      <label class="form-label">Eintrittsdatum</label>
+      <input type="date" class="form-input" id="newEintrittsdatum">
+    </div>
     <div class="modal-actions">
       <button class="btn btn-secondary" onclick="closeModal('staffModal')">Abbrechen</button>
       <button class="btn btn-primary" onclick="saveStaff()">Hinzufügen</button>
@@ -1475,8 +1479,8 @@ if('serviceWorker' in navigator){
         </div>
       </div>
 
-      <!-- Zeile 3: Wöchtl. Arbeitszeit, Urlaubstage/Jahr, Stundenlohn -->
-      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px">
+      <!-- Zeile 3: Wöchtl. Arbeitszeit, Urlaubstage/Jahr, Stundenlohn, Eintrittsdatum -->
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:10px">
         <div>
           <div style="font-size:11px;color:var(--text3);margin-bottom:3px">Wöchtl. Arbeitszeit (h)</div>
           <input type="number" id="inviteSoll" placeholder="z.B. 38.5" min="0" max="60" step="0.5" style="width:100%;padding:7px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:12px;background:var(--surface);color:var(--text)">
@@ -1488,6 +1492,10 @@ if('serviceWorker' in navigator){
         <div>
           <div style="font-size:11px;color:var(--text3);margin-bottom:3px">Stundenlohn (€)</div>
           <input type="number" id="inviteStundenlohn" value="0" min="0" max="200" step="0.01" style="width:100%;padding:7px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:12px;background:var(--surface);color:var(--text)">
+        </div>
+        <div>
+          <div style="font-size:11px;color:var(--text3);margin-bottom:3px">Eintrittsdatum</div>
+          <input type="date" id="inviteEintrittsdatum" style="width:100%;padding:7px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:12px;background:var(--surface);color:var(--text)">
         </div>
       </div>
 
@@ -1760,6 +1768,14 @@ if('serviceWorker' in navigator){
         <div>
           <div style="font-size:11px;color:var(--text3);margin-bottom:3px">Mitarbeiter-Nr.</div>
           <input type="text" id="euMaNr" placeholder="z.B. MA-001" style="width:100%;padding:7px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:12px;background:var(--surface);color:var(--text)">
+        </div>
+      </div>
+
+      <!-- Zeile 3b: Eintrittsdatum -->
+      <div style="display:grid;grid-template-columns:1fr;gap:10px">
+        <div>
+          <div style="font-size:11px;color:var(--text3);margin-bottom:3px">Eintrittsdatum</div>
+          <input type="date" id="euEintrittsdatum" style="width:100%;padding:7px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:12px;background:var(--surface);color:var(--text)">
         </div>
       </div>
 
@@ -2155,10 +2171,14 @@ let state = loadData();
 
 // ─── SUPABASE SYNC ───
 async function syncToSupabase(){
+  if(!currentUnternehmenId){
+    console.warn('syncToSupabase: currentUnternehmenId noch nicht gesetzt – Sync übersprungen');
+    return;
+  }
   try {
     // Upsert staff
     if(state.staff && state.staff.length){
-      await sb.from('staff').upsert(
+      const {error: staffErr} = await sb.from('staff').upsert(
         state.staff.map(s=>({
           id: s.id,
           name: s.name,
@@ -2166,9 +2186,15 @@ async function syncToSupabase(){
           soll: s.soll,
           color: s.color,
           notes: s.notes||'',
-          rules: s.rules||{}
+          rules: s.rules||{},
+          eintrittsdatum: s.eintrittsdatum || null,
+          unternehmen_id: currentUnternehmenId
         }))
       );
+      if(staffErr){
+        console.warn('Staff-Sync Fehler:', staffErr.message);
+        showToast('⚠️ Speichern fehlgeschlagen: '+staffErr.message);
+      }
     }
     // Upsert entries
     const entryRows = Object.entries(state.entries||{}).map(([key,val])=>({
@@ -2177,14 +2203,20 @@ async function syncToSupabase(){
       info: val.info||'',
       gruppe_id: val.gruppe_id || currentGruppeId || null,
       standort_id: val.standort_id || currentStandortId || null,
+      unternehmen_id: currentUnternehmenId,
     }));
     if(entryRows.length){
-      await sb.from('entries').upsert(entryRows);
+      const {error: entriesErr} = await sb.from('entries').upsert(entryRows);
+      if(entriesErr){
+        console.warn('Entries-Sync Fehler:', entriesErr.message);
+        showToast('⚠️ Speichern fehlgeschlagen: '+entriesErr.message);
+      }
     }
     // Releases werden jetzt gezielt über upsertRelease()/removeRelease() synchronisiert,
     // nicht mehr pauschal hier (sonst fehlen gruppe_id/jahr/monat -> RLS/Constraint-Fehler)
   } catch(e){
     console.warn('Supabase sync error:', e.message);
+    showToast('⚠️ Speichern fehlgeschlagen: '+e.message);
   }
 }
 
@@ -2660,12 +2692,12 @@ function getHolidayName(dateStr){
 
 // ─── NAVIGATION ───
 // Correct monthly SOLL: count Mon–Fri workdays minus holidays × daily hours (soll/5)
-function calcMonthSoll(soll, year, month){
+function calcMonthSoll(soll, year, month, startDay=1){
   const days = daysInMonth(year, month);
   const hols = holidaysForYear(year);
   const ur = _unternehmensrahmen;
   let workdays = 0;
-  for(let d=1; d<=days; d++){
+  for(let d=Math.max(1, startDay); d<=days; d++){
     const dt = new Date(year, month, d);
     const dow = dt.getDay();
     const ds = fmtDate(dt);
@@ -2677,6 +2709,87 @@ function calcMonthSoll(soll, year, month){
     }
   }
   return workdays * (soll / 5);
+}
+
+// Berechnet/aktualisiert den Stundensaldo (Soll-Ist, kumuliert) für einen Mitarbeiter
+// für einen bestimmten Monat. Berücksichtigt eintrittsdatum (kein Saldo vor Eintritt,
+// anteiliges Soll im Eintrittsmonat). Schreibt das Ergebnis in stunden_saldo.
+// Überspringt Monate, die manuell korrigiert wurden (manuell_korrigiert=true) -
+// diese werden nicht automatisch überschrieben.
+async function berechneStundenSaldo(staffObj, year, month){
+  const eintritt = staffObj.eintrittsdatum ? new Date(staffObj.eintrittsdatum+'T00:00:00') : null;
+  const monthStart = new Date(year, month, 1);
+  const monthEndExcl = new Date(year, month+1, 1);
+
+  // Vor Eintrittsdatum: kein Saldo-Eintrag für diesen Monat
+  if(eintritt && eintritt >= monthEndExcl) return null;
+
+  // Bereits vorhandenen Eintrag prüfen (wegen manueller Korrektur)
+  const { data: existing } = await sb.from('stunden_saldo')
+    .select('*').eq('staff_id', staffObj.id).eq('jahr', year).eq('monat', month).maybeSingle();
+  if(existing && existing.manuell_korrigiert){
+    return existing; // manuell korrigierte Monate werden nicht automatisch überschrieben
+  }
+
+  // Start-Tag für anteiliges Soll im Eintrittsmonat ermitteln
+  let startDay = 1;
+  if(eintritt && eintritt >= monthStart && eintritt < monthEndExcl){
+    startDay = eintritt.getDate();
+  }
+
+  const sollStunden = calcMonthSoll(staffObj.soll, year, month, startDay);
+  const istStunden = await calcIstStunden(staffObj.id, year, month);
+  const saldoMonat = istStunden - sollStunden;
+
+  // Vormonat für Kumulierung holen
+  let vorMonat = month - 1, vorJahr = year;
+  if(vorMonat < 0){ vorMonat = 11; vorJahr--; }
+  const { data: vorSaldo } = await sb.from('stunden_saldo')
+    .select('saldo_kumuliert').eq('staff_id', staffObj.id).eq('jahr', vorJahr).eq('monat', vorMonat).maybeSingle();
+  const saldoKumuliert = (vorSaldo ? vorSaldo.saldo_kumuliert : 0) + saldoMonat;
+
+  const payload = {
+    staff_id: staffObj.id,
+    jahr: year,
+    monat: month,
+    soll_stunden: sollStunden,
+    ist_stunden: istStunden,
+    saldo_monat: saldoMonat,
+    saldo_kumuliert: saldoKumuliert,
+    manuell_korrigiert: false,
+    unternehmen_id: currentUnternehmenId
+  };
+
+  if(existing){
+    const { error } = await sb.from('stunden_saldo').update(payload).eq('id', existing.id);
+    if(error){ console.warn('Saldo-Update Fehler:', error.message); return null; }
+  } else {
+    const { error } = await sb.from('stunden_saldo').insert(payload);
+    if(error){ console.warn('Saldo-Insert Fehler:', error.message); return null; }
+  }
+  return payload;
+}
+
+// Berechnet die tatsächlich geleisteten Stunden eines Mitarbeiters in einem Monat
+// aus der Zeiterfassung (start_zeit, end_zeit, pause_minuten). Nur abgeschlossene
+// Buchungen (end_zeit gesetzt) werden gezählt - offene Buchungen (noch eingestempelt) nicht.
+async function calcIstStunden(staffId, year, month){
+  const monthStart = new Date(year, month, 1);
+  const monthEnd = new Date(year, month+1, 1);
+  const { data, error } = await sb.from('zeiterfassung')
+    .select('start_zeit, end_zeit, pause_minuten')
+    .eq('staff_id', staffId)
+    .gte('datum', fmtDate(monthStart))
+    .lt('datum', fmtDate(monthEnd));
+  if(error){ console.warn('calcIstStunden Fehler:', error.message); return 0; }
+  let totalMinuten = 0;
+  (data||[]).forEach(b=>{
+    if(b.start_zeit && b.end_zeit){
+      const dauerMin = Math.round((new Date(b.end_zeit)-new Date(b.start_zeit))/60000) - (b.pause_minuten||0);
+      if(dauerMin > 0) totalMinuten += dauerMin;
+    }
+  });
+  return totalMinuten / 60;
 }
 async function prevMonth(){
   currentMonth--; if(currentMonth<0){currentMonth=11;currentYear--;}
@@ -2880,8 +2993,9 @@ function saveStaff(){
   if(!name){ showToast('Bitte Namen eingeben'); return; }
   const role=document.getElementById('newRole').value;
   const soll=parseFloat(document.getElementById('newSoll').value);
+  const eintrittsdatum=document.getElementById('newEintrittsdatum').value || null;
   const color=COLORS[state.staff.length%COLORS.length];
-  state.staff.push({id:state.nextId++,name,role,soll,color});
+  state.staff.push({id:state.nextId++,name,role,soll,color,eintrittsdatum});
   saveData(); closeModal('staffModal'); render(); showToast(`${name} hinzugefügt ✓`);
 }
 
@@ -4272,6 +4386,7 @@ async function inviteUser(){
   const urlaubstageInvite = parseInt(document.getElementById('inviteUrlaubJahr')?.value)||30;
   const urlaubVorjahrInvite = parseInt(document.getElementById('inviteUrlaubVorjahr')?.value)||0;
   const stundenlohnInvite = parseFloat(document.getElementById('inviteStundenlohn').value)||0;
+  const eintrittsdatumInvite = document.getElementById('inviteEintrittsdatum')?.value || null;
   const auto1    = document.getElementById('inviteAuto1').checked;
   const poolAuto = document.getElementById('invitePoolAuto').checked;
   const standortIds = [...document.querySelectorAll('.inv-standort-cb:checked')].map(c=>c.value);
@@ -4317,6 +4432,7 @@ async function inviteUser(){
       qualifikationen: inviteQualifikationen,
       feste_freitage: inviteFesteFrei,
       dienste_erlaubt: [],
+      eintrittsdatum: eintrittsdatumInvite,
     });
 
     if(error){ showToast('Fehler: ' + error.message); return; }
@@ -4363,6 +4479,7 @@ async function inviteUser(){
       qualifikationen: inviteQualifikationen,
       feste_freitage: inviteFesteFrei,
       urlaubstage_vorjahr: urlaubVorjahrInvite,
+      eintrittsdatum: eintrittsdatumInvite,
     });
   }
 
@@ -6970,7 +7087,7 @@ async function openStundenModal(){
   _zuschlaege = (zRes.data) || [];
 
   updateSperrBadge();
-  stundenTab(_stundenTab);
+  await stundenTab(_stundenTab);
   openModal('stundenModal');
 }
 
@@ -7059,7 +7176,7 @@ async function toggleMonatSperre(skipConfirm=false){
   updateSperrBadge();
 }
 
-function stundenTab(tab){
+async function stundenTab(tab){
   _stundenTab = tab;
   ['planer','perso'].forEach(t => {
     const btn = document.getElementById('stTab_' + t);
@@ -7074,10 +7191,10 @@ function stundenTab(tab){
       btn.style.borderColor = 'var(--border)';
     }
   });
-  renderStundenBody();
+  await renderStundenBody();
 }
 
-function renderStundenBody(){
+async function renderStundenBody(){
   const body = document.getElementById('stundenBody');
   const staff = state.staff;
   if(!staff || !staff.length){
@@ -7123,7 +7240,13 @@ function renderStundenBody(){
   if(_stundenTab === 'planer'){
     renderStundenPlaner(body, maData);
   } else {
-    renderStundenPerso(body, maData);
+    // Kumulierten Stundensaldo (aus Zeiterfassung) für jeden Mitarbeiter laden/aktualisieren
+    const saldoMap = {};
+    for(const {s} of maData){
+      const saldo = await berechneStundenSaldo(s, currentYear, currentMonth);
+      saldoMap[s.id] = saldo;
+    }
+    renderStundenPerso(body, maData, saldoMap);
   }
 }
 
@@ -7166,10 +7289,11 @@ function renderStundenPlaner(body, maData){
     </table>`;
 }
 
-function renderStundenPerso(body, maData){
+function renderStundenPerso(body, maData, saldoMap){
   const cards = maData.map(({s, ist, soll, diff, weAnzahl, rbAnzahl, ftAnzahl, dienste}) => {
     const diffColor = diff >= 0 ? '#1a7f37' : '#cf222e';
     const diffStr = (diff >= 0 ? '+' : '') + diff.toFixed(1) + 'h';
+    const saldo = saldoMap && saldoMap[s.id];
 
     // Zuschläge berechnen
     let zuschlagZeilen = '';
@@ -7231,6 +7355,20 @@ function renderStundenPerso(body, maData){
 
         <div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:6px">${dienstZeilen}</div>
         ${zuschlagZeilen}
+        ${saldo ? `
+        <div style="border-top:1px solid var(--border);margin-top:8px;padding-top:8px;display:flex;align-items:center;justify-content:space-between">
+          <div>
+            <div style="font-size:11px;font-weight:600;color:var(--text2)">Stundenübertrag (kumuliert)${saldo.manuell_korrigiert?' · ✏️ manuell':''}</div>
+            <div style="font-size:9px;color:var(--text3)">Aus Zeiterfassung, fortgeschrieben ab Eintritt</div>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px">
+            <div style="font-size:16px;font-weight:700;color:${saldo.saldo_kumuliert>=0?'#1a7f37':'#cf222e'}">${saldo.saldo_kumuliert>=0?'+':''}${saldo.saldo_kumuliert.toFixed(1)}h</div>
+            ${['owner','master_admin','admin','personal'].includes(currentUserRole) ? `
+            <button onclick="openSaldoKorrektur(${s.id},'${s.name.replace(/'/g,"\\'")}',${saldo.saldo_kumuliert})" style="font-size:11px;padding:4px 8px;border:1px solid var(--border);border-radius:6px;background:var(--surface);color:var(--text2);cursor:pointer">✏️</button>
+            ` : ''}
+          </div>
+        </div>
+        ` : ''}
       </div>`;
   }).join('');
 
@@ -7239,6 +7377,55 @@ function renderStundenPerso(body, maData){
 
 function stundenExportExcel(){
   showToast('Excel-Export folgt in Kürze');
+}
+
+// Manuelle Korrektur des kumulierten Stundensaldos (Admin/Perso), mit Pflicht-Begründung.
+// Markiert den Monat als manuell_korrigiert, damit die automatische Berechnung ihn künftig nicht überschreibt.
+async function openSaldoKorrektur(staffId, staffName, aktuellerSaldo){
+  const neuerWertStr = prompt(`Neuer kumulierter Saldo für ${staffName} (aktuell: ${aktuellerSaldo.toFixed(1)}h):`, aktuellerSaldo.toFixed(1));
+  if(neuerWertStr === null) return;
+  const neuerWert = parseFloat(neuerWertStr.replace(',', '.'));
+  if(isNaN(neuerWert)){ showToast('Ungültiger Wert'); return; }
+  const grund = prompt('Grund für die Korrektur (Pflicht, wird protokolliert):');
+  if(!grund || !grund.trim()){ showToast('Bitte Grund angeben'); return; }
+
+  const { data: { session } } = await sb.auth.getSession();
+  const userId = session && session.user && session.user.id;
+
+  const { data: existing } = await sb.from('stunden_saldo')
+    .select('id').eq('staff_id', staffId).eq('jahr', currentYear).eq('monat', currentMonth).maybeSingle();
+
+  const payload = {
+    staff_id: staffId,
+    jahr: currentYear,
+    monat: currentMonth,
+    saldo_kumuliert: neuerWert,
+    manuell_korrigiert: true,
+    korrektur_grund: grund.trim(),
+    korrigiert_von: userId,
+    korrigiert_von_name: _currentUserName || '–',
+    korrigiert_am: new Date().toISOString(),
+    unternehmen_id: currentUnternehmenId
+  };
+
+  if(existing){
+    const { error } = await sb.from('stunden_saldo').update(payload).eq('id', existing.id);
+    if(error){ showToast('Fehler: ' + error.message); return; }
+  } else {
+    // Soll/Ist müssen für einen neuen Eintrag ebenfalls vorhanden sein
+    const s = state.staff.find(x=>x.id===staffId);
+    const sollStunden = s ? calcMonthSoll(s.soll, currentYear, currentMonth) : 0;
+    const istStunden = await calcIstStunden(staffId, currentYear, currentMonth);
+    const { error } = await sb.from('stunden_saldo').insert({
+      ...payload,
+      soll_stunden: sollStunden,
+      ist_stunden: istStunden,
+      saldo_monat: istStunden - sollStunden
+    });
+    if(error){ showToast('Fehler: ' + error.message); return; }
+  }
+  showToast('✅ Saldo korrigiert');
+  await renderStundenBody();
 }
 
 function stundenExportPDF(){
@@ -7494,6 +7681,7 @@ async function openEditUser(userId){
   document.getElementById('euKostenstelle').value= (profile && profile.kostenstelle) || '';
   document.getElementById('euMaNr').value        = (profile && profile.mitarbeiter_nr) || '';
   document.getElementById('euSoll').value        = (profile && profile.soll) || 38.5;
+  document.getElementById('euEintrittsdatum').value = (profile && profile.eintrittsdatum) || '';
   document.getElementById('euAuto1').checked     = (profile && profile.auto1) || false;
   document.getElementById('euPoolAuto').checked  = (profile && profile.pool_auto) || false;
   const sel = document.getElementById('euPosition');
@@ -7577,6 +7765,7 @@ async function openEditStaffOnly(staffId){
   const emailInputStaff = document.getElementById('euEmailAnzeige');
   if(emailInputStaff) emailInputStaff.value = '';
   document.getElementById('euSoll').value        = s.soll || 38.5;
+  document.getElementById('euEintrittsdatum').value = s.eintrittsdatum || '';
   document.getElementById('euAuto1').checked     = false;
   document.getElementById('euPoolAuto').checked  = false;
   // Urlaubstage werden via loadEuRules() befüllt
@@ -7692,6 +7881,7 @@ async function saveEditUser(){
   // Bug fix: nur euUrlaubJahr (Tab2 Planungsregeln) als Single Source of Truth
   const urlaubstage = parseInt(document.getElementById('euUrlaubJahr')?.value)||30;
   const stundenlohn = parseFloat(document.getElementById('euStundenlohn').value)||0;
+  const eintrittsdatum = document.getElementById('euEintrittsdatum')?.value || null;
   const standortIds = [...document.querySelectorAll('.eu-standort-cb:checked')].map(c=>c.value);
   const gruppeIds   = [...document.querySelectorAll('.eu-gruppe-cb:checked')].map(c=>c.value);
   const extraRightsEu = [...document.querySelectorAll('.eu-right-cb:checked')].map(c=>c.value);
@@ -7714,6 +7904,7 @@ async function saveEditUser(){
       !document.querySelector(`.eu-freitag-cb[value="${v}"]:checked`)
     ),
     qualifikationen,
+    eintrittsdatum,
   };
   const staffRulesNew = { ...staffRules, dienste_erlaubt: [] };
 
@@ -7752,6 +7943,7 @@ async function saveEditUser(){
       unternehmen_id: currentUnternehmenId,
       extra_rights: extraRightsEu,
       mitarbeiter_nr: maNr,
+      eintrittsdatum,
       ...(emailVal ? {email: emailVal} : {email: null})
     });
     if(error){ showToast('Fehler Profil: ' + error.message); return; }
