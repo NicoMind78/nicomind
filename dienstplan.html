@@ -30,6 +30,22 @@ if('serviceWorker' in navigator){
     --shadow: 0 2px 20px rgba(0,0,0,0.08); --shadow-lg: 0 8px 40px rgba(0,0,0,0.14);
     font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', Arial, sans-serif;
   }
+  /* DARKMODE – aktiviert über html.dark (Einstellung unter Meins → Einstellungen) */
+  html.dark {
+    --bg: #1c1c1e; --surface: #2c2c2e; --surface2: #3a3a3c;
+    --border: rgba(255,255,255,0.12); --text: #f5f5f7; --text2: #aeaeb2; --text3: #7c7c80;
+    --accent: #0a84ff; --accent-soft: rgba(10,132,255,0.18);
+    --green-soft: rgba(40,205,65,0.20);
+    --orange-soft: rgba(255,159,10,0.20);
+    --red-soft: rgba(255,69,58,0.18);
+    --purple-soft: rgba(191,90,242,0.20);
+    --teal-soft: rgba(90,200,250,0.20);
+    --yellow-soft: rgba(255,214,10,0.20);
+    --shadow: 0 2px 20px rgba(0,0,0,0.45); --shadow-lg: 0 8px 40px rgba(0,0,0,0.6);
+  }
+  html.dark .app-header { background: rgba(28,28,30,0.88); }
+  html.dark .release-countdown { background: rgba(255,255,255,.12); }
+  html.dark .form-input:focus, html.dark .form-select:focus, html.dark .form-textarea:focus { background: var(--surface2); }
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body { background: var(--bg); color: var(--text); min-height: 100vh; -webkit-font-smoothing: antialiased; }
   .app { display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
@@ -587,7 +603,7 @@ if('serviceWorker' in navigator){
       <div class="logo-icon"><img src="data:image/png;base64,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" style="width:100%;height:100%;object-fit:cover;display:block"></div>
       <div>
         <div class="logo-text" style="font-size:11px;font-weight:600;letter-spacing:-.2px">curenio</div>
-        <div class="logo-sub" style="font-size:9px;color:var(--text3);margin-top:1px">Palliativ Care · Build 2026-06-30-28</div>
+        <div class="logo-sub" style="font-size:9px;color:var(--text3);margin-top:1px">Palliativ Care · Build 2026-07-11-01</div>
       </div>
     </div>
 
@@ -620,8 +636,10 @@ if('serviceWorker' in navigator){
          onmousedown="sliderDragStart(event)" ontouchstart="sliderTouchStart(event)">
       <div id="monthSliderTrack" style="display:flex;align-items:center;height:100%;position:absolute;top:0;left:0"></div>
     </div>
-    <div id="unternehmenLabel" style="font-size:11px;color:var(--text3);white-space:nowrap;margin-right:2px;padding:2px 8px;border:1px solid var(--border);border-radius:20px">–</div>
-    <div id="standortLabel" style="font-size:11px;color:var(--text3);white-space:nowrap;margin-right:4px">–</div>
+    <div id="unternehmenLabel" onclick="openStandorteModal()" title="Unternehmen / Standort / Gruppe wechseln" style="font-size:11px;color:var(--text3);white-space:nowrap;margin-right:2px;padding:2px 8px;border:1px solid var(--border);border-radius:20px;cursor:pointer;transition:all .15s"
+      onmouseover="this.style.borderColor='var(--accent)';this.style.color='var(--accent)'"
+      onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--text3)'">–</div>
+    <div id="standortLabel" onclick="openStandorteModal()" title="Standort / Gruppe wechseln" style="font-size:11px;color:var(--text3);white-space:nowrap;margin-right:4px;cursor:pointer">–</div>
     <button id="btnMeins" onclick="openMeins()" title="Meins" style="width:32px;height:32px;border-radius:50%;border:1.5px solid var(--border);background:var(--surface2);cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--text2);transition:all .15s;flex-shrink:0;font-size:13px;font-weight:700"
       onmouseover="this.style.background='var(--accent-soft)';this.style.borderColor='var(--accent)';this.style.color='var(--accent)'"
       onmouseout="this.style.background='var(--surface2)';this.style.borderColor='var(--border)';this.style.color='var(--text2)'">M</button>
@@ -717,6 +735,10 @@ if('serviceWorker' in navigator){
     <div class="form-group">
       <label class="form-label">Tag</label>
       <select class="form-select" id="entryDay"></select>
+    </div>
+    <div class="form-group">
+      <label class="form-label">bis (optional – trägt den Dienst an allen Arbeitstagen im Zeitraum ein)</label>
+      <select class="form-select" id="entryDayBis"></select>
     </div>
     <div class="form-group">
       <label class="form-label">Dienst wählen</label>
@@ -950,6 +972,9 @@ if('serviceWorker' in navigator){
       </div>
       <div class="meins-nav-item" id="meinsNav_tausch" onclick="meinsTab('tausch')">
         🔄 Tausch
+      </div>
+      <div class="meins-nav-item" id="meinsNav_einstellungen" onclick="meinsTab('einstellungen')">
+        Einstellungen
       </div>
     </div>
 
@@ -1510,7 +1535,7 @@ if('serviceWorker' in navigator){
     </div>
 
     <!-- ── TAB 1: Stammdaten ── -->
-    <div id="inviteTab1" style="display:flex;flex-direction:column;gap:10px;flex:1;min-height:0">
+    <div id="inviteTab1" style="display:flex;flex-direction:column;gap:10px;flex:1;min-height:0;overflow-y:auto">
 
       <!-- Zeile 1: Nachname, Vorname, Rolle -->
       <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px">
@@ -1769,7 +1794,7 @@ if('serviceWorker' in navigator){
     </div>
 
     <!-- ── TAB 1: Stammdaten ── -->
-    <div id="euTab1" style="display:flex;flex-direction:column;gap:10px;flex:1;min-height:0">
+    <div id="euTab1" style="display:flex;flex-direction:column;gap:10px;flex:1;min-height:0;overflow-y:auto">
 
       <!-- Zeile 1: Nachname, Vorname, Rolle -->
       <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px">
@@ -2666,7 +2691,12 @@ function renderGrid(){
       const shift=entry?SHIFT_MAP[entry.shift]:null;
       // Stunden aus Gruppenvorgaben wenn verfügbar
       const gruppenDienst = entry ? _gruppenDienste.find(gd=>gd.kuerzel===entry.shift) : null;
-      ist += gruppenDienst ? (gruppenDienst.stunden||0) : (shift?shift.hours:0);
+      if(entry && entry.shift === 'URL'){
+        // Genehmigter Urlaub: zählt anteilig der Wochenarbeitszeit (Tagessoll)
+        ist += staffTagesSoll(staff);
+      } else {
+        ist += gruppenDienst ? (gruppenDienst.stunden||0) : (shift?shift.hours:0);
+      }
       const tipExtra=holName?' ('+holName+')':'';
       html+=`<div class="${dayCls}">`;
       const conflict = hasConflict(staff.id, ds);
@@ -2686,7 +2716,7 @@ function renderGrid(){
       }
       html+='</div>';
     }
-    const monthSoll=calcMonthSoll(staff.soll, currentYear, currentMonth);
+    const monthSoll=calcMonthSoll(staff, currentYear, currentMonth);
     const diff=ist-monthSoll;
     html+=`<div class="cell-tail"><span class="h-ist">${monthSoll.toFixed(0)}</span><span class="h-soll">/Monat</span></div>`;
     html+=`<div class="cell-tail"><span class="h-ist">${ist.toFixed(0)}</span><span class="${diff>=0?'h-diff-pos':'h-diff-neg'}">${diff>=0?'+':''}${diff.toFixed(1)}</span></div>`;
@@ -2715,6 +2745,12 @@ function renderGrid(){
         else if(isWE) wcls+=' weekend';
         const wkey=`w_${staff.id}_${ds}`;
         const wish=state.wishes&&state.wishes[wkey];
+        // Genehmigter Urlaub: Wunschzelle ausgrauen, keine Wünsche möglich
+        const urlEntry = state.entries[`${staff.id}_${ds}`];
+        if(urlEntry && urlEntry.shift === 'URL'){
+          whtml+=`<div class="${wcls}" style="opacity:.35;background:var(--surface2)" title="Urlaub – keine Wünsche möglich"><button class="wish-chip wish-empty" disabled style="cursor:default;pointer-events:none">–</button></div>`;
+          continue;
+        }
         whtml+=`<div class="${wcls}">`;
         if(wish){
           const prioEmoji  = {soll_frei:'🔴', wichtig:'🟠', wunsch_dienst:'🟢'}[wish.prioritaet]||'💬';
@@ -2830,23 +2866,41 @@ function getHolidayName(dateStr){
 
 // ─── NAVIGATION ───
 // Correct monthly SOLL: count Mon–Fri workdays minus holidays × daily hours (soll/5)
-function calcMonthSoll(soll, year, month, startDay=1){
+// Freie Wochentage eines Mitarbeiters (ISO 1=Mo..7=So).
+// NULL/undefined -> Standard Sa+So frei; leeres Array = bewusste 7-Tage-Woche.
+function staffFreieTage(staff){
+  const f = staff && staff.feste_freitage;
+  // NULL oder leeres Array = nicht konfiguriert -> Standard Sa+So frei (5-Tage-Woche)
+  if(!Array.isArray(f) || f.length === 0) return [6,7];
+  return f;
+}
+// Arbeitstage pro Woche (mind. 1, um Division durch 0 zu verhindern)
+function staffArbeitstageProWoche(staff){
+  return Math.max(7 - staffFreieTage(staff).length, 1);
+}
+// Tagessoll = Wochenarbeitszeit anteilig pro Arbeitstag
+function staffTagesSoll(staff){
+  return (staff && staff.soll ? staff.soll : 0) / staffArbeitstageProWoche(staff);
+}
+
+function calcMonthSoll(staff, year, month, startDay=1){
   const days = daysInMonth(year, month);
   const hols = holidaysForYear(year);
   const ur = _unternehmensrahmen;
+  const freie = staffFreieTage(staff);
   let workdays = 0;
   for(let d=Math.max(1, startDay); d<=days; d++){
     const dt = new Date(year, month, d);
-    const dow = dt.getDay();
+    const isoDow = dt.getDay() === 0 ? 7 : dt.getDay(); // ISO 1=Mo..7=So
     const ds = fmtDate(dt);
-    if(dow >= 1 && dow <= 5 && !hols[ds]){
+    if(!freie.includes(isoDow) && !hols[ds]){
       // Halber Tag für 24.12 / 31.12
       const isHeiligabend = ds.endsWith('-12-24') && ur && ur.heiligabend === 'halber_tag';
       const isSilvester   = ds.endsWith('-12-31') && ur && ur.silvester   === 'halber_tag';
       workdays += (isHeiligabend || isSilvester) ? 0.5 : 1;
     }
   }
-  return workdays * (soll / 5);
+  return workdays * staffTagesSoll(staff);
 }
 
 // Berechnet/aktualisiert den Stundensaldo (Soll-Ist, kumuliert) für einen Mitarbeiter
@@ -2904,6 +2958,7 @@ function openModal(id){ document.getElementById(id).classList.add('open'); }
 function closeModal(id){ document.getElementById(id).classList.remove('open'); }
 document.querySelectorAll('.modal-overlay').forEach(m=>m.addEventListener('click',e=>{ if(e.target===m) m.classList.remove('open'); }));
 
+let _userStandortIds = [], _userGruppeIds = [];
 let _editStaffId=null, _editDate=null;
 
 function openAddEntry(){
@@ -2952,10 +3007,14 @@ function populateStaffSelect(sel){
 
 function populateDaySelect(selDate){
   const sel=document.getElementById('entryDay'); sel.innerHTML='';
+  const selBis=document.getElementById('entryDayBis');
+  selBis.innerHTML='<option value="">– nur dieser Tag –</option>';
   const days=daysInMonth(currentYear,currentMonth);
   for(let d=1;d<=days;d++){
     const dt=new Date(currentYear,currentMonth,d); const ds=fmtDate(dt);
-    sel.innerHTML+=`<option value="${ds}" ${ds===selDate?'selected':''}>${DAY_SHORT[dt.getDay()]}, ${fmtDisp(dt)}</option>`;
+    const label=`${DAY_SHORT[dt.getDay()]}, ${fmtDisp(dt)}`;
+    sel.innerHTML+=`<option value="${ds}" ${ds===selDate?'selected':''}>${label}</option>`;
+    selBis.innerHTML+=`<option value="${ds}">${label}</option>`;
   }
 }
 
@@ -3010,13 +3069,29 @@ async function saveEntry(){
   const info=document.getElementById('entryInfo').value.trim();
   const key=`${staffId}_${dateStr}`;
 
+  // Von-Bis: optionaler Zeitraum – trägt den Dienst an allen Arbeitstagen ein
+  const bisStr = (document.getElementById('entryDayBis')||{}).value || '';
+  let zielTage = [dateStr];
+  if(bisStr && bisStr > dateStr){
+    const staffObj = state.staff.find(s=>s.id===staffId);
+    const freie = staffFreieTage(staffObj);
+    zielTage = [];
+    const endDt = new Date(bisStr+'T12:00:00');
+    for(let dt=new Date(dateStr+'T12:00:00'); dt<=endDt; dt.setDate(dt.getDate()+1)){
+      const isoDow = dt.getDay()===0 ? 7 : dt.getDay();
+      if(freie.includes(isoDow)) continue; // freie Wochentage überspringen
+      zielTage.push(fmtDate(dt));
+    }
+    if(!zielTage.length){ showToast('Keine Arbeitstage im gewählten Zeitraum'); return; }
+  }
+
   // Alt-Dienst für Audit-Trail vor Änderung merken
   const altDienst = state.entries[key]?.shift || null;
   const neuDienstPreCheck = _selectedShift || null;
 
   // Sperr-Prüfung: Monat des bearbeiteten Tages ermitteln (kann vom aktuell angezeigten Monat abweichen)
   let grundFuerAenderung = null;
-  if(altDienst !== neuDienstPreCheck){
+  if(altDienst !== neuDienstPreCheck || zielTage.length > 1){
     const [dY, dM] = dateStr.split('-').map(Number); // dM ist 1-12
     let sperreDesTages = (_monatsSperre && _monatsSperre.jahr === dY && _monatsSperre.monat === dM-1)
       ? _monatsSperre : null;
@@ -3037,32 +3112,48 @@ async function saveEntry(){
     }
   }
 
-  // Konflikt-Prüfung: ist dieser Mitarbeiter an diesem Tag woanders eingeplant?
-  if(_selectedShift && hasConflict(staffId, dateStr)){
-    const conflictStandort = getConflictStandort(staffId, dateStr);
-    const conflictEntry = state.allEntries[`${staffId}_${dateStr}`];
-    const conflictShift = (conflictEntry && conflictEntry.shift) === 'FREI' ? 'als Frei eingetragen' : ('mit ' + ((SHIFT_MAP[conflictEntry && conflictEntry.shift] && SHIFT_MAP[conflictEntry && conflictEntry.shift].label) || (conflictEntry && conflictEntry.shift)) + ' eingeplant');
-    const confirmed = window.confirm(
-      `⚠️ ${state.staff.find(s=>s.id===staffId).name} ist an diesem Tag in ${conflictStandort} ${conflictShift}.\n\nTrotzdem hier einplanen? Der Eintrag in ${conflictStandort} wird automatisch überschrieben.`
-    );
-    if(!confirmed) return;
-    // Eintrag in anderen Standorten löschen
-    await sb.from('entries').delete().eq('key', key);
-    delete state.allEntries[key];
+  // Konflikt-Prüfung: ist dieser Mitarbeiter an einem der Tage woanders eingeplant?
+  if(_selectedShift){
+    const konfliktTage = zielTage.filter(ds => hasConflict(staffId, ds));
+    if(konfliktTage.length){
+      const erster = konfliktTage[0];
+      const conflictStandort = getConflictStandort(staffId, erster);
+      const conflictEntry = state.allEntries[`${staffId}_${erster}`];
+      const conflictShift = (conflictEntry && conflictEntry.shift) === 'FREI' ? 'als Frei eingetragen' : ('mit ' + ((SHIFT_MAP[conflictEntry && conflictEntry.shift] && SHIFT_MAP[conflictEntry && conflictEntry.shift].label) || (conflictEntry && conflictEntry.shift)) + ' eingeplant');
+      const confirmed = window.confirm(
+        konfliktTage.length === 1
+          ? `⚠️ ${state.staff.find(s=>s.id===staffId).name} ist an diesem Tag in ${conflictStandort} ${conflictShift}.\n\nTrotzdem hier einplanen? Der Eintrag in ${conflictStandort} wird automatisch überschrieben.`
+          : `⚠️ ${state.staff.find(s=>s.id===staffId).name} ist an ${konfliktTage.length} Tagen im Zeitraum in einem anderen Standort eingeplant (z.B. ${erster} in ${conflictStandort}).\n\nTrotzdem einplanen? Diese Einträge werden automatisch überschrieben.`
+      );
+      if(!confirmed) return;
+      // Einträge in anderen Standorten löschen
+      const konfliktKeys = konfliktTage.map(ds => `${staffId}_${ds}`);
+      await sb.from('entries').delete().in('key', konfliktKeys);
+      konfliktKeys.forEach(k => { delete state.allEntries[k]; });
+    }
   }
 
-  if(!_selectedShift){ 
-    delete state.entries[key]; 
-    delete (state.allEntries && state.allEntries[key]);
-  } else { 
-    const entryData = {shift:_selectedShift, info, gruppe_id: currentGruppeId, standort_id: currentStandortId};
-    state.entries[key] = entryData; 
-    if(state.allEntries) state.allEntries[key] = entryData;
+  const geaendert = []; // [key, altDienst] für Audit-Trail
+  for(const ds of zielTage){
+    const k = `${staffId}_${ds}`;
+    const alt = state.entries[k] ? (state.entries[k].shift || null) : null;
+    if(!_selectedShift){
+      delete state.entries[k];
+      delete (state.allEntries && state.allEntries[k]);
+    } else {
+      const entryData = {shift:_selectedShift, info, gruppe_id: currentGruppeId, standort_id: currentStandortId};
+      state.entries[k] = entryData;
+      if(state.allEntries) state.allEntries[k] = entryData;
+    }
+    const neu = _selectedShift || null;
+    if(alt !== neu) geaendert.push([k, alt, neu]);
   }
-  saveData(); closeModal('entryModal'); showToast('Dienst gespeichert ✓');
-  // Audit-Trail: Änderung nach Freigabe loggen – erst dann render() damit Badge sofort erscheint
-  const neuDienst = _selectedShift || null;
-  if(altDienst !== neuDienst) await logAenderung(key, altDienst, neuDienst, null, grundFuerAenderung);
+  saveData(); closeModal('entryModal');
+  showToast(zielTage.length > 1 ? `Dienst an ${zielTage.length} Tagen gespeichert ✓` : 'Dienst gespeichert ✓');
+  // Audit-Trail: Änderungen nach Freigabe loggen – erst dann render() damit Badge sofort erscheint
+  for(const [k, alt, neu] of geaendert){
+    await logAenderung(k, alt, neu, null, grundFuerAenderung);
+  }
   render();
 }
 
@@ -3343,7 +3434,7 @@ function showStaffPopup(e, staffId){
       else if(en.shift==='RU') cRU++;
     }
   }
-  const soll=calcMonthSoll(staff.soll, currentYear, currentMonth);
+  const soll=calcMonthSoll(staff, currentYear, currentMonth);
   const pct=soll>0?Math.min(100,Math.round(ist/soll*100)):0;
   const diff=ist-soll;
   const init=staff.name.split(' ').map(p=>p[0]).join('').slice(0,2).toUpperCase();
@@ -3573,7 +3664,7 @@ async function runKIPlanner(){
 
   // Monatssoll berechnen
   const monatssoll = {};
-  staff.forEach(s => monatssoll[s.id] = calcMonthSoll(s.soll, currentYear, currentMonth));
+  staff.forEach(s => monatssoll[s.id] = calcMonthSoll(s, currentYear, currentMonth));
 
   // Tracking-Strukturen
   const istStunden   = {};  // geplante Stunden
@@ -5360,6 +5451,22 @@ async function urlaubEntscheiden(id, status){
   const msg = status==='genehmigt' ? '✅ Urlaub genehmigt' : status==='storniert' ? '🚫 Urlaub storniert' : '❌ Urlaub abgelehnt';
   showToast(msg);
 
+  // Dienstplan synchronisieren: genehmigt -> URL-Einträge anlegen, sonst -> URL-Einträge entfernen
+  if(antrag){
+    try {
+      if(status === 'genehmigt'){
+        await schreibeUrlaubInDienstplan(antrag);
+      } else {
+        await entferneUrlaubAusDienstplan(antrag);
+      }
+      // Grid neu laden falls betroffener Zeitraum sichtbar
+      await loadFromSupabase();
+    } catch(e){
+      console.warn('Urlaub-Dienstplan-Sync Fehler:', e);
+      showToast('⚠️ Urlaub gespeichert, aber Dienstplan-Sync fehlgeschlagen: ' + (e.message||e));
+    }
+  }
+
   // Notification an MA
   if(antrag){
     const maEmail = await getEmailForStaff(antrag.staff_id);
@@ -5377,6 +5484,119 @@ async function urlaubEntscheiden(id, status){
     }
   }
   loadAdminUrlaub();
+}
+
+// ─── URLAUB ↔ DIENSTPLAN SYNC ────────────────────────────────────────────────
+
+// Liefert alle Arbeitstage (fmtDate-Strings) eines Urlaubsantrags:
+// freie Wochentage des MA und Feiertage werden übersprungen
+function urlaubArbeitstage(antrag, staff){
+  const freie = staffFreieTage(staff);
+  const tage = [];
+  const von = new Date(antrag.von_datum + 'T12:00:00');
+  const bis = new Date(antrag.bis_datum + 'T12:00:00');
+  for(let dt = new Date(von); dt <= bis; dt.setDate(dt.getDate()+1)){
+    const isoDow = dt.getDay() === 0 ? 7 : dt.getDay();
+    if(freie.includes(isoDow)) continue;
+    const ds = fmtDate(dt);
+    if(getHolidayName(ds)) continue; // Feiertag: kein Urlaub nötig
+    tage.push(ds);
+  }
+  return tage;
+}
+
+// Genehmigter Urlaub -> URL-Einträge im Dienstplan anlegen (überschreibt geplante Dienste)
+async function schreibeUrlaubInDienstplan(antrag){
+  const { data: st, error: stErr } = await sb.from('staff')
+    .select('id, gruppe_id, standort_id, unternehmen_id, feste_freitage')
+    .eq('id', antrag.staff_id).maybeSingle();
+  if(stErr || !st) throw new Error('Mitarbeiter-Datensatz nicht gefunden');
+  const tage = urlaubArbeitstage(antrag, st);
+  if(!tage.length) return;
+  const rows = tage.map(ds => ({
+    key: `${st.id}_${ds}`,
+    shift: 'URL',
+    info: 'Urlaub genehmigt',
+    gruppe_id: st.gruppe_id,
+    standort_id: st.standort_id,
+    unternehmen_id: st.unternehmen_id
+  }));
+  const { error } = await sb.from('entries').upsert(rows);
+  if(error) throw error;
+}
+
+// Storno/Ablehnung -> nur URL-Einträge im Zeitraum entfernen (andere Dienste unangetastet)
+async function entferneUrlaubAusDienstplan(antrag){
+  const von = new Date(antrag.von_datum + 'T12:00:00');
+  const bis = new Date(antrag.bis_datum + 'T12:00:00');
+  const keys = [];
+  for(let dt = new Date(von); dt <= bis; dt.setDate(dt.getDate()+1)){
+    keys.push(`${antrag.staff_id}_${fmtDate(dt)}`);
+  }
+  if(!keys.length) return;
+  const { error } = await sb.from('entries').delete()
+    .in('key', keys).eq('shift', 'URL');
+  if(error) throw error;
+}
+
+// ─── EINSTELLUNGEN (Darkmode) ────────────────────────────────────────────────
+
+let _darkMode = false;
+
+function applyDarkMode(on){
+  _darkMode = !!on;
+  document.documentElement.classList.toggle('dark', _darkMode);
+}
+
+// Beim Start: Einstellung aus user_profiles laden (geräteübergreifend)
+async function ladeDarkModeEinstellung(){
+  try {
+    const sessRes = await sb.auth.getSession();
+    const session = sessRes.data && sessRes.data.session;
+    if(!session) return;
+    const { data } = await sb.from('user_profiles')
+      .select('dark_mode').eq('user_id', session.user.id).maybeSingle();
+    if(data) applyDarkMode(data.dark_mode);
+  } catch(e){ console.warn('Darkmode laden Fehler:', e); }
+}
+
+async function toggleDarkMode(on){
+  applyDarkMode(on);
+  try {
+    const sessRes = await sb.auth.getSession();
+    const session = sessRes.data && sessRes.data.session;
+    if(!session) return;
+    const { error } = await sb.from('user_profiles')
+      .update({ dark_mode: _darkMode }).eq('user_id', session.user.id);
+    if(error){ showToast('⚠️ Einstellung konnte nicht gespeichert werden: ' + error.message); return; }
+    showToast(_darkMode ? '🌙 Darkmode aktiviert' : '☀️ Darkmode deaktiviert');
+  } catch(e){ console.warn('Darkmode speichern Fehler:', e); }
+}
+
+function renderEinstellungen(){
+  const content = document.getElementById('meinsContent');
+  content.innerHTML = `
+    <div style="max-width:480px">
+      <div style="font-size:14px;font-weight:600;color:var(--text);margin-bottom:14px">Einstellungen</div>
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border:1.5px solid var(--border);border-radius:10px;background:var(--surface)">
+        <div>
+          <div style="font-size:13px;font-weight:600;color:var(--text)">Darkmode</div>
+          <div style="font-size:11.5px;color:var(--text3);margin-top:2px">Dunkles Erscheinungsbild – wird geräteübergreifend gespeichert</div>
+        </div>
+        <label style="position:relative;display:inline-block;width:46px;height:26px;flex-shrink:0;cursor:pointer">
+          <input type="checkbox" id="darkModeToggle" ${_darkMode?'checked':''}
+            onchange="toggleDarkMode(this.checked)" style="opacity:0;width:0;height:0">
+          <span id="darkModeTrack" style="position:absolute;inset:0;border-radius:26px;background:${_darkMode?'var(--accent)':'var(--surface2)'};border:1.5px solid var(--border);transition:background .2s"></span>
+          <span id="darkModeKnob" style="position:absolute;top:2px;left:${_darkMode?'22px':'2px'};width:20px;height:20px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.3);transition:left .2s"></span>
+        </label>
+      </div>
+    </div>`;
+  // Toggle-Optik bei Änderung nachziehen
+  const cb = document.getElementById('darkModeToggle');
+  cb.addEventListener('change', ()=>{
+    document.getElementById('darkModeTrack').style.background = cb.checked ? 'var(--accent)' : 'var(--surface2)';
+    document.getElementById('darkModeKnob').style.left = cb.checked ? '22px' : '2px';
+  });
 }
 
 // ─── STEMPELUHR ──────────────────────────────────────────────────────────────
@@ -5659,7 +5879,7 @@ function closeMeins(){
 
 function meinsTab(tab){
   _meinsTab = tab;
-  ['daten','dienste','urlaub','buchungen','zeit','tausch'].forEach(t => {
+  ['daten','dienste','urlaub','buchungen','zeit','tausch','einstellungen'].forEach(t => {
     const nav = document.getElementById('meinsNav_' + t);
     if(!nav) return;
     nav.style.background = t === tab ? 'var(--accent-soft)' : 'transparent';
@@ -5673,6 +5893,7 @@ function meinsTab(tab){
   if(tab === 'urlaub')   renderMeinUrlaub();
   if(tab === 'buchungen' || tab === 'zeit') renderMeineBuchungen();
   if(tab === 'tausch')   renderMeineTausche();
+  if(tab === 'einstellungen') renderEinstellungen();
 }
 
 // ── MEINS HELPER: Staff laden ─────────────────────────────────────────────────
@@ -7948,7 +8169,7 @@ async function renderStundenBody(){
       if(holsObj[dateStr]) ftAnzahl++;
     }
 
-    const soll = calcMonthSoll(s.soll, currentYear, currentMonth);
+    const soll = calcMonthSoll(s, currentYear, currentMonth);
     const diff = ist - soll;
     return { s, ist, soll, diff, weAnzahl, rbAnzahl, ftAnzahl, dienste };
   });
@@ -8133,7 +8354,7 @@ async function openSaldoKorrektur(staffId, staffName, aktuellerSaldo){
   } else {
     // Soll/Ist müssen für einen neuen Eintrag ebenfalls vorhanden sein
     const s = state.staff.find(x=>x.id===staffId);
-    const sollStunden = s ? calcMonthSoll(s.soll, currentYear, currentMonth) : 0;
+    const sollStunden = s ? calcMonthSoll(s, currentYear, currentMonth) : 0;
     const istStunden = await calcIstStunden(staffId, currentYear, currentMonth);
     const { error } = await sb.from('stunden_saldo').insert({
       ...payload,
@@ -8249,9 +8470,13 @@ async function loadUserRole(){
 
     // Profil laden: Username + Passwort-Änderungs-Flag + Zugangsberechtigung + individuelle Rechte
     const { data: profile, error: profileErr } = await sb.from('user_profiles')
-      .select('name, vorname, muss_passwort_aendern, unternehmen_id, extra_rights')
+      .select('name, vorname, muss_passwort_aendern, unternehmen_id, extra_rights, standort_ids, gruppe_ids')
       .eq('user_id', currentUserId)
       .maybeSingle();
+
+    // Eigene Zuordnung merken – für gefilterte Standort-/Gruppen-Auswahl
+    _userStandortIds = (profile && Array.isArray(profile.standort_ids)) ? profile.standort_ids : [];
+    _userGruppeIds   = (profile && Array.isArray(profile.gruppe_ids))   ? profile.gruppe_ids   : [];
 
     if(profileErr){ console.warn('user_profiles Fehler:', profileErr.message); }
 
@@ -9200,6 +9425,10 @@ async function openStandorteModal(){
   document.getElementById('settingsMenu').style.display='none';
   await loadStandorteData();
   renderStandorteList();
+  // "+ Neuer Standort" nur für Admin-Rollen
+  const addBtnWrap = document.querySelector('#standorteModal [onclick="addStandort()"]');
+  if(addBtnWrap) addBtnWrap.parentElement.style.display =
+    ['owner','master_admin','admin'].includes(currentUserRole) ? '' : 'none';
   openModal('standorteModal');
 }
 
@@ -9207,13 +9436,21 @@ function renderStandorteList(){
   const list = document.getElementById('standorteList');
   const canEdit  = ['owner','master_admin','admin'].includes(currentUserRole);
   const isPlaner = currentUserRole === 'planer';
+  // Mitarbeiter: nur eigene Standorte/Gruppen (aus user_profiles), Fallback = aktive Gruppe
+  const isEingeschraenkt = !canEdit && !isPlaner;
 
   list.innerHTML = allStandorte.map(s=>{
-    const gruppen   = allGruppen.filter(g=>g.standort_id===s.id);
+    let gruppen   = allGruppen.filter(g=>g.standort_id===s.id);
     const isActiveS = s.id === currentStandortId;
     if(isPlaner && !isActiveS) return '';
+    if(isEingeschraenkt){
+      const meineStandorte = _userStandortIds.length ? _userStandortIds : [currentStandortId];
+      if(!meineStandorte.includes(s.id)) return '';
+      if(_userGruppeIds.length) gruppen = gruppen.filter(g => _userGruppeIds.includes(g.id));
+      else gruppen = gruppen.filter(g => g.id === currentGruppeId);
+    }
     return `
-      <div style="border:1.5px solid ${isActiveS?'var(--accent)':'var(--border)'};border-radius:10px;overflow:hidden">
+      <div style="border:1.5px solid ${isActiveS?'var(--accent)':'var(--border)'};border-radius:10px;overflow:hidden;flex-shrink:0">
         <div style="padding:10px 14px;background:${isActiveS?'var(--accent-soft)':'var(--surface2)'};display:flex;align-items:center;gap:6px">
           <div style="font-size:13px;font-weight:600;color:${isActiveS?'var(--accent)':'var(--text)'};flex:1">${s.name}</div>
           ${canEdit?`
@@ -9304,9 +9541,57 @@ async function addStandort(){
   renderStandorteList();
 }
 
+// Exportiert alle Daten eines Standorts als JSON-Backup-Datei
+async function exportStandortBackup(standortId, standortName){
+  const [standortRes, gruppenRes, staffRes, dienstRes, entriesRes] = await Promise.all([
+    sb.from('standorte').select('*').eq('id', standortId),
+    sb.from('gruppen').select('*').eq('standort_id', standortId),
+    sb.from('staff').select('*').eq('standort_id', standortId),
+    sb.from('gruppe_dienste').select('*, gruppen!inner(standort_id)').eq('gruppen.standort_id', standortId),
+    sb.from('entries').select('*').eq('standort_id', standortId),
+  ]);
+  const backup = {
+    exportiert_am: new Date().toISOString(),
+    standort: standortRes.data || [],
+    gruppen: gruppenRes.data || [],
+    staff: staffRes.data || [],
+    gruppe_dienste: dienstRes.data || [],
+    entries: entriesRes.data || [],
+  };
+  const blob = new Blob([JSON.stringify(backup, null, 2)], {type:'application/json'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `curenio-backup-standort-${standortName.replace(/[^a-zA-Z0-9äöüÄÖÜß_-]/g,'_')}-${fmtDate(new Date())}.json`;
+  document.body.appendChild(a);
+  a.click();
+  setTimeout(()=>{ URL.revokeObjectURL(a.href); a.remove(); }, 1000);
+}
+
 async function deleteStandort(id, name){
-  if(!confirm(`Standort „${name}" und alle Gruppen löschen?\nAlle Einträge und Dienste gehen verloren!`)) return;
-  await sb.from('standorte').delete().eq('id', id);
+  if(!confirm(`Standort „${name}" und alle Gruppen löschen?\nAlle Einträge, Dienste und zugeordnete Mitarbeiter-Daten gehen verloren!`)) return;
+
+  // Backup-Abfrage vor dem Löschen
+  if(confirm(`Möchtest du die Daten von „${name}" vorher als Backup-Datei sichern?\n\nOK = Backup herunterladen und dann löschen\nAbbrechen = ohne Backup löschen`)){
+    try {
+      await exportStandortBackup(id, name);
+      showToast('💾 Backup heruntergeladen');
+    } catch(e){
+      if(!confirm('⚠️ Backup fehlgeschlagen: ' + (e.message||e) + '\n\nTrotzdem löschen?')) return;
+    }
+  }
+
+  // Dienstplan-Einträge des Standorts entfernen (kein FK auf standorte)
+  const { error: entriesErr } = await sb.from('entries').delete().eq('standort_id', id);
+  if(entriesErr){
+    showToast('❌ Löschen fehlgeschlagen (Einträge): ' + entriesErr.message);
+    return;
+  }
+  // Standort löschen – Gruppen, Dienste und Mitarbeiter kaskadieren per FK
+  const { error: delErr } = await sb.from('standorte').delete().eq('id', id);
+  if(delErr){
+    showToast('❌ Löschen fehlgeschlagen: ' + delErr.message);
+    return;
+  }
   if(currentStandortId===id){ currentStandortId=null; currentGruppeId=null; }
   showToast(`✅ ${name} gelöscht`);
   await loadStandorteData();
@@ -9349,8 +9634,12 @@ async function addGruppeToStandort(standortId){
 }
 
 async function deleteGruppe(id, name){
-  if(!confirm(`Gruppe „${name}" löschen?\nAlle Einträge und Dienste dieser Gruppe gehen verloren!`)) return;
-  await sb.from('gruppen').delete().eq('id', id);
+  if(!confirm(`Gruppe „${name}" löschen?\nAlle Einträge und Dienste dieser Gruppe gehen verloren!\n(Mitarbeiter-Datensätze bleiben erhalten und können neu zugeordnet werden.)`)) return;
+  // Dienstplan-Einträge der Gruppe entfernen (kein FK auf gruppen)
+  const { error: gEntriesErr } = await sb.from('entries').delete().eq('gruppe_id', id);
+  if(gEntriesErr){ showToast('❌ Löschen fehlgeschlagen (Einträge): ' + gEntriesErr.message); return; }
+  const { error: gDelErr } = await sb.from('gruppen').delete().eq('id', id);
+  if(gDelErr){ showToast('❌ Löschen fehlgeschlagen: ' + gDelErr.message); return; }
   if(currentGruppeId===id){
     const fallback = allGruppen.find(g=>g.id!==id && g.standort_id===currentStandortId);
     currentGruppeId = (fallback && fallback.id) || null;
@@ -9457,6 +9746,7 @@ window.addEventListener('pageshow', (e) => {
   await loadStandorteData();
   await loadFromSupabase();
   await loadUserRole();
+  ladeDarkModeEinstellung(); // Darkmode-Einstellung anwenden (nicht blockierend)
   setTimeout(initStempel, 1500);
 })();
 </script>
